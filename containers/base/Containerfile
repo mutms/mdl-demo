@@ -85,7 +85,9 @@ COPY containers/base/assets/000-placeholder.conf /etc/apache2/sites-available/
 RUN a2enmod proxy_fcgi rewrite setenvif \
     && a2dissite 000-default \
     && a2ensite 000-placeholder \
-    && sed -i 's/^Listen 80$/Listen 8080/' /etc/apache2/ports.conf
+    && sed -i 's/^Listen 80$/Listen 8080/' /etc/apache2/ports.conf \
+    && echo 'ServerName localhost' > /etc/apache2/conf-available/servername.conf \
+    && a2enconf servername
 
 # Demo-speed tweak from mpd: bounded loss on power cut, no corruption.
 # (Deliberately NOT full_page_writes=off — that risks torn pages.)
