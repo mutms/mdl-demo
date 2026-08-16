@@ -20,7 +20,6 @@ import (
 	"github.com/mutms/mdl-demo/internal/recipes"
 	"github.com/mutms/mdl-demo/internal/site"
 	"github.com/mutms/mdl-demo/internal/state"
-	"github.com/mutms/mdl-demo/internal/svc"
 	"github.com/mutms/mdl-demo/internal/webui"
 )
 
@@ -33,9 +32,9 @@ Usage:
   mdl-demo <command> [flags]
 
 Commands:
-  serve     run the management web UI on port 8081 (systemd service)
-  init      run as PID 1: supervise all services without systemd (for
-            runtimes that cannot boot systemd, e.g. WSL containers preview)
+  serve     run only the management web UI on port 8081 (development)
+  init      run as PID 1: supervise all services and the web UI (the
+            container's entrypoint)
   recipes   list available site recipes from /srv/extra/mdl-recipes
   install   install the demo site from a recipe
   status    show demo site status
@@ -51,13 +50,6 @@ func main() {
 	if len(os.Args) < 2 {
 		fmt.Fprint(os.Stderr, usage)
 		os.Exit(2)
-	}
-
-	// Booted without systemd (mdl-demo init is PID 1): CLI invocations run
-	// as separate processes and must not try systemctl. `init` itself
-	// replaces this with the full supervisor.
-	if !svc.UnderSystemd() {
-		svc.Use(svc.NewStandalone())
 	}
 
 	var err error

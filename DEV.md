@@ -20,61 +20,43 @@ make run          # sudo podman run -d --name demo -p 127.0.0.1:8080:8080 -p 127
 Verification after `make run`:
 
 ```sh
-sudo podman exec demo systemctl is-system-running   # expect: running
+sudo podman logs demo                                # "mdl-demo init: supervising …"
 sudo podman exec demo mdl-demo recipes
 sudo podman exec demo mdl-demo install --recipe moodle/release/5.2.2 --adminpass 'Test1234!'
 curl -s http://127.0.0.1:8080/                       # Moodle front page
 ```
 
-Note the run flags differ per runtime:
+## Why mdl-demo's own init (no systemd)
 
-- **rootful podman**: no `--cap-add` — podman's systemd mode handles cgroups, and
-  `--cap-add ALL` breaks systemd 257's generator sandboxing ("Failed to fork off
-  sandboxing environment … Protocol error").
-- **Apple `container`**: needs `--cap-add SYS_ADMIN`. It does not pre-mount
-  systemd's API filesystems the way podman does, so PID 1 mounts them itself
-  and mount(2) needs SYS_ADMIN — without it systemd dies immediately
-  ("Failed to mount tmpfs on /run … Failed to mount API filesystems") and
-  the container goes straight to stopped. SYS_ADMIN alone suffices — do not
-  use `--cap-add ALL`.
-- **WSL containers (`wslc` preview)**: cannot boot systemd (tested
-  2026-08-16): wslc grants Docker's default capability set (no SYS_ADMIN;
-  CapEff a80425fb), mounts /sys/fs/cgroup as cgroup2 **read-only**, and
-  exposes no `--cap-add`, `--privileged` or `--cgroupns`. `--tmpfs /run`
-  gets systemd past the API filesystems, but it then dies on
-  "Failed to create /init.scope control group: Read-only file system".
-  Bind workarounds are impossible by construction: `-v` sources arrive in
-  the container's utility VM as virtiofs (file sharing), which cannot carry
-  a kernel control filesystem like cgroupfs. Until WSL gains Docker-parity
-  cgroup handling, WSL uses the image's **systemd-free boot** instead:
-  `mdl-demo init` as the entrypoint runs its own PID-1 supervisor (no
-  capabilities, no cgroups needed — see "Boot modes" below).
+The image boots `mdl-demo init` as PID 1: it starts and supervises
+postgresql/php-fpm/apache2 with restart backoff, serves the web UI
+in-process, runs Moodle cron on a per-minute ticker, reaps orphans and turns
+SIGTERM into an ordered shutdown. Service actions (Apache reload, cron
+arming, the dashboard status card, the `/debug` diagnostics page) go through
+`internal/svc`, which distinguishes the PID-1 supervisor from exec'd CLI
+processes.
 
-## Boot modes
+This is deliberate and was proven the hard way (2026-08-16): Docker-style
+runtimes give PID 1 no CAP_SYS_ADMIN, and systemd cannot boot without it —
+it cannot even mount tmpfs on /run. Each runtime failed differently:
 
-The image boots two ways from the same bits:
+- **Apple `container`** needed `--cap-add SYS_ADMIN` for systemd (no
+  pre-mounted API filesystems).
+- **rootful podman** booted systemd only via its special systemd mode — and
+  `--cap-add ALL` actively broke systemd 257's generator sandboxing.
+- **WSL containers preview** cannot boot systemd at all: Docker default caps
+  (CapEff a80425fb), /sys/fs/cgroup mounted cgroup2 read-only, no
+  `--cap-add`/`--privileged`/`--cgroupns`, and `-v` arrives as virtiofs,
+  which cannot carry a cgroupfs.
 
-- **systemd (default ENTRYPOINT)** — podman, Apple `container`: a normal
-  Debian boot; services are systemd units, Moodle cron is a systemd timer.
-- **`mdl-demo init`** (entrypoint override, runtime must pre-mount a tmpfs
-  on /run) — for runtimes that cannot boot systemd (WSL preview): mdl-demo
-  runs as PID 1, starts and supervises postgresql/php-fpm/apache2 with
-  restart backoff, serves the web UI in-process, replaces the cron timer
-  with a per-minute ticker, reaps orphans and handles the stop signal.
-  Service actions (Apache reload, cron arming, the dashboard's status card,
-  the /debug diagnostics page) go through `internal/svc`, which picks the
-  systemd or supervisor implementation per boot.
-
-```sh
-sudo podman run -d --name demo --tmpfs /run --entrypoint /usr/bin/mdl-demo -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 mdl-demo init
-```
+The Go init needs none of that: no capabilities, no cgroups, no tmpfs — the
+identical flag-free run command works on all three runtimes.
 
 Misbehaving services surface on the web UI's `/debug` page (mode, restart
-counts, last exits, log tails) as one copy-pasteable block for bug reports —
-in both boot modes.
+counts, last exits, log tails) as one copy-pasteable block for bug reports.
 
-The image intentionally has no systemd-resolved: every target runtime manages
-/etc/resolv.conf itself and nss stays `files dns`.
+The image intentionally has no systemd-resolved (or systemd at all): every
+target runtime manages /etc/resolv.conf itself and nss stays `files dns`.
 
 ## Browsing a VM-hosted demo from the host
 

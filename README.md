@@ -16,42 +16,43 @@ The container exposes two ports, both meant to be mapped to localhost only:
 One demo site per container: to try a different Moodle version, create a new
 container and delete the old one.
 
+The image needs **no special flags on any runtime** — no extra capabilities, no
+privileged mode: instead of systemd it boots mdl-demo's own small service
+supervisor, which requires nothing from the container runtime. The run command
+is the same everywhere; only the runtime's name changes.
+`-e MDL_DEMO_PASSWORD=…` is optional — without it the UI asks you to set a
+password on first access.
+
+Open <http://localhost:8081>, log in, pick a recipe and install. The demo site
+then lives at <http://localhost:8080>.
+
+TODO: image publishing to a registry is not set up yet; see DEV.md for building
+it yourself in the meantime.
+
 ## Installation in macOS
 
-Requires [Apple container](https://github.com/apple/container) (macOS 15+ on Apple
-silicon). Then:
+Requires [Apple container](https://github.com/apple/container) (macOS 15+ on
+Apple silicon). Then:
 
 ```sh
-container run -d --name demo --cap-add SYS_ADMIN \
-    -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 \
-    -e MDL_DEMO_PASSWORD=choose-a-password \
-    ghcr.io/mutms/mdl-demo
+container run -d --name demo -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 -e MDL_DEMO_PASSWORD=choose-a-password ghcr.io/mutms/mdl-demo
 ```
-
-Open <http://localhost:8081>, log in with the password you chose, pick a recipe and
-install. The demo site then lives at <http://localhost:8080>.
-
-`--cap-add SYS_ADMIN` is required: the container boots a real systemd, which
-needs it to mount its API filesystems (/run, cgroups) at startup.
-`-e MDL_DEMO_PASSWORD=…` is optional — without it the UI asks you to set a password
-on first access.
-
-TODO: image publishing to a registry is not set up yet; see DEV.md for building it
-yourself in the meantime.
 
 ## Installation of Windows 11
 
-Requires WSL with the WSL containers preview (`wsl --update --pre-release`).
-The preview cannot boot systemd yet, so the container starts mdl-demo's
-built-in service supervisor instead (same image, different entrypoint — note
-the `--tmpfs /run`, which the supervisor needs):
+Requires WSL with the WSL containers preview (`wsl --update --pre-release`):
 
 ```powershell
-wslc run -d --name demo --tmpfs /run --entrypoint /usr/bin/mdl-demo -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 -e MDL_DEMO_PASSWORD=choose-a-password ghcr.io/mutms/mdl-demo init
+wslc run -d --name demo -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 -e MDL_DEMO_PASSWORD=choose-a-password ghcr.io/mutms/mdl-demo
 ```
 
-Open <http://localhost:8081> and continue as on macOS. Once WSL containers
-can boot systemd, the plain macOS-style command will work here too.
+## Linux
+
+Rootful podman or docker:
+
+```sh
+sudo podman run -d --name demo -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 -e MDL_DEMO_PASSWORD=choose-a-password ghcr.io/mutms/mdl-demo
+```
 
 ## AI disclosure
 

@@ -80,9 +80,6 @@ func Run(version string) error {
 	if os.Getpid() != 1 {
 		fmt.Fprintln(os.Stderr, "warning: mdl-demo init is not PID 1 — zombie reaping is not guaranteed")
 	}
-	if svc.UnderSystemd() {
-		return fmt.Errorf("systemd is running — `mdl-demo init` is only for containers booted without it")
-	}
 
 	s := &Supervisor{version: version, started: time.Now(), byPID: map[int]*proc{}}
 	svc.Use(s)
@@ -348,11 +345,15 @@ func (s *Supervisor) find(name string) *proc {
 
 // --- helpers ---
 
-// prepareRunDirs recreates what systemd's RuntimeDirectory= would: /run is
-// a fresh tmpfs mounted by the runtime (wslc --tmpfs /run), so the service
-// socket/pid directories must exist before anything starts.
+// prepareRunDirs recreates the service socket/pid directories. /run may be
+// a plain overlay directory rather than a fresh tmpfs (no runtime flags
+// required), so stale pidfiles/sockets from a previous boot are wiped —
+// a stale apache pid matching a reused PID would otherwise block startup.
 func prepareRunDirs() error {
 	for _, d := range []string{"/run/php", "/run/apache2", "/run/lock", "/run/postgresql"} {
+		if err := os.RemoveAll(d); err != nil {
+			return err
+		}
 		if err := os.MkdirAll(d, 0755); err != nil {
 			return err
 		}

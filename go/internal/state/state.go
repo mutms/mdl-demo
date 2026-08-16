@@ -11,9 +11,8 @@ import (
 	"time"
 )
 
-// Path is the state file location. moodle-cron.service conditions on its
-// existence, so it must only exist once a site is installed OR a password
-// is set — both fine: cron itself checks for an installed site.
+// Path is the state file location. The init supervisor's cron ticker reads
+// it every minute: cron runs while it records an installed site.
 const Path = "/etc/mdl-demo/state.json"
 
 type State struct {

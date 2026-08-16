@@ -1,16 +1,17 @@
-// Package svc is the seam between "services run under systemd" (podman,
-// Apple container — the image's default boot) and "services run under
-// mdl-demo's own PID-1 supervisor" (`mdl-demo init`, for runtimes that
-// cannot boot systemd, e.g. the WSL containers preview).
+// Package svc is the seam between the two processes that touch services:
+// the PID-1 supervisor (`mdl-demo init`, the image's entrypoint — rich
+// in-memory state) and CLI invocations exec'd into the container (separate
+// processes — cross-process mechanisms only).
 //
 // Everything that touches services — reloading Apache after a vhost swap,
 // arming Moodle cron, the dashboard's status card, the diagnostics page —
-// goes through the Manager interface, never straight to systemctl.
+// goes through the Manager interface. The image deliberately has no
+// systemd: a Docker-style runtime gives PID 1 no CAP_SYS_ADMIN and often a
+// read-only cgroup tree, which systemd cannot boot under, while this
+// arrangement needs no capabilities at all.
 package svc
 
 import (
-	"os"
-
 	"github.com/mutms/mdl-demo/internal/execx"
 )
 
@@ -32,7 +33,7 @@ type Diag struct {
 }
 
 type Manager interface {
-	// Mode names the boot mode in status output ("systemd" | "mdl-demo-init").
+	// Mode names the acting manager in status output.
 	Mode() string
 	ReloadApache(logf execx.Logf) error
 	// EnableCron arms the per-minute Moodle cron (systemd timer or Go
@@ -43,16 +44,10 @@ type Manager interface {
 	Diagnostics() []Diag
 }
 
-var current Manager = NewSystemd()
+var current Manager = NewStandalone()
 
 // Use replaces the active manager; called once by `mdl-demo init` before
-// anything else runs.
+// anything else runs. Every other invocation keeps the standalone default.
 func Use(m Manager) { current = m }
 
 func Current() Manager { return current }
-
-// UnderSystemd reports whether systemd is PID 1 on this boot.
-func UnderSystemd() bool {
-	_, err := os.Stat("/run/systemd/system")
-	return err == nil
-}

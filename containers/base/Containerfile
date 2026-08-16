@@ -1,28 +1,20 @@
 # mdl-demo — self-contained Moodle/MuTMS demo image.
 #
-# Debian trixie booting real systemd as PID 1, Apache+PHP 8.3 (Sury) on 8080,
-# PostgreSQL local-only, and the mdl-demo management UI on 8081.
+# Debian trixie with mdl-demo's own Go init as PID 1: it starts and
+# supervises PostgreSQL, php-fpm and Apache (port 8080) and serves the
+# management UI (port 8081). No systemd on purpose — a Docker-style
+# runtime gives PID 1 no CAP_SYS_ADMIN and often a read-only cgroup tree,
+# which systemd cannot boot under (the WSL containers preview proved this
+# terminally), while the Go init needs no capabilities, no cgroups and no
+# tmpfs. The SAME run command therefore works on rootful podman/docker,
+# Apple `container` and WSL containers:
 #
-# Run flags differ per runtime:
-#   - Apple `container`: needs `--cap-add SYS_ADMIN`. Unlike podman it does
-#     not pre-mount systemd's API filesystems, so PID 1 must mount them
-#     itself (tmpfs on /run first, then cgroups) and mount(2) needs
-#     SYS_ADMIN — without it: "Failed to mount API filesystems", PID 1
-#     exits. Verified on real hardware; SYS_ADMIN alone suffices, never ALL.
-#   - rootful podman: NO --cap-add — podman's systemd mode handles cgroups,
-#     and --cap-add ALL actually breaks systemd 257's generator sandboxing
-#     ("Failed to fork off sandboxing environment ... Protocol error").
-#
-# No systemd-resolved on purpose: every target runtime manages
-# /etc/resolv.conf itself and nss stays `files dns` (mpd-virt lesson —
-# pointing nss at resolved strands external names), and under podman's
-# default caps resolved cannot even spawn its user (status=217/USER).
+#   <runtime> run -d --name demo \
+#       -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 \
+#       -e MDL_DEMO_PASSWORD=... mdl-demo
 #
 # Build from the REPO ROOT (the build stage copies go/):
 #   sudo podman build -t mdl-demo -f containers/base/Containerfile .
-# Run (podman):
-#   sudo podman run -d --name demo \
-#       -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 mdl-demo
 
 # ---------------------------------------------------------------------------
 # Stage 1: build mudev + mdl-demo. Runs on the build host's native arch and
@@ -49,34 +41,18 @@ RUN cd /src/mdl-demo \
     && GOARCH=$TARGETARCH go build -ldflags "-X main.version=$VERSION" -o /out/mdl-demo ./cmd/mdl-demo
 
 # ---------------------------------------------------------------------------
-# Stage 2: the runtime image. Intentionally configured to look like a normal
-# Debian install with systemd, matching the mpd-virt and mpd sibling images.
+# Stage 2: the runtime image.
 #
 # The explicit $TARGETPLATFORM is LOAD-BEARING: stage 1 pulls debian:trixie
 # for the build host's arch, and a bare `FROM debian:trixie` here would
 # resolve to that already-present local image by name — producing an "arm64"
-# image whose apt layers are all x86-64 (Exec format error on /sbin/init).
+# image whose apt layers are all x86-64 (Exec format error on PID 1).
 FROM --platform=$TARGETPLATFORM debian:trixie
 
-# libpam-systemd + dbus-user-session are NOT decoration: a real Debian gets
-# them via systemd's Recommends, but --no-install-recommends drops them, and
-# without pam_systemd per-user managers never get a session (lesson from
-# mpd-virt's Apple container image).
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        systemd systemd-sysv libpam-systemd \
-        dbus dbus-user-session \
-        sudo wget curl git ca-certificates gnupg2 lsb-release apt-transport-https unzip \
-    && systemctl mask systemd-modules-load.service \
+        curl git ca-certificates gnupg2 lsb-release apt-transport-https \
     && rm -rf /var/lib/apt/lists/*
-
-# Lift systemd's per-service task cap: DefaultTasksMax defaults to 15% of the
-# pids controller limit and every service inherits it — php-fpm, postgres and
-# apache together would trip a few-hundred-task ceiling. The container-wide
-# pids-limit remains the real bound. (Same rationale as mpd's runtime image.)
-RUN mkdir -p /etc/systemd/system.conf.d \
-    && printf '[Manager]\nDefaultTasksMax=infinity\n' \
-       > /etc/systemd/system.conf.d/mdl-demo-tasksmax.conf
 
 # PHP 8.3 from the Sury repo (keyring style), Apache, PostgreSQL — one apt
 # pass. Moodle-required PHP extensions per mpd's runtime build.
@@ -124,12 +100,8 @@ RUN git clone --depth 1 https://github.com/mutms/mdl-plugins /srv/extra/mdl-plug
     && git clone --depth 1 https://github.com/mutms/mdl-recipes /srv/extra/mdl-recipes \
     && mkdir -p /srv/projects/demo /srv/data /etc/mdl-demo
 
-COPY containers/base/units/ /etc/systemd/system/
-RUN systemctl enable apache2 php8.3-fpm postgresql mdl-demo
-# moodle-cron.timer ships disabled; `mdl-demo install` enables it.
-
 EXPOSE 8080 8081
 
-# systemd as PID 1. SIGRTMIN+3 is systemd's clean-shutdown signal.
-STOPSIGNAL SIGRTMIN+3
-ENTRYPOINT ["/sbin/init"]
+# mdl-demo init as PID 1: supervises the services, reaps orphans, and turns
+# SIGTERM (the default stop signal) into an ordered shutdown.
+ENTRYPOINT ["/usr/bin/mdl-demo", "init"]
