@@ -1,0 +1,135 @@
+# mdl-demo — self-contained Moodle/MuTMS demo image.
+#
+# Debian trixie booting real systemd as PID 1, Apache+PHP 8.3 (Sury) on 8080,
+# PostgreSQL local-only, and the mdl-demo management UI on 8081.
+#
+# Run flags differ per runtime:
+#   - Apple `container`: needs `--cap-add SYS_ADMIN`. Unlike podman it does
+#     not pre-mount systemd's API filesystems, so PID 1 must mount them
+#     itself (tmpfs on /run first, then cgroups) and mount(2) needs
+#     SYS_ADMIN — without it: "Failed to mount API filesystems", PID 1
+#     exits. Verified on real hardware; SYS_ADMIN alone suffices, never ALL.
+#   - rootful podman: NO --cap-add — podman's systemd mode handles cgroups,
+#     and --cap-add ALL actually breaks systemd 257's generator sandboxing
+#     ("Failed to fork off sandboxing environment ... Protocol error").
+#
+# No systemd-resolved on purpose: every target runtime manages
+# /etc/resolv.conf itself and nss stays `files dns` (mpd-virt lesson —
+# pointing nss at resolved strands external names), and under podman's
+# default caps resolved cannot even spawn its user (status=217/USER).
+#
+# Build from the REPO ROOT (the build stage copies go/):
+#   sudo podman build -t mdl-demo -f containers/base/Containerfile .
+# Run (podman):
+#   sudo podman run -d --name demo \
+#       -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 mdl-demo
+
+# ---------------------------------------------------------------------------
+# Stage 1: build mudev + mdl-demo. Runs on the build host's native arch and
+# cross-compiles for $TARGETARCH, so a multi-arch build never compiles Go
+# under qemu. GOTOOLCHAIN=local: trixie's golang-go (1.24) or a legible
+# failure, never a silent 210 MB toolchain download.
+FROM --platform=$BUILDPLATFORM debian:trixie AS build
+ARG TARGETARCH
+ARG MUDEV_REF=main
+ARG VERSION=dev
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends golang-go git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV GOTOOLCHAIN=local CGO_ENABLED=0 GOFLAGS=-trimpath
+
+RUN git clone --depth 1 --branch "$MUDEV_REF" https://github.com/mutms/mudev /src/mudev \
+    && cd /src/mudev \
+    && GOARCH=$TARGETARCH go build -o /out/mudev ./cmd/mudev
+
+COPY go/ /src/mdl-demo/
+RUN cd /src/mdl-demo \
+    && GOARCH=$TARGETARCH go build -ldflags "-X main.version=$VERSION" -o /out/mdl-demo ./cmd/mdl-demo
+
+# ---------------------------------------------------------------------------
+# Stage 2: the runtime image. Intentionally configured to look like a normal
+# Debian install with systemd, matching the mpd-virt and mpd sibling images.
+#
+# The explicit $TARGETPLATFORM is LOAD-BEARING: stage 1 pulls debian:trixie
+# for the build host's arch, and a bare `FROM debian:trixie` here would
+# resolve to that already-present local image by name — producing an "arm64"
+# image whose apt layers are all x86-64 (Exec format error on /sbin/init).
+FROM --platform=$TARGETPLATFORM debian:trixie
+
+# libpam-systemd + dbus-user-session are NOT decoration: a real Debian gets
+# them via systemd's Recommends, but --no-install-recommends drops them, and
+# without pam_systemd per-user managers never get a session (lesson from
+# mpd-virt's Apple container image).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        systemd systemd-sysv libpam-systemd \
+        dbus dbus-user-session \
+        sudo wget curl git ca-certificates gnupg2 lsb-release apt-transport-https unzip \
+    && systemctl mask systemd-modules-load.service \
+    && rm -rf /var/lib/apt/lists/*
+
+# Lift systemd's per-service task cap: DefaultTasksMax defaults to 15% of the
+# pids controller limit and every service inherits it — php-fpm, postgres and
+# apache together would trip a few-hundred-task ceiling. The container-wide
+# pids-limit remains the real bound. (Same rationale as mpd's runtime image.)
+RUN mkdir -p /etc/systemd/system.conf.d \
+    && printf '[Manager]\nDefaultTasksMax=infinity\n' \
+       > /etc/systemd/system.conf.d/mdl-demo-tasksmax.conf
+
+# PHP 8.3 from the Sury repo (keyring style), Apache, PostgreSQL — one apt
+# pass. Moodle-required PHP extensions per mpd's runtime build.
+RUN curl -fsSL https://packages.sury.org/php/apt.gpg \
+        | gpg --dearmor -o /usr/share/keyrings/sury-php.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/sury-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" \
+        > /etc/apt/sources.list.d/sury-php.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        apache2 postgresql postgresql-client \
+        php8.3-cli php8.3-fpm php8.3-curl php8.3-gd php8.3-intl php8.3-mbstring \
+        php8.3-pgsql php8.3-soap php8.3-xml php8.3-zip php8.3-opcache \
+    && rm -rf /var/lib/apt/lists/*
+
+# Moodle's php.ini requirements (fpm + cli), values from mpd's runtime.
+RUN for sapi in fpm cli; do \
+        printf '%s\n' \
+            'max_input_vars = 10000' \
+            'upload_max_filesize = 200M' \
+            'post_max_size = 206M' \
+            'zend.exception_ignore_args = On' \
+            > /etc/php/8.3/$sapi/conf.d/99-moodle.ini; \
+    done
+
+# Apache: PHP via FPM socket, Moodle 5 router needs rewrite. Port 8080 only.
+# The placeholder vhost is swapped for the real Moodle vhost by mdl-demo at
+# install time (the docroot depends on the Moodle version's tree layout).
+COPY containers/base/assets/placeholder/ /var/www/placeholder/
+COPY containers/base/assets/000-placeholder.conf /etc/apache2/sites-available/
+RUN a2enmod proxy_fcgi rewrite setenvif \
+    && a2dissite 000-default \
+    && a2ensite 000-placeholder \
+    && sed -i 's/^Listen 80$/Listen 8080/' /etc/apache2/ports.conf
+
+# Demo-speed tweak from mpd: bounded loss on power cut, no corruption.
+# (Deliberately NOT full_page_writes=off — that risks torn pages.)
+RUN printf 'synchronous_commit = off\n' \
+        > "$(ls -d /etc/postgresql/*/main/conf.d)/demo.conf"
+
+COPY --from=build /out/mudev /out/mdl-demo /usr/bin/
+
+# Recipe + plugin catalogues at mudev's default paths. Shallow, but with .git
+# kept so a running container can `git pull` fresh recipes.
+RUN git clone --depth 1 https://github.com/mutms/mdl-plugins /srv/extra/mdl-plugins \
+    && git clone --depth 1 https://github.com/mutms/mdl-recipes /srv/extra/mdl-recipes \
+    && mkdir -p /srv/projects/demo /srv/data /etc/mdl-demo
+
+COPY containers/base/units/ /etc/systemd/system/
+RUN systemctl enable apache2 php8.3-fpm postgresql mdl-demo
+# moodle-cron.timer ships disabled; `mdl-demo install` enables it.
+
+EXPOSE 8080 8081
+
+# systemd as PID 1. SIGRTMIN+3 is systemd's clean-shutdown signal.
+STOPSIGNAL SIGRTMIN+3
+ENTRYPOINT ["/sbin/init"]

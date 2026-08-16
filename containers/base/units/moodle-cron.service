@@ -1,0 +1,9 @@
+[Unit]
+Description=Moodle cron for the demo site
+ConditionPathExists=/etc/mdl-demo/state.json
+
+[Service]
+Type=oneshot
+# mdl-demo resolves the cron.php path itself (admin/cli moved between the
+# repo root and public/ across Moodle versions), so the unit stays generic.
+ExecStart=/usr/bin/mdl-demo cron

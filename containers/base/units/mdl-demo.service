@@ -1,0 +1,12 @@
+[Unit]
+Description=mdl-demo management web UI (port 8081)
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/mdl-demo serve
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
