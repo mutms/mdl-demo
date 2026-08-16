@@ -77,7 +77,7 @@ scp mdl-demo.tar <target>:
 On the target — macOS (Apple `container`):
 
 ```sh
-container images load --input mdl-demo.tar
+container image load --input mdl-demo.tar
 container run -d --name demo --cap-add SYS_ADMIN \
     -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 mdl-demo
 ```
