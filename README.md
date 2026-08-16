@@ -5,7 +5,7 @@ database or PHP to install.
 
 mdl-demo is a container image with everything a Moodle site needs inside.
 All it takes is the container support from your OS vendor (see the sections
-below for Apple container, Microsoft WSL, or podman/docker on Linux).
+below for Apple container, Microsoft WSL, or podman on Linux).
 Start it, open <http://localhost:8081> in your browser, pick a Moodle version
 and set an admin password — a few minutes later your demo site is running at
 <http://localhost:8080>. The site is only reachable from your own computer.
@@ -36,11 +36,26 @@ wslc run -d --name demo -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 -e MDL_DEM
 
 ## Linux
 
-Rootful podman or docker:
+Rootful podman (any compatible container runtime works the same way):
 
 ```sh
 sudo podman run -d --name demo -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 -e MDL_DEMO_PASSWORD=choose-a-password ghcr.io/mutms/mdl-demo
 ```
+
+## Managing demo containers
+
+The usual container commands work everywhere (`demo` is the name the run
+commands above chose — give each container its own name if you keep several):
+
+|        | macOS                  | Windows           | Linux                    |
+|--------|------------------------|-------------------|--------------------------|
+| list   | `container ls -a`      | `wslc ps -a`      | `sudo podman ps -a`      |
+| stop   | `container stop demo`  | `wslc stop demo`  | `sudo podman stop demo`  |
+| start  | `container start demo` | `wslc start demo` | `sudo podman start demo` |
+| delete | `container rm demo`    | `wslc rm demo`    | `sudo podman rm demo`    |
+
+Stopping keeps the demo site — start the container again and it is back.
+Deleting removes the site and all its data for good (stop it first).
 
 ## When something misbehaves
 
@@ -48,8 +63,19 @@ The management UI has a diagnostics page (`/debug`) with service states and
 recent logs as one copy-pasteable block — paste it into a
 [bug report](https://github.com/mutms/mdl-demo/issues) and we will take a look.
 
-TODO: image publishing to a registry is not set up yet; see DEV.md for building
-it yourself in the meantime.
+The first images will appear at `ghcr.io/mutms/mdl-demo` with the v0.1
+release; until then see DEV.md for building the image yourself.
+
+## Contributing
+
+Forks and contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+AI assistants get a head start from [AGENTS.md](AGENTS.md).
+
+The demo site code is assembled by [mudev](https://github.com/mutms/mudev),
+the Moodle/MuTMS development tool, from community-editable
+[site recipes](https://github.com/mutms/mdl-recipes) and a
+[plugin catalogue](https://github.com/mutms/mdl-plugins) — new recipes and
+plugins are contributions too.
 
 ## AI disclosure
 

@@ -12,7 +12,23 @@ import "html/template"
 // fetches to refresh one card without touching the rest.
 var page = template.Must(template.New("page").Parse(
 	shellHTML + siteHTML + servicesHTML + progressHTML +
-		loginHTML + setupHTML + installHTML + debugHTML))
+		loginHTML + setupHTML + installHTML + debugHTML + footerHTML))
+
+// footerHTML is the GPLv3 "Appropriate Legal Notice" (GPL-3.0 §0, §5(d)):
+// it identifies the author and the project on every page of the interactive
+// UI, and the license requires modified versions to keep displaying it.
+//
+// Forking this project? Please do — that is what the GPL is for. Add your
+// own copyright line right here next to the original one (the license asks
+// you to keep the existing notice, not to stop at it).
+const footerHTML = `{{define "footer"}}
+<footer style="margin-top:2rem; font-size:.78rem; color:var(--dim)">
+  © 2026 Petr Skoda —
+  <a href="https://github.com/mutms/mdl-demo">mdl-demo</a>, part of the
+  <a href="https://github.com/mutms">MuTMS</a> project —
+  <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL-3.0 or later</a>
+</footer>
+{{end}}`
 
 const styleHTML = `<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -69,10 +85,18 @@ const styleHTML = `<meta charset="utf-8">
   button.subtle { background: var(--idlebg); color: var(--fg); font-weight: 400; }
   .error { color: var(--err); background: var(--errbg); border-radius: 7px;
     padding: .5rem .7rem; font-size: .88rem; }
+  .success { color: var(--ok); background: var(--okbg); border-radius: 7px;
+    padding: .5rem .7rem; margin: 0 0 .7rem; }
   pre.log { font: .78rem/1.45 ui-monospace, SFMono-Regular, monospace;
     background: var(--bg); border: 1px solid var(--line); border-radius: 7px;
     padding: .7rem .8rem; overflow-x: auto; white-space: pre-wrap; margin: 0; }
+  pre.log.short { max-height: 5cm; overflow-y: auto; }
   .row { display: flex; gap: .6rem; align-items: center; }
+  .spin { display: inline-block; width: .85em; height: .85em; margin-right: .35em;
+    border: 2px solid var(--line); border-top-color: var(--accent);
+    border-radius: 50%; vertical-align: -.1em;
+    animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>`
 
 const shellHTML = `{{define "page"}}<!doctype html>
@@ -89,6 +113,7 @@ const shellHTML = `{{define "page"}}<!doctype html>
 {{template "progress" .}}
 {{template "site" .}}
 {{template "services" .}}
+{{template "footer" .}}
 </html>{{end}}`
 
 const siteHTML = `{{define "site"}}
@@ -96,13 +121,13 @@ const siteHTML = `{{define "site"}}
   <h2>Demo site</h2>
   {{if .Installed}}
   <table>
-    <tr><th>Recipe</th><th>URL</th><th>Admin</th><th>Installed</th></tr>
+    <tr><th>Recipe</th><th>URL</th><th>Log in as</th><th>Installed</th></tr>
     <tr>
       <td class="name">{{.Recipe}}</td>
       {{/* New tab on purpose: landing inside Moodle in the same tab loses
            people — they forget the management UI's address to get back. */}}
       <td class="meta"><a href="{{.Wwwroot}}" target="_blank" rel="noopener">{{.Wwwroot}}</a></td>
-      <td class="meta">admin</td>
+      <td class="meta">admin / <span class="cred">{{if .AdminPass}}{{.AdminPass}}{{else}}(set at install){{end}}</span></td>
       <td class="meta">{{.InstalledAt}}</td>
     </tr>
   </table>
@@ -112,7 +137,7 @@ const siteHTML = `{{define "site"}}
     <button class="subtle">Reset site…</button>
   </form>
   {{else if .Busy}}
-  <p class="empty">Working — see progress above.</p>
+  <p class="empty"><span class="spin"></span>Working — see progress above.</p>
   {{else}}
   <p class="empty">No demo site installed yet.</p>
   <p style="margin:.9rem 0 0"><a href="/install"><button>Install a demo site…</button></a></p>
@@ -148,21 +173,24 @@ const debugHTML = `{{define "debug"}}<!doctype html>
      It contains service states and recent log lines, no passwords.</p>
   <pre class="log cred">{{.DebugReport}}</pre>
 </section>
+{{template "footer" .}}
 </html>{{end}}`
 
 const progressHTML = `{{define "progress"}}
 {{if .Job.Kind}}
 <section id="progress" {{if .Job.Running}}hx-get="/section/progress" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
   <h2>{{if eq .Job.Kind "install"}}Installation{{else}}Reset{{end}}
-      {{if .Job.Running}}<span class="badge on">running</span>
+      {{if .Job.Running}}<span class="spin"></span><span class="badge on">running</span>
       {{else if .Job.Failed}}<span class="badge err">failed</span>
       {{else}}<span class="badge on">done</span>{{end}}</h2>
   {{if .Job.Failed}}<p class="error">{{.Job.Error}}</p>{{end}}
   {{if and (not .Job.Running) (not .Job.Failed) .Job.Wwwroot}}
-  <p>Demo site ready: <a href="{{.Job.Wwwroot}}" target="_blank" rel="noopener">{{.Job.Wwwroot}}</a> —
+  <p class="success">Demo site ready: <a href="{{.Job.Wwwroot}}" target="_blank" rel="noopener">{{.Job.Wwwroot}}</a> —
      log in as <code class="cred">admin</code> / <code class="cred">{{.Job.AdminPass}}</code></p>
   {{end}}
-  <pre class="log">{{range .Job.Tail}}{{.}}
+  {{/* Finished: the result card is the news — the log shrinks to a small
+       scrollable strip instead of dominating the page. */}}
+  <pre class="log{{if not .Job.Running}} short{{end}}">{{range .Job.Tail}}{{.}}
 {{end}}</pre>
 </section>
 {{end}}
@@ -181,6 +209,7 @@ const loginHTML = `{{define "login"}}<!doctype html>
     <div><button>Log in</button></div>
   </form>
 </section>
+{{template "footer" .}}
 </html>{{end}}`
 
 const setupHTML = `{{define "setup"}}<!doctype html>
@@ -201,6 +230,7 @@ const setupHTML = `{{define "setup"}}<!doctype html>
     <div><button>Set password</button></div>
   </form>
 </section>
+{{template "footer" .}}
 </html>{{end}}`
 
 const installHTML = `{{define "install"}}<!doctype html>
@@ -232,4 +262,5 @@ const installHTML = `{{define "install"}}<!doctype html>
   <p class="empty" style="margin-top:.9rem">Installation clones several git
   repositories and runs the Moodle installer — expect several minutes.</p>
 </section>
+{{template "footer" .}}
 </html>{{end}}`

@@ -117,6 +117,9 @@ func cmdStatus() error {
 	}
 	fmt.Printf("recipe:     %s\n", s.Recipe)
 	fmt.Printf("wwwroot:    %s\n", s.Wwwroot)
+	if s.AdminPass != "" {
+		fmt.Printf("log in as:  admin / %s\n", s.AdminPass)
+	}
 	fmt.Printf("installed:  %s\n", s.InstalledAt.Format(time.RFC3339))
 	if count, err := pgdb.TableCount(); err == nil {
 		fmt.Printf("db tables:  %d\n", count)

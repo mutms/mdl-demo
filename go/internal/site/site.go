@@ -114,6 +114,7 @@ func Install(logf execx.Logf, o Options) error {
 	}
 	s.Recipe = recipe.ID
 	s.Wwwroot = o.Wwwroot
+	s.AdminPass = o.AdminPass
 	s.InstalledAt = time.Now().UTC()
 	if err := s.Save(); err != nil {
 		return err
@@ -153,7 +154,7 @@ func Reset(logf execx.Logf) error {
 	if err != nil {
 		return err
 	}
-	s.Recipe, s.Wwwroot = "", ""
+	s.Recipe, s.Wwwroot, s.AdminPass = "", "", ""
 	s.InstalledAt = time.Time{}
 	return s.Save()
 }

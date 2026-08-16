@@ -18,10 +18,15 @@ const Path = "/etc/mdl-demo/state.json"
 type State struct {
 	// PasswordHash is "pbkdf2-sha256:<iterations>:<salt-b64>:<hash-b64>",
 	// empty until a web UI password is set.
-	PasswordHash string    `json:"password_hash,omitempty"`
-	Recipe       string    `json:"recipe,omitempty"`
-	Wwwroot      string    `json:"wwwroot,omitempty"`
-	InstalledAt  time.Time `json:"installed_at,omitzero"`
+	PasswordHash string `json:"password_hash,omitempty"`
+	Recipe       string `json:"recipe,omitempty"`
+	Wwwroot      string `json:"wwwroot,omitempty"`
+	// AdminPass is the demo site's admin password, kept in plain text on
+	// purpose: the UI shows it on the site card so users can always find
+	// it (this file is root-only 0600, and the whole site is a throwaway
+	// demo behind the management password).
+	AdminPass   string    `json:"admin_pass,omitempty"`
+	InstalledAt time.Time `json:"installed_at,omitzero"`
 }
 
 func (s *State) Installed() bool { return s.Recipe != "" }

@@ -129,6 +129,7 @@ type view struct {
 	Busy        bool
 	Recipe      string
 	Wwwroot     string
+	AdminPass   string
 	InstalledAt string
 	Services    []serviceRow
 	Job         jobView
@@ -155,6 +156,7 @@ func (s *Server) buildView(r *http.Request) view {
 		v.Installed = true
 		v.Recipe = st.Recipe
 		v.Wwwroot = st.Wwwroot
+		v.AdminPass = st.AdminPass
 		v.InstalledAt = st.InstalledAt.Format("2006-01-02 15:04 MST")
 	}
 	for _, s := range svc.Current().Statuses() {

@@ -36,7 +36,7 @@ arming, the dashboard status card, the `/debug` diagnostics page) go through
 `internal/svc`, which distinguishes the PID-1 supervisor from exec'd CLI
 processes.
 
-This is deliberate and was proven the hard way (2026-08-16): Docker-style
+This is deliberate and was proven the hard way (2026-08-16): standard OCI
 runtimes give PID 1 no CAP_SYS_ADMIN, and systemd cannot boot without it —
 it cannot even mount tmpfs on /run. Each runtime failed differently:
 
@@ -44,7 +44,7 @@ it cannot even mount tmpfs on /run. Each runtime failed differently:
   pre-mounted API filesystems).
 - **rootful podman** booted systemd only via its special systemd mode — and
   `--cap-add ALL` actively broke systemd 257's generator sandboxing.
-- **WSL containers preview** cannot boot systemd at all: Docker default caps
+- **WSL containers preview** cannot boot systemd at all: default runtime caps
   (CapEff a80425fb), /sys/fs/cgroup mounted cgroup2 read-only, no
   `--cap-add`/`--privileged`/`--cgroupns`, and `-v` arrives as virtiofs,
   which cannot carry a cgroupfs.
@@ -82,8 +82,7 @@ A site installed under one address will not work when visited under another
 
 ## Distributing dev builds
 
-The image is not published anywhere yet. To try a build on another machine,
-move it as a tarball:
+To try an unpublished build on another machine, move it as a tarball:
 
 ```sh
 sudo podman save --format oci-archive -o mdl-demo.tar localhost/mdl-demo
@@ -94,8 +93,7 @@ On the target — macOS (Apple `container`):
 
 ```sh
 container image load --input mdl-demo.tar
-container run -d --name demo --cap-add SYS_ADMIN \
-    -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 mdl-demo
+container run -d --name demo -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 mdl-demo
 ```
 
 or Linux (podman): `sudo podman load -i mdl-demo.tar`.
@@ -103,29 +101,77 @@ or Linux (podman): `sudo podman load -i mdl-demo.tar`.
 A private OCI registry works too, of course — push with `podman push` and run
 the image by its registry name; setting one up is outside this repo's scope.
 
-## Multi-arch (amd64 + arm64)
+## Building multi-arch images (amd64 + arm64)
 
-The build stage runs on the build host's native arch (`--platform=$BUILDPLATFORM`) and
-cross-compiles Go for `$TARGETARCH`, so only the apt layers ever run emulated.
+**Build on an Apple silicon Mac — it is by far the fastest path.** The arm64
+leg builds natively and the amd64 leg runs under Rosetta (fast binary
+translation); a full two-arch build takes ~8 minutes even on an M2. The
+Containerfile's build stage runs on the build host's native arch
+(`--platform=$BUILDPLATFORM`) and cross-compiles Go for `$TARGETARCH`, so Go
+never compiles under emulation on any host.
 
-Dev loop: plain native `make image`. Publish-time:
+```sh
+container build --arch arm64 --arch amd64 --build-arg VERSION=$(git describe --tags --always --dirty) -t mdl-demo -f containers/base/Containerfile .
+```
+
+Fallback (Linux, e.g. CI): podman with qemu user emulation — correct but much
+slower, since the arm64 apt layers run fully emulated:
 
 ```sh
 sudo apt-get install -y qemu-user-static binfmt-support
 sudo podman build --platform linux/amd64,linux/arm64 \
-    --manifest <registry>/mdl-demo:latest -f containers/base/Containerfile .
-sudo podman manifest push <registry>/mdl-demo:latest
+    --build-arg VERSION=$(git describe --tags --always --dirty) \
+    --manifest mdl-demo -f containers/base/Containerfile .
 ```
 
-Escape hatch / cross-check: native arm64 `container build` on an Apple Silicon Mac.
-Publishing of images to a public registry (GitHub/Docker Hub) will be set up later;
-relying on Rosetta on macOS is a stopgap until it gets retired in 2027.
+(Rosetta is a stopgap until Apple retires it around 2027; by then the CI path
+takes over the amd64 leg.)
+
+After the first multi-arch build on a new toolchain, verify neither variant
+is an arch chimera (mixed-architecture layers — it has happened): from each
+variant, extract `/usr/sbin/apache2` and `/usr/bin/mdl-demo` (`podman create`
++ `podman cp`) and check `file` reports the expected architecture for both.
+
+## Releasing to ghcr.io
+
+Images are published to GitHub Container Registry as
+`ghcr.io/mutms/mdl-demo` (the README's run commands point there). Forked the
+repo? The same instructions work as-is — just replace `mutms/mdl-demo` with
+your own `<owner>/<repo>` in the commands below (and in your README).
+Login uses a GitHub PAT with the `write:packages` scope — entered at the
+interactive prompt, never on the command line:
+
+From the Mac (recommended, see above):
+
+```sh
+container registry login ghcr.io
+container build --arch arm64 --arch amd64 --build-arg VERSION=v0.1.0 -t ghcr.io/mutms/mdl-demo:v0.1.0 -f containers/base/Containerfile .
+container image push ghcr.io/mutms/mdl-demo:v0.1.0
+container image tag ghcr.io/mutms/mdl-demo:v0.1.0 ghcr.io/mutms/mdl-demo:latest
+container image push ghcr.io/mutms/mdl-demo:latest
+```
+
+From Linux (podman): `sudo podman login ghcr.io`, then `manifest push` the
+multi-arch manifest to the same names.
+
+Release checklist:
+
+1. Tag the release (`git tag -a v0.1.0`) so `git describe` and the
+   `VERSION` build-arg agree with the image tag.
+2. Build with `--build-arg VERSION=v0.1.0` — the binary, the web UI and the
+   `/debug` page all report this version.
+3. Push `:v0.1.0` and move `:latest`.
+4. First push only: the ghcr package is created **private** — make it public
+   in the package settings on github.com. The `org.opencontainers.image.source`
+   label in the Containerfile links the package to this repo automatically.
 
 ## Layout
 
-- `containers/base/Containerfile` — the image: Debian trixie + systemd PID 1, Apache+PHP 8.3
-  (Sury) on 8080, local PostgreSQL, mudev + mdl-demo binaries, recipe/plugin catalogues.
-- `containers/base/units/` — systemd units (mdl-demo web UI, Moodle cron timer).
+- `containers/base/Containerfile` — the image: Debian trixie with `mdl-demo init`
+  as PID 1, Apache+PHP 8.3 (Sury) on 8080, local PostgreSQL, the
+  [mudev](https://github.com/mutms/mudev) + mdl-demo binaries, and the
+  [mdl-recipes](https://github.com/mutms/mdl-recipes) /
+  [mdl-plugins](https://github.com/mutms/mdl-plugins) catalogues.
 - `containers/base/assets/` — Apache placeholder vhost shown before a site is installed.
 - `go/` — the mdl-demo Go module (`cmd/mdl-demo` + `internal/*`).
 

@@ -2,11 +2,11 @@
 #
 # Debian trixie with mdl-demo's own Go init as PID 1: it starts and
 # supervises PostgreSQL, php-fpm and Apache (port 8080) and serves the
-# management UI (port 8081). No systemd on purpose — a Docker-style
+# management UI (port 8081). No systemd on purpose — a standard OCI
 # runtime gives PID 1 no CAP_SYS_ADMIN and often a read-only cgroup tree,
 # which systemd cannot boot under (the WSL containers preview proved this
 # terminally), while the Go init needs no capabilities, no cgroups and no
-# tmpfs. The SAME run command therefore works on rootful podman/docker,
+# tmpfs. The SAME run command therefore works on rootful podman,
 # Apple `container` and WSL containers:
 #
 #   <runtime> run -d --name demo \
@@ -101,6 +101,11 @@ COPY --from=build /out/mudev /out/mdl-demo /usr/bin/
 RUN git clone --depth 1 https://github.com/mutms/mdl-plugins /srv/extra/mdl-plugins \
     && git clone --depth 1 https://github.com/mutms/mdl-recipes /srv/extra/mdl-recipes \
     && mkdir -p /srv/projects/demo /srv/data /etc/mdl-demo
+
+# Links the ghcr.io package to the repo (and its README to the package page).
+LABEL org.opencontainers.image.source=https://github.com/mutms/mdl-demo \
+      org.opencontainers.image.description="Throwaway Moodle/MuTMS demo sites in one command" \
+      org.opencontainers.image.licenses=GPL-3.0-or-later
 
 EXPOSE 8080 8081
 
