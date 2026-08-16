@@ -37,7 +37,41 @@ Note the run flags differ per runtime:
   ("Failed to mount tmpfs on /run … Failed to mount API filesystems") and
   the container goes straight to stopped. SYS_ADMIN alone suffices — do not
   use `--cap-add ALL`.
-- **WSL containers**: preview, unverified yet.
+- **WSL containers (`wslc` preview)**: cannot boot systemd (tested
+  2026-08-16): wslc grants Docker's default capability set (no SYS_ADMIN;
+  CapEff a80425fb), mounts /sys/fs/cgroup as cgroup2 **read-only**, and
+  exposes no `--cap-add`, `--privileged` or `--cgroupns`. `--tmpfs /run`
+  gets systemd past the API filesystems, but it then dies on
+  "Failed to create /init.scope control group: Read-only file system".
+  Bind workarounds are impossible by construction: `-v` sources arrive in
+  the container's utility VM as virtiofs (file sharing), which cannot carry
+  a kernel control filesystem like cgroupfs. Until WSL gains Docker-parity
+  cgroup handling, WSL uses the image's **systemd-free boot** instead:
+  `mdl-demo init` as the entrypoint runs its own PID-1 supervisor (no
+  capabilities, no cgroups needed — see "Boot modes" below).
+
+## Boot modes
+
+The image boots two ways from the same bits:
+
+- **systemd (default ENTRYPOINT)** — podman, Apple `container`: a normal
+  Debian boot; services are systemd units, Moodle cron is a systemd timer.
+- **`mdl-demo init`** (entrypoint override, runtime must pre-mount a tmpfs
+  on /run) — for runtimes that cannot boot systemd (WSL preview): mdl-demo
+  runs as PID 1, starts and supervises postgresql/php-fpm/apache2 with
+  restart backoff, serves the web UI in-process, replaces the cron timer
+  with a per-minute ticker, reaps orphans and handles the stop signal.
+  Service actions (Apache reload, cron arming, the dashboard's status card,
+  the /debug diagnostics page) go through `internal/svc`, which picks the
+  systemd or supervisor implementation per boot.
+
+```sh
+sudo podman run -d --name demo --tmpfs /run --entrypoint /usr/bin/mdl-demo -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 mdl-demo init
+```
+
+Misbehaving services surface on the web UI's `/debug` page (mode, restart
+counts, last exits, log tails) as one copy-pasteable block for bug reports —
+in both boot modes.
 
 The image intentionally has no systemd-resolved: every target runtime manages
 /etc/resolv.conf itself and nss stays `files dns`.

@@ -12,7 +12,7 @@ import "html/template"
 // fetches to refresh one card without touching the rest.
 var page = template.Must(template.New("page").Parse(
 	shellHTML + siteHTML + servicesHTML + progressHTML +
-		loginHTML + setupHTML + installHTML))
+		loginHTML + setupHTML + installHTML + debugHTML))
 
 const styleHTML = `<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -132,8 +132,23 @@ const servicesHTML = `{{define "services"}}
     </tr>
     {{end}}
   </table>
+  <p class="empty" style="margin:.7rem 0 0">Something misbehaving?
+     The <a href="/debug">diagnostics page</a> has a report you can copy into a bug report.</p>
 </section>
 {{end}}`
+
+const debugHTML = `{{define "debug"}}<!doctype html>
+<html lang="en">
+` + styleHTML + `
+<header><div><h1>mdl-demo <span>— diagnostics</span></h1>
+<p class="sub"><a href="/">← back</a></p></div></header>
+<section>
+  <p class="empty">Copy the whole block below into a bug report
+     (<a href="https://github.com/mutms/mdl-demo/issues">github.com/mutms/mdl-demo/issues</a>).
+     It contains service states and recent log lines, no passwords.</p>
+  <pre class="log cred">{{.DebugReport}}</pre>
+</section>
+</html>{{end}}`
 
 const progressHTML = `{{define "progress"}}
 {{if .Job.Kind}}

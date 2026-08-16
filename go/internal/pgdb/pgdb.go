@@ -7,7 +7,10 @@
 package pgdb
 
 import (
+	"fmt"
+	"os/exec"
 	"strconv"
+	"time"
 
 	"github.com/mutms/mdl-demo/internal/execx"
 )
@@ -19,11 +22,31 @@ func psql(args ...string) []string {
 	return append([]string{"-u", "postgres", "--", "psql", "-v", "ON_ERROR_STOP=1", "-qAt"}, args...)
 }
 
+// WaitReady blocks until the local cluster accepts connections — under
+// `mdl-demo init` there is no systemd ordering, and after an unclean stop
+// postgres spends a few seconds in WAL recovery before listening.
+func WaitReady(logf execx.Logf) error {
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		if err := exec.Command("runuser", "-u", "postgres", "--", "pg_isready", "-q").Run(); err == nil {
+			return nil
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("postgresql not ready after 30s")
+		}
+		logf("Waiting for PostgreSQL to accept connections…")
+		time.Sleep(2 * time.Second)
+	}
+}
+
 // Provision idempotently creates (or re-passwords) the role and creates the
 // database if missing. Mirrors mpd's SQL: the role via a DO block (CREATE
 // ROLE has no IF NOT EXISTS), the database probed first because CREATE
 // DATABASE cannot run inside a DO block.
 func Provision(logf execx.Logf) error {
+	if err := WaitReady(logf); err != nil {
+		return err
+	}
 	role := `DO $$ BEGIN
 	IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '` + Name + `') THEN
 		CREATE ROLE "` + Name + `" LOGIN PASSWORD '` + Name + `';

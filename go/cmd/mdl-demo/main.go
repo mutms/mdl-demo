@@ -14,11 +14,13 @@ import (
 	"os"
 	"time"
 
+	"github.com/mutms/mdl-demo/internal/initd"
 	"github.com/mutms/mdl-demo/internal/moodle"
 	"github.com/mutms/mdl-demo/internal/pgdb"
 	"github.com/mutms/mdl-demo/internal/recipes"
 	"github.com/mutms/mdl-demo/internal/site"
 	"github.com/mutms/mdl-demo/internal/state"
+	"github.com/mutms/mdl-demo/internal/svc"
 	"github.com/mutms/mdl-demo/internal/webui"
 )
 
@@ -32,6 +34,8 @@ Usage:
 
 Commands:
   serve     run the management web UI on port 8081 (systemd service)
+  init      run as PID 1: supervise all services without systemd (for
+            runtimes that cannot boot systemd, e.g. WSL containers preview)
   recipes   list available site recipes from /srv/extra/mdl-recipes
   install   install the demo site from a recipe
   status    show demo site status
@@ -49,6 +53,13 @@ func main() {
 		os.Exit(2)
 	}
 
+	// Booted without systemd (mdl-demo init is PID 1): CLI invocations run
+	// as separate processes and must not try systemctl. `init` itself
+	// replaces this with the full supervisor.
+	if !svc.UnderSystemd() {
+		svc.Use(svc.NewStandalone())
+	}
+
 	var err error
 	switch cmd := os.Args[1]; cmd {
 	case "version", "--version", "-v":
@@ -57,6 +68,8 @@ func main() {
 		fmt.Print(usage)
 	case "serve":
 		err = serve()
+	case "init":
+		err = initd.Run(version)
 	case "recipes":
 		err = cmdRecipes()
 	case "install":

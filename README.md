@@ -41,8 +41,17 @@ yourself in the meantime.
 
 ## Installation of Windows 11
 
-Microsoft WSL containers are in preview; instructions will follow once verified.
-The image is expected to run the same way with the ports mapped to localhost.
+Requires WSL with the WSL containers preview (`wsl --update --pre-release`).
+The preview cannot boot systemd yet, so the container starts mdl-demo's
+built-in service supervisor instead (same image, different entrypoint — note
+the `--tmpfs /run`, which the supervisor needs):
+
+```powershell
+wslc run -d --name demo --tmpfs /run --entrypoint /usr/bin/mdl-demo -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 -e MDL_DEMO_PASSWORD=choose-a-password ghcr.io/mutms/mdl-demo init
+```
+
+Open <http://localhost:8081> and continue as on macOS. Once WSL containers
+can boot systemd, the plain macOS-style command will work here too.
 
 ## AI disclosure
 

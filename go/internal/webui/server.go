@@ -10,7 +10,6 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +17,7 @@ import (
 	"github.com/mutms/mdl-demo/internal/recipes"
 	"github.com/mutms/mdl-demo/internal/site"
 	"github.com/mutms/mdl-demo/internal/state"
+	"github.com/mutms/mdl-demo/internal/svc"
 )
 
 const addr = ":8081"
@@ -63,6 +63,7 @@ func Serve(out io.Writer, version string) error {
 			s.renderFragment(w, r, section)
 		}))
 	}
+	mux.HandleFunc("GET /debug", s.auth(s.handleDebug))
 	mux.HandleFunc("GET /install", s.auth(s.handleInstallForm))
 	mux.HandleFunc("POST /install", s.auth(s.csrf(s.handleInstall)))
 	mux.HandleFunc("POST /reset", s.auth(s.csrf(s.handleReset)))
@@ -136,6 +137,7 @@ type view struct {
 	Recipes       []recipes.Recipe
 	Hostname      string
 	SuggestedPass string
+	DebugReport   string
 }
 
 type serviceRow struct {
@@ -155,13 +157,8 @@ func (s *Server) buildView(r *http.Request) view {
 		v.Wwwroot = st.Wwwroot
 		v.InstalledAt = st.InstalledAt.Format("2006-01-02 15:04 MST")
 	}
-	for _, unit := range []string{"apache2", "php8.3-fpm", "postgresql", "moodle-cron.timer"} {
-		status := unitStatus(unit)
-		v.Services = append(v.Services, serviceRow{
-			Name:    unit,
-			Status:  status,
-			Running: status == "active",
-		})
+	for _, s := range svc.Current().Statuses() {
+		v.Services = append(v.Services, serviceRow{Name: s.Name, Status: s.State, Running: s.Running})
 	}
 	return v
 }
@@ -303,21 +300,38 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
-// unitStatus is `systemctl is-active`, which exits nonzero for anything but
-// active — the output word (inactive/failed/…) is still what we want.
-func unitStatus(unit string) string {
-	out, err := execOutput("systemctl", "is-active", unit)
-	if out == "" && err != nil {
-		return "unknown"
+// handleDebug renders the diagnostics page: one copy-pasteable report of
+// mode, versions, state and per-service status + log tails, so an end user
+// can paste it whole into a bug report.
+func (s *Server) handleDebug(w http.ResponseWriter, r *http.Request) {
+	v := s.buildView(r)
+	var b strings.Builder
+	fmt.Fprintf(&b, "mdl-demo %s\nmode: %s\ntime: %s\n",
+		s.version, svc.Current().Mode(), time.Now().UTC().Format(time.RFC3339))
+	if v.Installed {
+		fmt.Fprintf(&b, "site: %s (%s), installed %s\n", v.Recipe, v.Wwwroot, v.InstalledAt)
+	} else {
+		b.WriteString("site: none installed\n")
 	}
-	return out
-}
-
-// execOutput keeps stdout even on nonzero exit (is-active exits 3 for
-// "inactive" while still printing the word).
-func execOutput(name string, args ...string) (string, error) {
-	out, err := exec.Command(name, args...).Output()
-	return strings.TrimSpace(string(out)), err
+	if v.Job.Kind != "" {
+		fmt.Fprintf(&b, "last operation: %s running=%v failed=%v %s\n",
+			v.Job.Kind, v.Job.Running, v.Job.Failed, v.Job.Error)
+	}
+	for _, d := range svc.Current().Diagnostics() {
+		fmt.Fprintf(&b, "\n== %s: %s", d.Name, d.State)
+		if d.PID > 0 {
+			fmt.Fprintf(&b, " pid=%d", d.PID)
+		}
+		if d.Restarts > 0 {
+			fmt.Fprintf(&b, " restarts=%d last-exit=%q", d.Restarts, d.LastExit)
+		}
+		b.WriteString(" ==\n")
+		for _, line := range d.LogTail {
+			b.WriteString(line + "\n")
+		}
+	}
+	v.DebugReport = b.String()
+	s.render(w, "debug", v)
 }
 
 func hostOnly(hostport string) string {

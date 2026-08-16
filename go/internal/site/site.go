@@ -15,6 +15,7 @@ import (
 	"github.com/mutms/mdl-demo/internal/pgdb"
 	"github.com/mutms/mdl-demo/internal/recipes"
 	"github.com/mutms/mdl-demo/internal/state"
+	"github.com/mutms/mdl-demo/internal/svc"
 )
 
 type Options struct {
@@ -102,8 +103,8 @@ func Install(logf execx.Logf, o Options) error {
 		return err
 	}
 
-	logf("Enabling Moodle cron timer")
-	if err := execx.Run(logf, "", "systemctl", "enable", "--now", "moodle-cron.timer"); err != nil {
+	logf("Enabling Moodle cron")
+	if err := svc.Current().EnableCron(logf); err != nil {
 		return err
 	}
 
@@ -127,8 +128,8 @@ func Install(logf execx.Logf, o Options) error {
 // Reset tears the site down to the just-built image state. The web UI
 // password survives; the site fields are cleared. Idempotent.
 func Reset(logf execx.Logf) error {
-	logf("Disabling Moodle cron timer")
-	_ = execx.Run(logf, "", "systemctl", "disable", "--now", "moodle-cron.timer")
+	logf("Disabling Moodle cron")
+	_ = svc.Current().DisableCron(logf)
 
 	logf("Restoring placeholder site on port 8080")
 	if err := apache.RestorePlaceholder(logf); err != nil {

@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/mutms/mdl-demo/internal/execx"
+	"github.com/mutms/mdl-demo/internal/svc"
 )
 
 const sitePath = "/etc/apache2/sites-available/demo.conf"
@@ -55,7 +56,7 @@ func EnableDemo(logf execx.Logf) error {
 	if err := execx.Run(logf, "", "a2ensite", "-q", "demo"); err != nil {
 		return err
 	}
-	return execx.Run(logf, "", "systemctl", "reload", "apache2")
+	return svc.Current().ReloadApache(logf)
 }
 
 // RestorePlaceholder switches 8080 back and removes the generated vhost.
@@ -69,5 +70,5 @@ func RestorePlaceholder(logf execx.Logf) error {
 	if err := os.Remove(sitePath); err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	return execx.Run(logf, "", "systemctl", "reload", "apache2")
+	return svc.Current().ReloadApache(logf)
 }
