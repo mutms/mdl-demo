@@ -12,7 +12,7 @@ import "html/template"
 // fetches to refresh one card without touching the rest.
 var page = template.Must(template.New("page").Parse(
 	shellHTML + siteHTML + servicesHTML + progressHTML +
-		loginHTML + setupHTML + installHTML + debugHTML + footerHTML))
+		loginHTML + setupHTML + installHTML + debugHTML + footerHTML + copyHTML))
 
 // footerHTML is the GPLv3 "Appropriate Legal Notice" (GPL-3.0 §0, §5(d)):
 // it identifies the author and the project on every page of the interactive
@@ -97,7 +97,43 @@ const styleHTML = `<meta charset="utf-8">
     border-radius: 50%; vertical-align: -.1em;
     animation: spin 1s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-</style>`
+  button.copy { background: none; border: 0; padding: 0 .1rem; margin-left: .15rem;
+    color: var(--dim); cursor: pointer; vertical-align: -.15em; line-height: 1; }
+  button.copy:hover { color: var(--fg); }
+  button.copy.ok { color: var(--ok); }
+</style>` + scriptHTML
+
+// copyHTML is the copy-to-clipboard button; invoked as {{template "copy" <text>}}.
+// The click handler lives in scriptHTML (delegated, so it survives htmx swaps).
+const copyHTML = `{{define "copy"}}<button class="copy" type="button" data-copy="{{.}}" title="Copy to clipboard"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>{{end}}`
+
+// navigator.clipboard needs a secure context — http://localhost qualifies, but
+// browsing via a LAN/VM IP does not, hence the hidden-textarea fallback.
+const scriptHTML = `<script>
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('button.copy');
+  if (!b) return;
+  var text = b.dataset.copy;
+  var done = function () {
+    var old = b.innerHTML;
+    b.classList.add('ok');
+    b.innerHTML = '✓';
+    setTimeout(function () { b.classList.remove('ok'); b.innerHTML = old; }, 1200);
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done);
+  } else {
+    var t = document.createElement('textarea');
+    t.value = text;
+    t.style.position = 'fixed';
+    t.style.opacity = '0';
+    document.body.appendChild(t);
+    t.select();
+    try { document.execCommand('copy'); done(); } catch (err) {}
+    t.remove();
+  }
+});
+</script>`
 
 const shellHTML = `{{define "page"}}<!doctype html>
 <html lang="en">
@@ -127,7 +163,7 @@ const siteHTML = `{{define "site"}}
       {{/* New tab on purpose: landing inside Moodle in the same tab loses
            people — they forget the management UI's address to get back. */}}
       <td class="meta"><a href="{{.Wwwroot}}" target="_blank" rel="noopener">{{.Wwwroot}}</a></td>
-      <td class="meta">admin / <span class="cred">{{if .AdminPass}}{{.AdminPass}}{{else}}(set at install){{end}}</span></td>
+      <td class="meta">admin / <span class="cred">{{if .AdminPass}}{{.AdminPass}}{{else}}(set at install){{end}}</span>{{if .AdminPass}}{{template "copy" .AdminPass}}{{end}}</td>
       <td class="meta">{{.InstalledAt}}</td>
     </tr>
   </table>
@@ -186,7 +222,7 @@ const progressHTML = `{{define "progress"}}
   {{if .Job.Failed}}<p class="error">{{.Job.Error}}</p>{{end}}
   {{if and (not .Job.Running) (not .Job.Failed) .Job.Wwwroot}}
   <p class="success">Demo site ready: <a href="{{.Job.Wwwroot}}" target="_blank" rel="noopener">{{.Job.Wwwroot}}</a> —
-     log in as <code class="cred">admin</code> / <code class="cred">{{.Job.AdminPass}}</code></p>
+     log in as <code class="cred">admin</code> / <code class="cred">{{.Job.AdminPass}}</code>{{template "copy" .Job.AdminPass}}</p>
   {{end}}
   {{/* Finished: the result card is the news — the log shrinks to a small
        scrollable strip instead of dominating the page. */}}
