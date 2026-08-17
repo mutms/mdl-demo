@@ -17,6 +17,10 @@ make image        # sudo podman build -t mdl-demo -f containers/base/Containerfi
 make run          # sudo podman run -d --name demo -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 mdl-demo
 ```
 
+On macOS, `./rebuild-mdl-demo-test.sh` is the whole loop: pull, native
+single-arch build (no push), fresh `mdl-demo-test` container on the same
+ports. Code-only rebuilds finish in seconds thanks to layer caching.
+
 Verification after `make run`:
 
 ```sh
