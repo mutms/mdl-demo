@@ -127,29 +127,56 @@ func Install(logf execx.Logf, o Options) error {
 }
 
 // Reset tears the site down to the just-built image state. The web UI
-// password survives; the site fields are cleared. Idempotent.
+// password survives; the site fields are cleared.
+//
+// Reset is the escape hatch, so it must land the container back in a clean,
+// usable "no site" state from ANY starting condition — a healthy site, a
+// half-assembled tree left by an interrupted install, a broken install. Every
+// step therefore runs best-effort and logs its own failure instead of aborting
+// the ones after it. What makes the result "reset worked" for the user is the
+// placeholder serving on 8080 and the cleared state the UI reads; a database or
+// a tree that will not go away (e.g. Postgres momentarily down) is a warning to
+// retry, not a reason to leave the site stuck — so only those two steps can
+// fail the reset, and it stays safe to run again.
 func Reset(logf execx.Logf) error {
+	warn := func(what string, err error) {
+		if err != nil {
+			logf("warning: " + what + " failed: " + err.Error())
+		}
+	}
+
 	logf("Disabling Moodle cron")
 	_ = svc.Current().DisableCron(logf)
 
 	logf("Restoring placeholder site on port 8080")
-	if err := apache.RestorePlaceholder(logf); err != nil {
-		return err
-	}
+	placeholderErr := apache.RestorePlaceholder(logf)
+	warn("restoring the placeholder", placeholderErr)
 
 	logf("Dropping database " + pgdb.Name)
-	if err := pgdb.Drop(logf); err != nil {
-		return err
-	}
+	warn("dropping the database", pgdb.Drop(logf))
 
 	logf("Removing code tree and data")
-	if err := clearDir(moodle.Root); err != nil {
-		return err
-	}
-	if err := os.RemoveAll(moodle.Dataroot); err != nil {
-		return err
-	}
+	warn("removing the code tree", clearDir(moodle.Root))
+	warn("removing the data directory", os.RemoveAll(moodle.Dataroot))
 
+	logf("Clearing the recorded site")
+	stateErr := clearSiteState()
+	warn("clearing the recorded site", stateErr)
+
+	// Only the two steps that make the UI usable again can fail the reset;
+	// everything else is recoverable by installing or resetting once more.
+	switch {
+	case placeholderErr != nil:
+		return fmt.Errorf("could not restore the placeholder site: %w", placeholderErr)
+	case stateErr != nil:
+		return fmt.Errorf("could not clear the recorded site: %w", stateErr)
+	}
+	return nil
+}
+
+// clearSiteState wipes the recorded site fields, leaving the web UI password
+// (and anything else in state) intact.
+func clearSiteState() error {
 	s, err := state.Load()
 	if err != nil {
 		return err

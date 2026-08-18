@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Removed default management password from README
+- Fixed custom init system race conditions
+- More reliable site reset command
 
 ## [0.1.1] - 2026-08-18
 

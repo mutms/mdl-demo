@@ -72,6 +72,11 @@ type Supervisor struct {
 	byPID    map[int]*proc
 	procs    []*proc
 	stopping atomic.Bool
+
+	// execWaiters routes the exit status of a child started through StartChild
+	// (execx, in-process) back to its waiter, keyed by pid — the same job
+	// byPID does for a supervised service. Both are read under mu by reap.
+	execWaiters map[int]chan syscall.WaitStatus
 }
 
 // Run boots the world and blocks until shutdown. Never returns in normal
@@ -81,7 +86,12 @@ func Run(version string) error {
 		fmt.Fprintln(os.Stderr, "warning: mdl-demo init is not PID 1 — zombie reaping is not guaranteed")
 	}
 
-	s := &Supervisor{version: version, started: time.Now(), byPID: map[int]*proc{}}
+	s := &Supervisor{
+		version:     version,
+		started:     time.Now(),
+		byPID:       map[int]*proc{},
+		execWaiters: map[int]chan syscall.WaitStatus{},
+	}
 	svc.Use(s)
 
 	if err := prepareRunDirs(); err != nil {
@@ -108,6 +118,14 @@ func Run(version string) error {
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, sigStop)
 	go s.reap(sigchld)
 
+	// Only now, with the reaper running, may in-process execx route its waits
+	// through it. Everything before this point (prepareRunDirs) ran before the
+	// reaper and used a plain cmd.Wait(), which is safe with no reaper to race.
+	// Everything after — the supervised services below still use their own
+	// exitCh path; the web UI's install/reset jobs and the cron ticker use
+	// execx — waits through the reaper instead of losing the race with ECHILD.
+	execx.StartChild = s.StartChild
+
 	for _, p := range s.procs {
 		go s.supervise(p)
 	}
@@ -126,9 +144,10 @@ func Run(version string) error {
 }
 
 // reap is the single wait()er: it collects every exited child — supervised
-// or reparented orphan — and routes supervised exits to their proc. Using
-// one central Wait4 avoids the classic Go-PID-1 race between a global
-// reaper and per-child cmd.Wait().
+// service, in-process execx command, or reparented orphan — and routes each
+// exit to whoever is waiting for it. Using one central Wait4 avoids the classic
+// Go-PID-1 race between a global reaper and per-child cmd.Wait(): nothing else
+// calls Wait, so the status is never stolen out from under its waiter.
 func (s *Supervisor) reap(sigchld <-chan os.Signal) {
 	for range sigchld {
 		for {
@@ -140,11 +159,65 @@ func (s *Supervisor) reap(sigchld <-chan os.Signal) {
 			s.mu.Lock()
 			p := s.byPID[pid]
 			delete(s.byPID, pid)
+			ch := s.execWaiters[pid]
+			delete(s.execWaiters, pid)
 			s.mu.Unlock()
-			if p != nil {
+			// A pid is in at most one map; both channels are buffered, so the
+			// send never blocks the reaper. An unmatched pid is a reparented
+			// orphan — reaped here, with nothing to route.
+			switch {
+			case p != nil:
 				p.exitCh <- ws
+			case ch != nil:
+				ch <- ws
 			}
 		}
+	}
+}
+
+// StartChild starts cmd and returns a wait function yielding its exit status.
+// It is execx.StartChild inside PID 1: code in this process must not call
+// cmd.Wait(), because reap already collects every child with Wait4(-1) and a
+// second waiter loses the race with ECHILD ("waitid: no child processes").
+//
+// Start() and the registration run under mu, the lock reap takes before it
+// routes a reaped pid. The child cannot be reaped before it exists (after
+// Start), so reap's routing lookup blocks until the pid is registered here —
+// which closes the start-vs-reap window without holding mu across the Wait4
+// syscall itself.
+func (s *Supervisor) StartChild(cmd *exec.Cmd) (func() error, error) {
+	s.mu.Lock()
+	if err := cmd.Start(); err != nil {
+		s.mu.Unlock()
+		return nil, err
+	}
+	ch := make(chan syscall.WaitStatus, 1)
+	s.execWaiters[cmd.Process.Pid] = ch
+	s.mu.Unlock()
+
+	wait := func() error {
+		ws := <-ch
+		// reap already collected the pid; Release just drops os/exec's handle
+		// so nothing later tries (and fails) to Wait on it.
+		_ = cmd.Process.Release()
+		return waitStatusError(ws)
+	}
+	return wait, nil
+}
+
+// waitStatusError renders a WaitStatus the way exec.Cmd.Wait would: nil for a
+// clean exit, otherwise a message matching os/exec's own wording, since the
+// routed wait path cannot hand back an *exec.ExitError.
+func waitStatusError(ws syscall.WaitStatus) error {
+	switch {
+	case ws.Exited() && ws.ExitStatus() == 0:
+		return nil
+	case ws.Exited():
+		return fmt.Errorf("exit status %d", ws.ExitStatus())
+	case ws.Signaled():
+		return fmt.Errorf("signal: %s", ws.Signal())
+	default:
+		return fmt.Errorf("unexpected wait status %#x", ws)
 	}
 }
 

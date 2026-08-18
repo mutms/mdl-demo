@@ -50,10 +50,10 @@ func WriteVhost(docroot string, router bool) error {
 
 // EnableDemo switches 8080 from the placeholder to the Moodle vhost.
 func EnableDemo(logf execx.Logf) error {
-	if err := execx.Run(logf, "", "a2dissite", "-q", "000-placeholder"); err != nil {
+	if err := disableSite(logf, "000-placeholder"); err != nil {
 		return err
 	}
-	if err := execx.Run(logf, "", "a2ensite", "-q", "demo"); err != nil {
+	if err := enableSite(logf, "demo"); err != nil {
 		return err
 	}
 	return svc.Current().ReloadApache(logf)
@@ -61,14 +61,42 @@ func EnableDemo(logf execx.Logf) error {
 
 // RestorePlaceholder switches 8080 back and removes the generated vhost.
 func RestorePlaceholder(logf execx.Logf) error {
-	if err := execx.Run(logf, "", "a2dissite", "-q", "demo"); err != nil {
+	if err := disableSite(logf, "demo"); err != nil {
 		return err
 	}
-	if err := execx.Run(logf, "", "a2ensite", "-q", "000-placeholder"); err != nil {
+	if err := enableSite(logf, "000-placeholder"); err != nil {
 		return err
 	}
 	if err := os.Remove(sitePath); err != nil && !os.IsNotExist(err) {
 		return err
 	}
 	return svc.Current().ReloadApache(logf)
+}
+
+// enableSite enables an apache site unless it already is, and disableSite
+// disables one only if it is currently enabled. The guard keeps site switching
+// idempotent: a2ensite/a2dissite exit non-zero (and, for a never-enabled site,
+// print "Site … does not exist!") when asked to move a site that is already in
+// the target state, which would otherwise abort a re-run of reset or install
+// partway — the exact failure seen after an interrupted reset.
+func enableSite(logf execx.Logf, name string) error {
+	if siteEnabled(name) {
+		return nil
+	}
+	return execx.Run(logf, "", "a2ensite", "-q", name)
+}
+
+func disableSite(logf execx.Logf, name string) error {
+	if !siteEnabled(name) {
+		return nil
+	}
+	return execx.Run(logf, "", "a2dissite", "-q", name)
+}
+
+// siteEnabled reports whether apache currently has the named site enabled.
+// `a2query -s <name>` exits 0 only for an enabled site (disabled or absent
+// exits non-zero), which is exactly the state these guards need.
+func siteEnabled(name string) bool {
+	_, err := execx.Output("", "a2query", "-s", name)
+	return err == nil
 }
