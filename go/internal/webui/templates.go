@@ -81,8 +81,9 @@ const styleHTML = `<meta charset="utf-8">
   dl.site dd { margin: 0; font-family: ui-monospace, SFMono-Regular, monospace;
                font-size: .82rem; color: var(--dim); overflow-wrap: anywhere; }
   dl.site dd.name { font-family: inherit; font-size: inherit; font-weight: 600; color: var(--fg); }
-  a { color: inherit; text-decoration-color: var(--line); }
-  a:hover { text-decoration-color: currentColor; }
+  a { color: inherit; text-decoration-color: var(--accent);
+      text-decoration-thickness: 1.5px; text-underline-offset: 2px; }
+  a:hover { color: var(--accent); text-decoration-thickness: 2px; }
   form.stack { display: grid; gap: .8rem; max-width: 26rem; }
   label { display: grid; gap: .25rem; font-size: .85rem; color: var(--dim); }
   input, select { font: inherit; color: var(--fg); background: var(--bg);
@@ -175,9 +176,9 @@ const siteHTML = `{{define "site"}}
     <dt>Log in as</dt><dd>admin / <span class="cred">{{if .AdminPass}}{{.AdminPass}}{{else}}(set at install){{end}}</span>{{if .AdminPass}}{{template "copy" .AdminPass}}{{end}}</dd>
     <dt>Installed</dt><dd>{{.InstalledAt}}</dd>
   </dl>
-  {{/* Actions live in a row so future ones slot in beside Reset. Back up and
-       Restore both act on data only (dataroot + database), leaving the git
-       code tree in place — so they belong here, with a site installed. */}}
+  {{/* Actions live in a row so future ones slot in beside Reset. Restore backup
+       appears in both states: here (site installed) it swaps data onto the
+       current tree; from empty it reinstalls the backup's recipe first. */}}
   <div class="row" style="margin:.9rem 0 0">
     <form method="post" action="/reset"
           onsubmit="return confirm('Wipe the demo site? The database, code tree and all data are deleted.')">
@@ -185,13 +186,19 @@ const siteHTML = `{{define "site"}}
       <button class="subtle">Reset site…</button>
     </form>
     <button class="subtle" disabled title="Coming soon">Back up data…</button>
-    <button class="subtle" disabled title="Coming soon">Restore data…</button>
+    <button class="subtle" disabled title="Coming soon">Restore backup…</button>
   </div>
   {{else if .Busy}}
   <p class="empty"><span class="spin"></span>Working — see progress below.</p>
   {{else}}
   <p class="empty">No demo site installed yet.</p>
-  <p style="margin:.9rem 0 0"><a href="/install"><button>Install a demo site…</button></a></p>
+  {{/* Restore backup works from empty because a backup records the recipe it
+       came from — restoring can reinstall that code tree, then load the data.
+       (The installed-state Restore only swaps data onto the current tree.) */}}
+  <div class="row" style="margin:.9rem 0 0">
+    <a href="/install"><button>Install a demo site…</button></a>
+    <button class="subtle" disabled title="Coming soon">Restore backup…</button>
+  </div>
   {{end}}
 </section>
 {{end}}`
