@@ -63,9 +63,6 @@ The management UI has a diagnostics page (`/debug`) with service states and
 recent logs as one copy-pasteable block — paste it into a
 [bug report](https://github.com/mutms/mdl-demo/issues) and we will take a look.
 
-The first images will appear at `ghcr.io/mutms/mdl-demo` with the v0.1
-release; until then see DEV.md for building the image yourself.
-
 ## Contributing
 
 Forks and contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
