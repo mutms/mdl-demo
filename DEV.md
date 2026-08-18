@@ -134,8 +134,9 @@ Release checklist:
 
 ```sh
 container registry login ghcr.io
-container build --arch arm64 --arch amd64 --build-arg VERSION=v0.1.1 -t ghcr.io/mutms/mdl-demo:v0.1.1 -f containers/base/Containerfile .
-container image push ghcr.io/mutms/mdl-demo:v0.1.1
-container image tag ghcr.io/mutms/mdl-demo:v0.1.1 ghcr.io/mutms/mdl-demo:latest
+
+container build --arch arm64 --arch amd64 --build-arg VERSION=v0.1.2 -t ghcr.io/mutms/mdl-demo:v0.1.2 -f containers/base/Containerfile .
+container image push ghcr.io/mutms/mdl-demo:v0.1.2
+container image tag ghcr.io/mutms/mdl-demo:v0.1.2 ghcr.io/mutms/mdl-demo:latest
 container image push ghcr.io/mutms/mdl-demo:latest
 ```
