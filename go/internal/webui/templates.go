@@ -251,7 +251,7 @@ const progressHTML = `{{define "jobstatus"}}
      box to the bottom. When the job ends the cursor is absent, so polling
      stops. */}}
 {{define "logtail"}}{{range .Job.Log}}{{.}}
-{{end}}{{if .Job.Running}}<span id="logcursor" hx-get="/joblog?from={{.Job.Next}}" hx-trigger="every 1s" hx-target="this" hx-swap="outerHTML scroll:#joblog:bottom"></span>{{end}}{{end}}
+{{end}}{{if .Job.Running}}<span id="logcursor" hx-get="/joblog?from={{.Job.Next}}" hx-trigger="every 500ms" hx-target="this" hx-swap="outerHTML scroll:#joblog:bottom"></span>{{end}}{{end}}
 
 {{define "progress"}}
 {{if .Job.Kind}}
