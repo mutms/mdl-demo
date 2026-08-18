@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Assemble the Moodle tree with `mudev clone --shallow` to improve performance
+- Management UI visual improvements
 
 ### Fixed
 

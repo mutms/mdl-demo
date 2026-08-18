@@ -74,6 +74,13 @@ const styleHTML = `<meta charset="utf-8">
   .badge.err { background: var(--errbg); color: var(--err); }
   .empty { color: var(--dim); font-size: .88rem; padding: .3rem 0; }
   .cred { user-select: all; }
+  dl.site { display: grid; grid-template-columns: max-content 1fr;
+            gap: .45rem .9rem; margin: 0; align-items: baseline; }
+  dl.site dt { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em;
+               color: var(--dim); font-weight: 600; }
+  dl.site dd { margin: 0; font-family: ui-monospace, SFMono-Regular, monospace;
+               font-size: .82rem; color: var(--dim); overflow-wrap: anywhere; }
+  dl.site dd.name { font-family: inherit; font-size: inherit; font-weight: 600; color: var(--fg); }
   a { color: inherit; text-decoration-color: var(--line); }
   a:hover { text-decoration-color: currentColor; }
   form.stack { display: grid; gap: .8rem; max-width: 26rem; }
@@ -83,6 +90,7 @@ const styleHTML = `<meta charset="utf-8">
   button { font: inherit; font-weight: 600; border: 0; border-radius: 7px;
     padding: .5rem .9rem; background: var(--accent); color: #fff; cursor: pointer; }
   button.subtle { background: var(--idlebg); color: var(--fg); font-weight: 400; }
+  button:disabled { opacity: .5; cursor: not-allowed; }
   .error { color: var(--err); background: var(--errbg); border-radius: 7px;
     padding: .5rem .7rem; font-size: .88rem; }
   .success { color: var(--ok); background: var(--okbg); border-radius: 7px;
@@ -147,8 +155,8 @@ const shellHTML = `{{define "page"}}<!doctype html>
   <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="subtle">Log out</button></form>
 </header>
 
-{{template "progress" .}}
 {{template "site" .}}
+{{template "progress" .}}
 {{template "services" .}}
 {{template "footer" .}}
 </html>{{end}}`
@@ -157,24 +165,30 @@ const siteHTML = `{{define "site"}}
 <section id="site" hx-get="/section/site" hx-trigger="every 5s" hx-swap="outerHTML">
   <h2>Demo site</h2>
   {{if .Installed}}
-  <table>
-    <tr><th>Recipe</th><th>URL</th><th>Log in as</th><th>Installed</th></tr>
-    <tr>
-      <td class="name">{{.Recipe}}</td>
-      {{/* New tab on purpose: landing inside Moodle in the same tab loses
-           people — they forget the management UI's address to get back. */}}
-      <td class="meta"><a href="{{.Wwwroot}}" target="_blank" rel="noopener">{{.Wwwroot}}</a></td>
-      <td class="meta">admin / <span class="cred">{{if .AdminPass}}{{.AdminPass}}{{else}}(set at install){{end}}</span>{{if .AdminPass}}{{template "copy" .AdminPass}}{{end}}</td>
-      <td class="meta">{{.InstalledAt}}</td>
-    </tr>
-  </table>
-  <form method="post" action="/reset" class="row" style="margin:.9rem 0 0"
-        onsubmit="return confirm('Wipe the demo site? The database, code tree and all data are deleted.')">
-    <input type="hidden" name="csrf" value="{{.CSRF}}">
-    <button class="subtle">Reset site…</button>
-  </form>
+  {{/* One site per container, so its details are a description list, not a
+       one-row table. */}}
+  <dl class="site">
+    <dt>Recipe</dt><dd class="name">{{.Recipe}}</dd>
+    {{/* New tab on purpose: landing inside Moodle in the same tab loses
+         people — they forget the management UI's address to get back. */}}
+    <dt>URL</dt><dd><a href="{{.Wwwroot}}" target="_blank" rel="noopener">{{.Wwwroot}}</a></dd>
+    <dt>Log in as</dt><dd>admin / <span class="cred">{{if .AdminPass}}{{.AdminPass}}{{else}}(set at install){{end}}</span>{{if .AdminPass}}{{template "copy" .AdminPass}}{{end}}</dd>
+    <dt>Installed</dt><dd>{{.InstalledAt}}</dd>
+  </dl>
+  {{/* Actions live in a row so future ones slot in beside Reset. Back up and
+       Restore both act on data only (dataroot + database), leaving the git
+       code tree in place — so they belong here, with a site installed. */}}
+  <div class="row" style="margin:.9rem 0 0">
+    <form method="post" action="/reset"
+          onsubmit="return confirm('Wipe the demo site? The database, code tree and all data are deleted.')">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <button class="subtle">Reset site…</button>
+    </form>
+    <button class="subtle" disabled title="Coming soon">Back up data…</button>
+    <button class="subtle" disabled title="Coming soon">Restore data…</button>
+  </div>
   {{else if .Busy}}
-  <p class="empty"><span class="spin"></span>Working — see progress above.</p>
+  <p class="empty"><span class="spin"></span>Working — see progress below.</p>
   {{else}}
   <p class="empty">No demo site installed yet.</p>
   <p style="margin:.9rem 0 0"><a href="/install"><button>Install a demo site…</button></a></p>
