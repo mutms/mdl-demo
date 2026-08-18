@@ -32,9 +32,16 @@ RUN apt-get update \
 
 ENV GOTOOLCHAIN=local CGO_ENABLED=0 GOFLAGS=-trimpath
 
-RUN git clone --depth 1 --branch "$MUDEV_REF" https://github.com/mutms/mudev /src/mudev \
-    && cd /src/mudev/go \
-    && GOARCH=$TARGETARCH go build -o /out/mudev ./cmd/mudev
+# Stamp mudev's version the way its own Makefile does — `git describe` reads
+# the nearest tag, so `mudev --version` in the image identifies the exact build
+# (and its compiled-in release flavours), the way it does everywhere else. A
+# full clone, not --depth 1: describe needs the tag in history, and the mudev
+# repo is small source, so the extra history is cheap.
+RUN git clone --branch "$MUDEV_REF" https://github.com/mutms/mudev /src/mudev \
+    && cd /src/mudev \
+    && MUDEV_VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo dev)" \
+    && cd go \
+    && GOARCH=$TARGETARCH go build -ldflags "-X main.version=$MUDEV_VERSION" -o /out/mudev ./cmd/mudev
 
 COPY go/ /src/mdl-demo/
 RUN cd /src/mdl-demo \
