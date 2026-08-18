@@ -33,7 +33,7 @@ RUN apt-get update \
 ENV GOTOOLCHAIN=local CGO_ENABLED=0 GOFLAGS=-trimpath
 
 RUN git clone --depth 1 --branch "$MUDEV_REF" https://github.com/mutms/mudev /src/mudev \
-    && cd /src/mudev \
+    && cd /src/mudev/go \
     && GOARCH=$TARGETARCH go build -o /out/mudev ./cmd/mudev
 
 COPY go/ /src/mdl-demo/
