@@ -89,8 +89,9 @@ const styleHTML = `<meta charset="utf-8">
     padding: .5rem .7rem; margin: 0 0 .7rem; }
   pre.log { font: .78rem/1.45 ui-monospace, SFMono-Regular, monospace;
     background: var(--bg); border: 1px solid var(--line); border-radius: 7px;
-    padding: .7rem .8rem; overflow-x: auto; white-space: pre-wrap; margin: 0; }
-  pre.log.short { max-height: 5cm; overflow-y: auto; }
+    padding: .7rem .8rem; overflow: auto; white-space: pre-wrap; margin: 0;
+    max-height: 22rem; }
+  pre.log.short { max-height: 5cm; }
   .row { display: flex; gap: .6rem; align-items: center; }
   .spin { display: inline-block; width: .85em; height: .85em; margin-right: .35em;
     border: 2px solid var(--line); border-top-color: var(--accent);
@@ -212,9 +213,12 @@ const debugHTML = `{{define "debug"}}<!doctype html>
 {{template "footer" .}}
 </html>{{end}}`
 
-const progressHTML = `{{define "progress"}}
-{{if .Job.Kind}}
-<section id="progress" {{if .Job.Running}}hx-get="/section/progress" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
+// The progress section is split so the two halves refresh independently: the
+// status header polls itself and swaps whole (it is tiny), while the log below
+// it is never re-rendered wholesale — it only grows. jobstatus and logtail are
+// both addressable fragments (/section/jobstatus and /joblog).
+const progressHTML = `{{define "jobstatus"}}
+<div id="jobstatus"{{if .Job.Running}} hx-get="/section/jobstatus" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
   <h2>{{if eq .Job.Kind "install"}}Installation{{else}}Reset{{end}}
       {{if .Job.Running}}<span class="spin"></span><span class="badge on">running</span>
       {{else if .Job.Failed}}<span class="badge err">failed</span>
@@ -224,10 +228,22 @@ const progressHTML = `{{define "progress"}}
   <p class="success">Demo site ready: <a href="{{.Job.Wwwroot}}" target="_blank" rel="noopener">{{.Job.Wwwroot}}</a> —
      log in as <code class="cred">admin</code> / <code class="cred">{{.Job.AdminPass}}</code>{{template "copy" .Job.AdminPass}}</p>
   {{end}}
-  {{/* Finished: the result card is the news — the log shrinks to a small
-       scrollable strip instead of dominating the page. */}}
-  <pre class="log{{if not .Job.Running}} short{{end}}">{{range .Job.Tail}}{{.}}
-{{end}}</pre>
+</div>
+{{end}}
+
+{{/* logtail is both the initial log body and every incremental poll response:
+     the batch of lines, then — while the job runs — a self-replacing cursor
+     that fetches only what comes after .Job.Next and, on swap, scrolls the log
+     box to the bottom. When the job ends the cursor is absent, so polling
+     stops. */}}
+{{define "logtail"}}{{range .Job.Log}}{{.}}
+{{end}}{{if .Job.Running}}<span id="logcursor" hx-get="/joblog?from={{.Job.Next}}" hx-trigger="every 1s" hx-target="this" hx-swap="outerHTML scroll:#joblog:bottom"></span>{{end}}{{end}}
+
+{{define "progress"}}
+{{if .Job.Kind}}
+<section id="progress">
+  {{template "jobstatus" .}}
+  <pre id="joblog" class="log{{if not .Job.Running}} short{{end}}">{{template "logtail" .}}</pre>
 </section>
 {{end}}
 {{end}}`

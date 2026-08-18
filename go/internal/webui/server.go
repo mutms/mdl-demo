@@ -57,12 +57,13 @@ func Serve(out io.Writer, version string) error {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", s.auth(s.handleHome))
-	for _, name := range []string{"site", "services", "progress"} {
+	for _, name := range []string{"site", "services", "progress", "jobstatus"} {
 		section := name
 		mux.HandleFunc("GET /section/"+section, s.auth(func(w http.ResponseWriter, r *http.Request) {
 			s.renderFragment(w, r, section)
 		}))
 	}
+	mux.HandleFunc("GET /joblog", s.auth(s.handleJobLog))
 	mux.HandleFunc("GET /debug", s.auth(s.handleDebug))
 	mux.HandleFunc("GET /install", s.auth(s.handleInstallForm))
 	mux.HandleFunc("POST /install", s.auth(s.csrf(s.handleInstall)))
@@ -178,6 +179,15 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) renderFragment(w http.ResponseWriter, r *http.Request, section string) {
 	s.render(w, section, s.buildView(r))
+}
+
+// handleJobLog streams the log incrementally: given the caller's last line
+// number (?from=N), it renders only the lines after it plus a fresh cursor, so
+// the browser appends rather than reflowing the whole log. The "logtail"
+// template ends in a self-replacing poller carrying the new line number.
+func (s *Server) handleJobLog(w http.ResponseWriter, r *http.Request) {
+	from, _ := strconv.Atoi(r.URL.Query().Get("from"))
+	s.render(w, "logtail", view{Job: s.job.logSince(from)})
 }
 
 func (s *Server) handleLoginForm(w http.ResponseWriter, r *http.Request) {

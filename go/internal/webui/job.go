@@ -14,6 +14,7 @@ type job struct {
 	mu      sync.Mutex
 	kind    string // "install" | "reset"
 	lines   []string
+	dropped int // lines evicted from the front of lines, so an absolute line number stays a stable cursor
 	running bool
 	err     error
 	// adminPass is shown once on the success card and never persisted.
@@ -24,9 +25,12 @@ type job struct {
 func (j *job) logf(line string) {
 	j.mu.Lock()
 	j.lines = append(j.lines, line)
-	// Bound memory: keep the newest few thousand lines.
+	// Bound memory: keep the newest few thousand lines. dropped tracks what
+	// fell off the front so the log tail's cursor keeps counting through it.
 	if len(j.lines) > 4000 {
-		j.lines = j.lines[len(j.lines)-4000:]
+		drop := len(j.lines) - 4000
+		j.lines = j.lines[drop:]
+		j.dropped += drop
 	}
 	j.mu.Unlock()
 }
@@ -39,7 +43,7 @@ func (j *job) start(kind string, fn func(execx.Logf) error) bool {
 		return false
 	}
 	j.kind, j.running, j.err = kind, true, nil
-	j.lines = nil
+	j.lines, j.dropped = nil, 0
 	j.mu.Unlock()
 
 	go func() {
@@ -56,11 +60,20 @@ type jobView struct {
 	Running bool
 	Failed  bool
 	Error   string
-	Tail    []string
+	// Log is the batch of log lines to render — the recent tail on a full
+	// section render, or just the new lines on an incremental /joblog poll.
+	Log []string
+	// Next is the absolute number of the first not-yet-sent line: the cursor
+	// the log tail passes back so the next poll asks only for what came after.
+	Next int
 	// Success-card fields, only set after a finished install.
 	Wwwroot   string
 	AdminPass string
 }
+
+// logTailLimit bounds how many trailing lines a full render carries; the
+// incremental poll streams in everything after that.
+const logTailLimit = 400
 
 func (j *job) view() jobView {
 	j.mu.Lock()
@@ -71,14 +84,37 @@ func (j *job) view() jobView {
 		v.Error = j.err.Error()
 	}
 	tail := j.lines
-	if len(tail) > 30 {
-		tail = tail[len(tail)-30:]
+	if len(tail) > logTailLimit {
+		tail = tail[len(tail)-logTailLimit:]
 	}
-	v.Tail = append([]string(nil), tail...)
+	v.Log = append([]string(nil), tail...)
+	v.Next = j.dropped + len(j.lines)
 	if j.kind == "install" && !j.running && j.err == nil {
 		v.Wwwroot, v.AdminPass = j.wwwroot, j.adminPass
 	}
 	return v
+}
+
+// logSince returns only the log lines at or after absolute line number from,
+// plus the new cursor — what the incremental log tail polls for. A from that
+// predates the retained window (evicted lines) simply starts at the oldest
+// line still held.
+func (j *job) logSince(from int) jobView {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	start := from - j.dropped
+	if start < 0 {
+		start = 0
+	}
+	if start > len(j.lines) {
+		start = len(j.lines)
+	}
+	return jobView{
+		Kind:    j.kind,
+		Running: j.running,
+		Log:     append([]string(nil), j.lines[start:]...),
+		Next:    j.dropped + len(j.lines),
+	}
 }
 
 func (j *job) startInstall(o site.Options) bool {
