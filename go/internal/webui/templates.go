@@ -81,9 +81,8 @@ const styleHTML = `<meta charset="utf-8">
   dl.site dd { margin: 0; font-family: ui-monospace, SFMono-Regular, monospace;
                font-size: .82rem; color: var(--dim); overflow-wrap: anywhere; }
   dl.site dd.name { font-family: inherit; font-size: inherit; font-weight: 600; color: var(--fg); }
-  a { color: inherit; text-decoration-color: var(--accent);
-      text-decoration-thickness: 1.5px; text-underline-offset: 2px; }
-  a:hover { color: var(--accent); text-decoration-thickness: 2px; }
+  a { color: inherit; text-underline-offset: 2px; }
+  a:hover { color: var(--accent); text-decoration-color: var(--accent); }
   form.stack { display: grid; gap: .8rem; max-width: 26rem; }
   label { display: grid; gap: .25rem; font-size: .85rem; color: var(--dim); }
   input, select { font: inherit; color: var(--fg); background: var(--bg);
