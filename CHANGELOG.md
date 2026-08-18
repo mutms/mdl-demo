@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - More reliable site reset command
 - mudev binary is built with appropriate version
 - Redesigned log display area
+- Fixed display issues when container rebuilt when browser open
 
 ## [0.1.1] - 2026-08-18
 

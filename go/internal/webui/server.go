@@ -99,15 +99,32 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		if st.PasswordHash == "" {
-			http.Redirect(w, r, "/setup", http.StatusSeeOther)
+			redirect(w, r, "/setup")
 			return
 		}
 		if _, ok := s.sessions.get(r); !ok {
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			redirect(w, r, "/login")
 			return
 		}
 		next(w, r)
 	}
+}
+
+// redirect sends the browser to url. For a background htmx request (a section
+// poll, say) an ordinary 303 is wrong: htmx follows it and swaps the whole
+// target page into the little fragment slot, so the login/setup page ends up
+// nested and repeated. The HX-Redirect header instead makes htmx navigate the
+// whole window — which is what a poll that just discovered "you must log in /
+// set a password" should do. This is exactly the case a container rebuild hits:
+// the fresh container has no password, and the open page's polls must land on
+// the setup page, not paint it inside themselves.
+func redirect(w http.ResponseWriter, r *http.Request, url string) {
+	if r.Header.Get("HX-Request") == "true" {
+		w.Header().Set("HX-Redirect", url)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	http.Redirect(w, r, url, http.StatusSeeOther)
 }
 
 // csrf verifies the per-session token and the request origin on
