@@ -22,7 +22,7 @@ Requires [Apple container](https://github.com/apple/container) (macOS 15+ on
 Apple silicon):
 
 ```sh
-container run -d --name demo -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 -e MDL_DEMO_PASSWORD=choose-a-password ghcr.io/mutms/mdl-demo
+container run -d --name demo -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 ghcr.io/mutms/mdl-demo
 ```
 
 ## Windows 11
@@ -31,7 +31,7 @@ Runs on the new [WSL containers](https://devblogs.microsoft.com/commandline/wsl-
 preview (`wsl --update --pre-release`):
 
 ```powershell
-wslc run -d --name demo -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 -e MDL_DEMO_PASSWORD=choose-a-password ghcr.io/mutms/mdl-demo
+wslc run -d --name demo -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 ghcr.io/mutms/mdl-demo
 ```
 
 ## Linux
@@ -39,7 +39,7 @@ wslc run -d --name demo -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 -e MDL_DEM
 Rootful podman (any compatible container runtime works the same way):
 
 ```sh
-sudo podman run -d --name demo -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 -e MDL_DEMO_PASSWORD=choose-a-password ghcr.io/mutms/mdl-demo
+sudo podman run -d --name demo -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 ghcr.io/mutms/mdl-demo
 ```
 
 ## Managing demo containers
