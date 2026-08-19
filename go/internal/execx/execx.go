@@ -43,7 +43,22 @@ func startChild(cmd *exec.Cmd) (func() error, error) {
 // Run executes name args... in dir (empty = inherited cwd), streaming
 // combined stdout+stderr lines to logf.
 func Run(logf Logf, dir string, name string, args ...string) error {
-	logf("$ " + name + " " + strings.Join(args, " "))
+	return RunSecret(logf, nil, dir, name, args...)
+}
+
+// RunSecret is Run with secret values masked in the echoed command line — the
+// command still runs with the real values. For a password passed as a CLI flag
+// (e.g. --adminpass=…), which would otherwise be printed into a log that streams
+// to a possibly-shared screen.
+func RunSecret(logf Logf, secrets []string, dir string, name string, args ...string) error {
+	echo := "$ " + name + " " + strings.Join(args, " ")
+	for _, s := range secrets {
+		if s != "" {
+			echo = strings.ReplaceAll(echo, s, "***")
+		}
+	}
+	logf(echo)
+
 	cmd := exec.Command(name, args...)
 	cmd.Dir = dir
 

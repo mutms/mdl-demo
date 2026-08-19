@@ -60,19 +60,25 @@ func resolveDir(rel string) (string, error) {
 // RunCLI runs a Moodle CLI script as www-data — the same user php-fpm runs
 // as, so everything either writes into the dataroot is usable by the other.
 func RunCLI(logf execx.Logf, rel string, args ...string) error {
+	return runCLI(logf, nil, rel, args...)
+}
+
+// runCLI is RunCLI with secret values masked in the echoed command line, for a
+// script invoked with a password on its argv.
+func runCLI(logf execx.Logf, secrets []string, rel string, args ...string) error {
 	dir, err := resolveDir(rel)
 	if err != nil {
 		return err
 	}
 	cmd := append([]string{"-u", "www-data", "--", "php", rel}, args...)
-	return execx.Run(logf, dir, "runuser", cmd...)
+	return execx.RunSecret(logf, secrets, dir, "runuser", cmd...)
 }
 
 // InstallDatabase runs Moodle's CLI installer against the already-written
 // config.php. Flags proven by mpd's install tooling. The admin email is
 // deliberately hardcoded — a demo site never sends mail (noemailever).
 func InstallDatabase(logf execx.Logf, fullname, adminpass string) error {
-	return RunCLI(logf, "admin/cli/install_database.php",
+	return runCLI(logf, []string{adminpass}, "admin/cli/install_database.php",
 		"--agree-license",
 		"--fullname="+fullname,
 		"--shortname=demo",

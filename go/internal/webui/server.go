@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -57,7 +58,7 @@ func Serve(out io.Writer, version string) error {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", s.auth(s.handleHome))
-	for _, name := range []string{"site", "services", "progress", "jobstatus"} {
+	for _, name := range []string{"site", "users", "services", "progress", "jobstatus"} {
 		section := name
 		mux.HandleFunc("GET /section/"+section, s.auth(func(w http.ResponseWriter, r *http.Request) {
 			s.renderFragment(w, r, section)
@@ -147,22 +148,30 @@ type view struct {
 	Busy        bool
 	Recipe      string
 	Wwwroot     string
-	AdminPass   string
 	InstalledAt string
 	Services    []serviceRow
+	Users       []userRow
 	Job         jobView
 	// Page-specific fields.
-	Error         string
-	Recipes       []recipes.Recipe
-	Hostname      string
-	SuggestedPass string
-	DebugReport   string
+	Error        string
+	Recipes      []recipes.Recipe
+	SuggestedURL string
+	DebugReport  string
 }
 
 type serviceRow struct {
 	Name    string
 	Status  string
 	Running bool
+}
+
+// userRow is one Moodle account shown in the accounts section — its plaintext
+// password comes straight from state (the container owns it for a throwaway
+// site). Only admin exists today; seeded teachers/students will join the list.
+type userRow struct {
+	Username string
+	Password string
+	Role     string
 }
 
 func (s *Server) buildView(r *http.Request) view {
@@ -174,8 +183,8 @@ func (s *Server) buildView(r *http.Request) view {
 		v.Installed = true
 		v.Recipe = st.Recipe
 		v.Wwwroot = st.Wwwroot
-		v.AdminPass = st.AdminPass
 		v.InstalledAt = st.InstalledAt.Format("2006-01-02 15:04 MST")
+		v.Users = []userRow{{Username: "admin", Password: st.AdminPass, Role: "Site admin"}}
 	}
 	for _, s := range svc.Current().Statuses() {
 		v.Services = append(v.Services, serviceRow{Name: s.Name, Status: s.State, Running: s.Running})
@@ -289,31 +298,52 @@ func (s *Server) handleInstallForm(w http.ResponseWriter, r *http.Request) {
 		v.Error = err.Error()
 	}
 	v.Recipes = list
-	v.Hostname = hostOnly(r.Host)
-	// "Demo-…3!" keeps every Moodle default password-policy class present
-	// (upper, lower, digit, symbol) whatever the random part contains.
-	v.SuggestedPass = "Demo-" + randomToken()[:8] + "3!"
+	// Suggest the whole URL, not a host + a port field: "port" is jargon a
+	// teacher should never meet. The console is on 8081, the site on the host
+	// port mapped to 8080; if that mapping differs (or a tunnel is used), the
+	// operator just edits the address.
+	v.SuggestedURL = "http://" + hostOnly(r.Host) + ":8080"
 	s.render(w, "install", v)
 }
 
 func (s *Server) handleInstall(w http.ResponseWriter, r *http.Request) {
-	port, err := strconv.Atoi(r.FormValue("port"))
-	host := hostOnly(strings.TrimSpace(r.FormValue("host")))
-	adminpass := r.FormValue("adminpass")
-	if err != nil || port < 1 || port > 65535 || host == "" || len(adminpass) < 8 {
-		http.Error(w, "invalid form values", http.StatusBadRequest)
+	wwwroot, err := normalizeWwwroot(r.FormValue("wwwroot"))
+	if err != nil {
+		http.Error(w, "invalid demo site URL", http.StatusBadRequest)
 		return
 	}
 	o := site.Options{
 		Recipe:    r.FormValue("recipe"),
-		AdminPass: adminpass,
-		Wwwroot:   fmt.Sprintf("http://%s:%d", host, port),
+		AdminPass: randomAdminPass(),
+		Wwwroot:   wwwroot,
 	}
 	if !s.job.startInstall(o) {
 		http.Error(w, "another operation is already running", http.StatusConflict)
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// randomAdminPass generates the Moodle admin password. It is generated, never
+// asked for: a demo that may be exposed to the internet must not hang on
+// someone choosing a strong password. The "Demo-…3!" shape keeps every default
+// policy class present (upper, lower, digit, symbol) whatever the random middle
+// is; the result is stored (plain text, for a throwaway site) and shown masked
+// so the operator can retrieve it later without it ever being typed.
+func randomAdminPass() string {
+	return "Demo-" + randomToken()[:8] + "3!"
+}
+
+// normalizeWwwroot validates the demo site URL the operator entered and returns
+// the wwwroot Moodle bakes in: an http(s) URL with a host and no trailing slash
+// ($CFG->wwwroot is stored without one). A path is kept — Moodle can live under
+// a subpath — but the empty/garbage cases are rejected.
+func normalizeWwwroot(raw string) (string, error) {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return "", fmt.Errorf("not an http(s) URL")
+	}
+	return strings.TrimRight(u.String(), "/"), nil
 }
 
 func (s *Server) handleReset(w http.ResponseWriter, r *http.Request) {

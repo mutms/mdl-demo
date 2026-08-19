@@ -11,8 +11,8 @@ import "html/template"
 // section/page. Sections are addressable on their own — that is what htmx
 // fetches to refresh one card without touching the rest.
 var page = template.Must(template.New("page").Parse(
-	shellHTML + siteHTML + servicesHTML + progressHTML +
-		loginHTML + setupHTML + installHTML + debugHTML + footerHTML + copyHTML))
+	shellHTML + siteHTML + usersHTML + servicesHTML + helpHTML + progressHTML +
+		loginHTML + setupHTML + installHTML + debugHTML + footerHTML + copyHTML + secretHTML))
 
 // footerHTML is the GPLv3 "Appropriate Legal Notice" (GPL-3.0 §0, §5(d)):
 // it identifies the author and the project on every page of the interactive
@@ -68,6 +68,7 @@ const styleHTML = `<meta charset="utf-8">
   td.meta { color: var(--dim); font-family: ui-monospace, SFMono-Regular, monospace;
             font-size: .82rem; }
   .name { font-weight: 600; }
+  .role { color: var(--dim); font-weight: 400; font-size: .82rem; }
   .badge { display: inline-block; font-size: .72rem; padding: .05rem .5rem;
            border-radius: 999px; background: var(--idlebg); color: var(--idle); }
   .badge.on { background: var(--okbg); color: var(--ok); }
@@ -106,28 +107,50 @@ const styleHTML = `<meta charset="utf-8">
     border-radius: 50%; vertical-align: -.1em;
     animation: spin 1s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  button.copy { background: none; border: 0; padding: 0 .1rem; margin-left: .15rem;
-    color: var(--dim); cursor: pointer; vertical-align: -.15em; line-height: 1; }
-  button.copy:hover { color: var(--fg); }
+  button.copy, button.reveal { background: none; border: 0; padding: 0 .1rem;
+    margin-left: .15rem; color: var(--dim); cursor: pointer;
+    vertical-align: -.15em; line-height: 1; }
+  button.copy:hover, button.reveal:hover { color: var(--fg); }
   button.copy.ok { color: var(--ok); }
+  button.reveal { margin-left: .55rem; }
+  button.reveal.on { color: var(--accent); }
+  .secret code[data-copy] { cursor: pointer; }
+  .secret-val { user-select: all; }
 </style>` + scriptHTML
 
 // copyHTML is the copy-to-clipboard button; invoked as {{template "copy" <text>}}.
 // The click handler lives in scriptHTML (delegated, so it survives htmx swaps).
 const copyHTML = `{{define "copy"}}<button class="copy" type="button" data-copy="{{.}}" title="Copy to clipboard"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>{{end}}`
 
+// secretHTML masks a credential by default — a classroom console lives on a
+// projector, and an admin password does not belong on the wall. The value is
+// shown as dots with a reveal (eye) toggle and the copy button, so it can be
+// grabbed without ever being displayed. Not real secrecy — the value is in the
+// DOM for copy to reach — just "off the screen unless asked". Invoked as
+// {{template "secret" <text>}}; the reveal handler lives in scriptHTML.
+// Order and spacing are deliberate: copy (the safe, everyday action) sits right
+// next to the value, and reveal (which puts the password on screen) is pushed
+// off to the side with a gap, so a reach for copy cannot accidentally unmask it.
+const secretHTML = `{{define "secret"}}<span class="secret"><code class="cred secret-val" data-secret="{{.}}" data-copy="{{.}}" title="Click to copy">••••••••</code>{{template "copy" .}}<button class="reveal" type="button" title="Reveal" aria-label="Reveal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></span>{{end}}
+{{define "secretcopy"}}<span class="secret"><code class="cred" data-copy="{{.}}" title="Click to copy">••••••••</code>{{template "copy" .}}</span>{{end}}`
+
 // navigator.clipboard needs a secure context — http://localhost qualifies, but
 // browsing via a LAN/VM IP does not, hence the hidden-textarea fallback.
 const scriptHTML = `<script>
 document.addEventListener('click', function (e) {
-  var b = e.target.closest('button.copy');
+  var b = e.target.closest('[data-copy]');
   if (!b) return;
   var text = b.dataset.copy;
+  // Flash the check on the copy icon, never on the masked value — swapping the
+  // dots' content would make them jump. Clicking the dots or the icon both land
+  // here; either way the feedback is on the icon and the ••••• stays put.
+  var wrap = b.closest('.secret');
+  var fb = (wrap && wrap.querySelector('button.copy')) || b;
   var done = function () {
-    var old = b.innerHTML;
-    b.classList.add('ok');
-    b.innerHTML = '✓';
-    setTimeout(function () { b.classList.remove('ok'); b.innerHTML = old; }, 1200);
+    var old = fb.innerHTML;
+    fb.classList.add('ok');
+    fb.innerHTML = '✓';
+    setTimeout(function () { fb.classList.remove('ok'); fb.innerHTML = old; }, 1200);
   };
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(text).then(done);
@@ -142,6 +165,15 @@ document.addEventListener('click', function (e) {
     t.remove();
   }
 });
+document.addEventListener('click', function (e) {
+  var r = e.target.closest('button.reveal');
+  if (!r) return;
+  var val = r.parentNode.querySelector('.secret-val');
+  if (!val) return;
+  var shown = r.classList.toggle('on');
+  val.textContent = shown ? val.dataset.secret : '••••••••';
+  r.title = shown ? 'Hide' : 'Reveal';
+});
 </script>`
 
 const shellHTML = `{{define "page"}}<!doctype html>
@@ -149,15 +181,16 @@ const shellHTML = `{{define "page"}}<!doctype html>
 ` + styleHTML + `
 <header>
   <div>
-    <h1>mdl-demo <span>— Moodle demo manager</span></h1>
+    <h1>mdl-demo <span>— Moodle demo console</span></h1>
     <p class="sub">{{.Version}}</p>
   </div>
   <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="subtle">Log out</button></form>
 </header>
 
 {{template "site" .}}
+{{template "users" .}}
 {{template "progress" .}}
-{{template "services" .}}
+{{template "help" .}}
 {{template "footer" .}}
 </html>{{end}}`
 
@@ -172,7 +205,6 @@ const siteHTML = `{{define "site"}}
     {{/* New tab on purpose: landing inside Moodle in the same tab loses
          people — they forget the management UI's address to get back. */}}
     <dt>URL</dt><dd><a href="{{.Wwwroot}}" target="_blank" rel="noopener">{{.Wwwroot}}</a></dd>
-    <dt>Log in as</dt><dd>admin / <span class="cred">{{if .AdminPass}}{{.AdminPass}}{{else}}(set at install){{end}}</span>{{if .AdminPass}}{{template "copy" .AdminPass}}{{end}}</dd>
     <dt>Installed</dt><dd>{{.InstalledAt}}</dd>
   </dl>
   {{/* Actions live in a row so future ones slot in beside Reset. Restore backup
@@ -202,6 +234,34 @@ const siteHTML = `{{define "site"}}
 </section>
 {{end}}`
 
+// The accounts section sits between the site summary and the log — its own
+// space to grow as teachers and students are seeded, and the home for the
+// per-user login links. Deliberately NOT polled: it holds revealable passwords,
+// and a periodic swap would re-mask one the moment you showed it.
+// The accounts list refreshes only while a job runs and stops once idle — a
+// bare wrapper div polls during install/reset so the section appears the moment
+// the site is ready, then goes quiet so a revealed password is never re-masked
+// out from under you. The card itself renders only when a site is installed.
+const usersHTML = `{{define "users"}}
+<div id="users"{{if .Busy}} hx-get="/section/users" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
+{{if .Installed}}
+<section>
+  <h2>Accounts</h2>
+  <table>
+    <tr><th>User</th><th>Password</th><th></th></tr>
+    {{range .Users}}
+    <tr>
+      <td class="name">{{.Username}} <span class="role">{{.Role}}</span></td>
+      <td>{{template "secret" .Password}}</td>
+      <td><button class="subtle" disabled title="Coming soon">Log in…</button></td>
+    </tr>
+    {{end}}
+  </table>
+</section>
+{{end}}
+</div>
+{{end}}`
+
 const servicesHTML = `{{define "services"}}
 <section id="services" hx-get="/section/services" hx-trigger="every 5s" hx-swap="outerHTML">
   <h2>Services</h2>
@@ -214,8 +274,15 @@ const servicesHTML = `{{define "services"}}
     </tr>
     {{end}}
   </table>
-  <p class="empty" style="margin:.7rem 0 0">Something misbehaving?
-     The <a href="/debug">diagnostics page</a> has a report you can copy into a bug report.</p>
+</section>
+{{end}}`
+
+// help is an unmarked (headingless) section on the dashboard — the diagnostics
+// pointer for now, and room for a note or two later.
+const helpHTML = `{{define "help"}}
+<section>
+  <p class="empty">Something misbehaving? The <a href="/debug">diagnostics page</a>
+     has a report you can copy into a bug report.</p>
 </section>
 {{end}}`
 
@@ -224,6 +291,7 @@ const debugHTML = `{{define "debug"}}<!doctype html>
 ` + styleHTML + `
 <header><div><h1>mdl-demo <span>— diagnostics</span></h1>
 <p class="sub"><a href="/">← back</a></p></div></header>
+{{template "services" .}}
 <section>
   <p class="empty">Copy the whole block below into a bug report
      (<a href="https://github.com/mutms/mdl-demo/issues">github.com/mutms/mdl-demo/issues</a>).
@@ -246,7 +314,7 @@ const progressHTML = `{{define "jobstatus"}}
   {{if .Job.Failed}}<p class="error">{{.Job.Error}}</p>{{end}}
   {{if and (not .Job.Running) (not .Job.Failed) .Job.Wwwroot}}
   <p class="success">Demo site ready: <a href="{{.Job.Wwwroot}}" target="_blank" rel="noopener">{{.Job.Wwwroot}}</a> —
-     log in as <code class="cred">admin</code> / <code class="cred">{{.Job.AdminPass}}</code>{{template "copy" .Job.AdminPass}}</p>
+     log in as <code class="cred">admin</code> / {{template "secretcopy" .Job.AdminPass}}</p>
   {{end}}
 </div>
 {{end}}
@@ -320,19 +388,15 @@ const installHTML = `{{define "install"}}<!doctype html>
         {{end}}
       </select>
     </label>
-    <label>Moodle admin password
-      <input type="text" name="adminpass" minlength="8" value="{{.SuggestedPass}}" required>
-    </label>
-    <label>Site hostname (how your browser reaches this container)
-      <input type="text" name="host" value="{{.Hostname}}" required>
-    </label>
-    <label>Moodle port (the host port you mapped to container port 8080)
-      <input type="number" name="port" value="8080" min="1" max="65535" required>
+    <label>Demo site URL (the address you open the demo at)
+      <input type="url" name="wwwroot" value="{{.SuggestedURL}}" required>
     </label>
     <div><button>Install</button></div>
   </form>
-  <p class="empty" style="margin-top:.9rem">Installation clones several git
-  repositories and runs the Moodle installer — expect several minutes.</p>
+  <p class="empty" style="margin-top:.9rem">A strong Moodle admin password is
+  generated automatically and shown here once the site is ready. Installation
+  clones several git repositories and runs the Moodle installer — expect several
+  minutes.</p>
 </section>
 {{template "footer" .}}
 </html>{{end}}`

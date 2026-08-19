@@ -122,7 +122,9 @@ func Install(logf execx.Logf, o Options) error {
 
 	logf("")
 	logf("Demo site ready: " + o.Wwwroot)
-	logf("Log in as: admin / " + o.AdminPass)
+	// Never the password — the log streams to a screen that may be shared; it
+	// is shown (masked, with copy/reveal) on the dashboard instead.
+	logf("Log in as admin — the password is on the dashboard.")
 	return nil
 }
 
