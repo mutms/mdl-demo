@@ -30,11 +30,13 @@ if /i "%CMD%"=="--help" goto usage
 if /i "%CMD%"=="-h" goto usage
 shift
 
+rem Two checks, two different fixes: wslc is not installed at all, or it is
+rem installed but WSL is not ready to run containers. Help text goes to the
+rem user before any command is attempted.
 where wslc >nul 2>&1
-if errorlevel 1 (
-    echo mdl-demo: the 'wslc' command is missing - it comes with the WSL containers preview: wsl --update --pre-release 1>&2
-    exit /b 1
-)
+if errorlevel 1 goto nowslc
+wslc ps >nul 2>&1
+if errorlevel 1 goto wslcdown
 
 rem cmd.exe treats "=" as an argument separator, so --name="Fancy demo"
 rem arrives as two arguments: --name and "Fancy demo" (quotes stripped by %~2).
@@ -128,6 +130,25 @@ exit /b 0
 :list
 wslc ps -a | findstr /c:"CONTAINER" /c:"mdl-demo-"
 exit /b 0
+
+:nowslc
+echo mdl-demo: WSL containers ^(wslc^) are not installed. 1>&2
+echo. 1>&2
+echo   They come with the Windows Subsystem for Linux preview on Windows 11. 1>&2
+echo   In a terminal run 1>&2
+echo       wsl --update --pre-release 1>&2
+echo   then open a NEW terminal window and try this command again. 1>&2
+echo   Details: https://devblogs.microsoft.com/commandline/wsl-container-is-now-available-for-public-preview/ 1>&2
+exit /b 1
+
+:wslcdown
+echo mdl-demo: wslc is installed but not responding. 1>&2
+echo. 1>&2
+echo   Make sure WSL is up to date and running: 1>&2
+echo       wsl --update --pre-release 1>&2
+echo       wsl --status 1>&2
+echo   then try this command again. 1>&2
+exit /b 1
 
 :badport
 echo mdl-demo: the demo number must be a port between 1024 and 65534 (got "%PORT%") 1>&2

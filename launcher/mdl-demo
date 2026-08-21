@@ -40,11 +40,38 @@ EOF
 
 die() { echo "mdl-demo: $*" >&2; exit 1; }
 
-command -v container >/dev/null 2>&1 \
-    || die "the 'container' command is missing — install Apple container (https://github.com/apple/container) and run 'container system start'"
-
 cmd="${1:-help}"
 [ $# -gt 0 ] && shift
+case "$cmd" in help|--help|-h) usage; exit 0 ;; esac
+
+# Two checks, two different fixes: the CLI is not installed at all, or it is
+# installed but its background service is not running (the usual state right
+# after installation or a reboot). `ls` is the cheapest call that needs the
+# service. Help text goes to the user before any command is attempted.
+if ! command -v container >/dev/null 2>&1; then
+    cat >&2 <<EOF
+mdl-demo: Apple container is not installed.
+
+  It is Apple's container tool for macOS 15 or newer on Apple silicon:
+  download the installer package from
+      https://github.com/apple/container/releases
+  open it, then in a new terminal window run
+      container system start
+  and try this command again.
+EOF
+    exit 1
+fi
+if ! container ls >/dev/null 2>&1; then
+    cat >&2 <<EOF
+mdl-demo: Apple container is installed but not running.
+
+  Start its background service with
+      container system start
+  and try this command again.
+EOF
+    exit 1
+fi
+
 
 port=8081 name="" password="" tag="latest" positional=0
 for arg in "$@"; do
