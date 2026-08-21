@@ -58,7 +58,7 @@ clean:
 image:
 	sudo podman build -t mdl-demo --build-arg VERSION=$(VERSION) -f containers/base/Containerfile .
 
-# Throwaway local instance for manual testing (see DEV.md). No --cap-add:
+# Throwaway local instance for manual testing (see dev/README.md). No --cap-add:
 # podman's systemd mode handles cgroups, and --cap-add ALL breaks systemd
 # 257's generator sandboxing. (Apple `container` DOES need --cap-add ALL.)
 run:

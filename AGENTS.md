@@ -74,7 +74,7 @@ make run                        # flag-free podman run; UI on :8081
 
 End-to-end: `sudo podman exec demo mdl-demo install --recipe
 moodle/release/<version> --adminpass 'Test1234!'`, then browse
-http://localhost:8080. `DEV.md` has the full verification flow, multi-arch
+http://localhost:8080. `dev/README.md` has the full verification flow, multi-arch
 builds (build on an Apple silicon Mac — fastest) and release steps.
 
 Typical extension points: new UI feature → handler in

@@ -10,7 +10,7 @@ assistant productive in this codebase quickly).
 
 - **Build & check**: `make build test vet fmt-check` must pass; `make image`
   + `make run` (rootful podman) is the smoke test. Full end-to-end
-  verification steps are in `DEV.md`.
+  verification steps are in `dev/README.md`.
 - **Keep it dependency-free**: the Go module is standard library only, built
   with Debian trixie's Go (`GOTOOLCHAIN=local`). Talk to
   [mudev](https://github.com/mutms/mudev) as a binary, do not import it.
