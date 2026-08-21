@@ -147,6 +147,10 @@ document.addEventListener('click', function (e) {
   var wrap = b.closest('.secret');
   var fb = (wrap && wrap.querySelector('button.copy')) || b;
   var done = function () {
+    // Skip if the check is already showing (a double-click) — re-entering here
+    // would capture the ✓ as "old" and restore it to ✓, leaving it stuck. The
+    // copy above still happened; only the redundant flash is dropped.
+    if (fb.classList.contains('ok')) return;
     var old = fb.innerHTML;
     fb.classList.add('ok');
     fb.innerHTML = '✓';
