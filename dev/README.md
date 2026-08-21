@@ -121,22 +121,34 @@ database `demo`). A different Moodle version = new container.
 ## Releasing OCI packages to ghcr.io
 
 Images are published to GitHub Container Registry as
-`ghcr.io/mutms/mdl-demo` (the README's run commands point there). Forked the
-repo? The same instructions work as-is — just replace `mutms/mdl-demo` with
-your own `<owner>/<repo>` in the commands below (and in your README).
+`ghcr.io/mutms/mdl-demo` (the README's run commands point there). Releases
+are built on an Apple silicon Mac with `dev/github-publish.sh`, which builds
+both architectures natively — no emulation — and pushes `:vX.Y.Z` and
+`:latest`.
+
+The script takes the version from git and refuses to run unless HEAD is
+exactly on a `vX.Y.Z` tag that is already on origin and the working tree is
+clean, so an unreleased or modified tree can never reach the registry.
 
 Release checklist:
 
-1. Replace the versions in the following commands to match the release tag
-2. Update CHANGELOG.md and commit/push to GitHub repo
-3. Tag the release commit and push git tag to GitHub
-4. Run the following commands from macOS to build and publish OCI images:
+1. Move the `[Unreleased]` entries in `CHANGELOG.md` under a new
+   `[X.Y.Z] - YYYY-MM-DD` heading, commit and push.
+2. Tag that commit and push the tag:
+   `git tag -a vX.Y.Z -m 'Release vX.Y.Z' && git push origin vX.Y.Z`
+3. On the Mac, check out the tag, log in (interactive — credentials never
+   go into scripts) and publish:
 
 ```sh
+git fetch --tags && git checkout vX.Y.Z
 container registry login ghcr.io
-
-container build --arch arm64 --arch amd64 --build-arg VERSION=v0.1.2 -t ghcr.io/mutms/mdl-demo:v0.1.2 -f containers/base/Containerfile .
-container image push ghcr.io/mutms/mdl-demo:v0.1.2
-container image tag ghcr.io/mutms/mdl-demo:v0.1.2 ghcr.io/mutms/mdl-demo:latest
-container image push ghcr.io/mutms/mdl-demo:latest
+dev/github-publish.sh
 ```
+
+First release only: the new package is private by default — make it public
+in the package settings on GitHub, otherwise the README's run commands fail
+with an authentication error.
+
+Forked the repo? Set `IMAGE` to your own registry name
+(`IMAGE=ghcr.io/<owner>/<repo> dev/github-publish.sh`) and replace
+`mutms/mdl-demo` in your README's run commands.
