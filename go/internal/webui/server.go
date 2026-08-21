@@ -1,4 +1,5 @@
-// Package webui is the management UI on container port 8081: a small
+// Package webui is the management UI on container port 8081 (the outside
+// port is the demo's identity, see state.State.ConsolePort): a small
 // password-protected dashboard (mpd-portal style — htmx fragments over
 // html/template string constants) that installs and resets the demo site.
 package webui
@@ -10,7 +11,6 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -32,28 +32,16 @@ type Server struct {
 	job      *job
 }
 
-// Serve runs the UI until the process is stopped; systemd owns the
-// lifecycle. If MDL_DEMO_PASSWORD was passed at container creation and no
-// password is stored yet, it is adopted now.
+// Serve runs the UI until the process is stopped; the init supervisor owns
+// the lifecycle. Before the listener opens, the container environment is
+// adopted into state once: MDL_DEMO_PASSWORD (if no password is stored yet),
+// MDL_DEMO_PORT and MDL_DEMO_NAME. Anything exec'd into the container after
+// this point (the CLI, `mdl-demo url`) can rely on the identity being there.
 func Serve(out io.Writer, version string) error {
 	s := &Server{version: version, sessions: newSessions(), job: &job{}}
 
-	if pw := passwordFromPID1(); pw != "" {
-		st, err := state.Load()
-		if err != nil {
-			return err
-		}
-		if st.PasswordHash == "" {
-			hash, err := hashPassword(pw)
-			if err != nil {
-				return err
-			}
-			st.PasswordHash = hash
-			if err := st.Save(); err != nil {
-				return err
-			}
-			fmt.Fprintln(out, "adopted management password from MDL_DEMO_PASSWORD")
-		}
+	if err := adoptEnv(out); err != nil {
+		return err
 	}
 
 	mux := http.NewServeMux()
@@ -88,6 +76,32 @@ func Serve(out io.Writer, version string) error {
 	}
 	fmt.Fprintf(out, "mdl-demo web UI listening on %s\n", addr)
 	return server.ListenAndServe()
+}
+
+func adoptEnv(out io.Writer) error {
+	st, err := state.Load()
+	if err != nil {
+		return err
+	}
+	changed := false
+	if pw := state.ContainerEnv("MDL_DEMO_PASSWORD"); pw != "" && st.PasswordHash == "" {
+		hash, err := hashPassword(pw)
+		if err != nil {
+			return err
+		}
+		st.PasswordHash = hash
+		changed = true
+		fmt.Fprintln(out, "adopted management password from MDL_DEMO_PASSWORD")
+	}
+	warn := func(line string) { fmt.Fprintln(out, "warning: "+line) }
+	if st.AdoptIdentity(state.ContainerEnv("MDL_DEMO_PORT"), state.ContainerEnv("MDL_DEMO_NAME"), warn) {
+		changed = true
+		fmt.Fprintf(out, "demo identity: %s (console port %d, site port %d)\n", st.Title(), st.Port(), st.SitePort())
+	}
+	if changed {
+		return st.Save()
+	}
+	return nil
 }
 
 // auth gates a handler behind the password: unset password → forced setup,
@@ -142,7 +156,12 @@ func (s *Server) csrf(next http.HandlerFunc) http.HandlerFunc {
 }
 
 type view struct {
-	Version     string
+	Version string
+	// ID, Name and Title identify this demo (see state.State): every page
+	// shows them so several consoles open side by side stay apart.
+	ID          string
+	Name        string
+	Title       string
 	CSRF        string
 	Installed   bool
 	Busy        bool
@@ -156,6 +175,8 @@ type view struct {
 	Error        string
 	Recipes      []recipes.Recipe
 	SuggestedURL string
+	Fullname     string
+	Shortname    string
 	DebugReport  string
 }
 
@@ -174,8 +195,21 @@ type userRow struct {
 	Role     string
 }
 
+// baseView is the view every page starts from, logged in or not: version
+// and the demo identity.
+func (s *Server) baseView() view {
+	v := view{Version: s.version}
+	st, err := state.Load()
+	if err != nil {
+		st = &state.State{}
+	}
+	v.ID, v.Name, v.Title = st.ID(), st.Name, st.Title()
+	return v
+}
+
 func (s *Server) buildView(r *http.Request) view {
-	v := view{Version: s.version, Job: s.job.view(), Busy: !s.job.idle()}
+	v := s.baseView()
+	v.Job, v.Busy = s.job.view(), !s.job.idle()
 	if sess, ok := s.sessions.get(r); ok {
 		v.CSRF = sess.csrf
 	}
@@ -217,7 +251,14 @@ func (s *Server) handleJobLog(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleLoginForm(w http.ResponseWriter, r *http.Request) {
-	s.render(w, "login", view{Version: s.version})
+	s.render(w, "login", s.baseView())
+}
+
+// viewError is a bare page view carrying an error message.
+func (s *Server) viewError(msg string) view {
+	v := s.baseView()
+	v.Error = msg
+	return v
 }
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
@@ -226,13 +267,13 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.sessions.throttled(r) {
-		s.render(w, "login", view{Error: "Too many failed attempts — try again later."})
+		s.render(w, "login", s.viewError("Too many failed attempts — try again later."))
 		return
 	}
 	st, err := state.Load()
 	if err != nil || st.PasswordHash == "" || !verifyPassword(st.PasswordHash, r.FormValue("password")) {
 		s.sessions.recordFail(r)
-		s.render(w, "login", view{Error: "Wrong password."})
+		s.render(w, "login", s.viewError("Wrong password."))
 		return
 	}
 	s.sessions.start(w)
@@ -245,7 +286,7 @@ func (s *Server) handleSetupForm(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
-	s.render(w, "setup", view{Version: s.version})
+	s.render(w, "setup", s.baseView())
 }
 
 // handleSetup sets the initial password. Only possible while none is set —
@@ -266,11 +307,11 @@ func (s *Server) handleSetup(w http.ResponseWriter, r *http.Request) {
 	}
 	pw, pw2 := r.FormValue("password"), r.FormValue("password2")
 	if len(pw) < 8 {
-		s.render(w, "setup", view{Error: "Password must be at least 8 characters."})
+		s.render(w, "setup", s.viewError("Password must be at least 8 characters."))
 		return
 	}
 	if pw != pw2 {
-		s.render(w, "setup", view{Error: "Passwords do not match."})
+		s.render(w, "setup", s.viewError("Passwords do not match."))
 		return
 	}
 	hash, err := hashPassword(pw)
@@ -299,15 +340,25 @@ func (s *Server) handleInstallForm(w http.ResponseWriter, r *http.Request) {
 	}
 	v.Recipes = list
 	// Suggest the whole URL, not a host + a port field: "port" is jargon a
-	// teacher should never meet. The console is on 8081, the site on the host
-	// port mapped to 8080; if that mapping differs (or a tunnel is used), the
-	// operator just edits the address.
-	v.SuggestedURL = "http://" + hostOnly(r.Host) + ":8080"
+	// teacher should never meet. The site is on the console's port + 1 at the
+	// host the browser used for the console — or on whatever `mdl-demo url`
+	// recorded when a proxy or tunnel sits in front; the operator can still
+	// edit the address.
+	st, err := state.Load()
+	if err != nil {
+		st = &state.State{}
+	}
+	v.SuggestedURL = st.SiteURLFor(hostOnly(r.Host))
+	v.Fullname = st.Name
+	v.Shortname = st.Name
+	if v.Shortname == "" {
+		v.Shortname = "demo"
+	}
 	s.render(w, "install", v)
 }
 
 func (s *Server) handleInstall(w http.ResponseWriter, r *http.Request) {
-	wwwroot, err := normalizeWwwroot(r.FormValue("wwwroot"))
+	wwwroot, err := site.NormalizeURL(r.FormValue("wwwroot"))
 	if err != nil {
 		http.Error(w, "invalid demo site URL", http.StatusBadRequest)
 		return
@@ -316,6 +367,8 @@ func (s *Server) handleInstall(w http.ResponseWriter, r *http.Request) {
 		Recipe:    r.FormValue("recipe"),
 		AdminPass: randomAdminPass(),
 		Wwwroot:   wwwroot,
+		Fullname:  strings.TrimSpace(r.FormValue("fullname")),
+		Shortname: strings.TrimSpace(r.FormValue("shortname")),
 	}
 	if !s.job.startInstall(o) {
 		http.Error(w, "another operation is already running", http.StatusConflict)
@@ -332,18 +385,6 @@ func (s *Server) handleInstall(w http.ResponseWriter, r *http.Request) {
 // so the operator can retrieve it later without it ever being typed.
 func randomAdminPass() string {
 	return "Demo-" + randomToken()[:8] + "3!"
-}
-
-// normalizeWwwroot validates the demo site URL the operator entered and returns
-// the wwwroot Moodle bakes in: an http(s) URL with a host and no trailing slash
-// ($CFG->wwwroot is stored without one). A path is kept — Moodle can live under
-// a subpath — but the empty/garbage cases are rejected.
-func normalizeWwwroot(raw string) (string, error) {
-	u, err := url.Parse(strings.TrimSpace(raw))
-	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
-		return "", fmt.Errorf("not an http(s) URL")
-	}
-	return strings.TrimRight(u.String(), "/"), nil
 }
 
 func (s *Server) handleReset(w http.ResponseWriter, r *http.Request) {
@@ -367,6 +408,16 @@ func (s *Server) handleDebug(w http.ResponseWriter, r *http.Request) {
 	var b strings.Builder
 	fmt.Fprintf(&b, "mdl-demo %s\nmode: %s\ntime: %s\n",
 		s.version, svc.Current().Mode(), time.Now().UTC().Format(time.RFC3339))
+	if st, err := state.Load(); err == nil {
+		fmt.Fprintf(&b, "demo: %s (console port %d, site port %d; inside %d/%d)\n",
+			st.Title(), st.Port(), st.SitePort(), state.ConsoleListen, state.SiteListen)
+		host := hostOnly(r.Host)
+		fmt.Fprintf(&b, "urls: console %s, site %s", st.ConsoleURLFor(host), st.SiteURLFor(host))
+		if st.ConsoleURL != "" || st.SiteURL != "" {
+			b.WriteString(" (overridden with `mdl-demo url`)")
+		}
+		b.WriteString("\n")
+	}
 	if v.Installed {
 		fmt.Fprintf(&b, "site: %s (%s), installed %s\n", v.Recipe, v.Wwwroot, v.InstalledAt)
 	} else {

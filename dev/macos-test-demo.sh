@@ -22,7 +22,7 @@ container build -t mdl-demo-test \
 
 container run -d --name mdl-demo-test \
     ${MDL_DEMO_PASSWORD:+-e MDL_DEMO_PASSWORD="$MDL_DEMO_PASSWORD"} \
-    -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 \
+    -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 \
     mdl-demo-test:latest
 
 echo "web UI: http://localhost:8081"

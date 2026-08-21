@@ -1,7 +1,8 @@
 // mdl-demo is a dual-purpose binary inside the mdl-demo container:
 //
 //  1. CLI tool to manage the single demo site (recipes, install, status, reset).
-//  2. Management web UI on port 8081 (`mdl-demo serve`), run as root under systemd.
+//  2. Management web UI on container port 8081 (`mdl-demo serve`), normally
+//     run in-process by `mdl-demo init`, the container's PID 1.
 //
 // One demo site per container: a different Moodle version means a new
 // container. All paths are therefore fixed (/srv/projects/demo, /srv/data/demo,
@@ -32,15 +33,20 @@ Usage:
   mdl-demo <command> [flags]
 
 Commands:
-  serve     run only the management web UI on port 8081 (development)
+  serve     run only the management web UI on container port 8081 (development)
   init      run as PID 1: supervise all services and the web UI (the
             container's entrypoint)
   recipes   list available site recipes from /srv/extra/mdl-recipes
   install   install the demo site from a recipe
-  status    show demo site status
+  status    show demo identity and site status
   reset     wipe the demo site (database, code tree, data)
-  cron      run Moodle cron for the installed site (used by moodle-cron.service)
+  url       show or override the console/site URLs (for proxies and tunnels)
+  cron      run Moodle cron for the installed site (the init's per-minute ticker)
   version   print the mdl-demo version
+
+Ports: the console listens on 8081 and the site on 8082 inside the container.
+Outside, the console port (MDL_DEMO_PORT, default 8081) is the demo's identity
+and the site is always on the next port — map NNNN:8081 and NNNN+1:8082.
 `
 
 // stdoutLog streams orchestration output for CLI use.
@@ -70,6 +76,8 @@ func main() {
 		err = cmdStatus()
 	case "reset":
 		err = site.Reset(stdoutLog)
+	case "url":
+		err = cmdURL(os.Args[2:])
 	case "cron":
 		err = cmdCron()
 	default:
@@ -98,8 +106,9 @@ func cmdInstall(args []string) error {
 	var o site.Options
 	fs.StringVar(&o.Recipe, "recipe", "", "recipe identifier, e.g. mutms/release/5.2.2.01 (see `mdl-demo recipes`)")
 	fs.StringVar(&o.AdminPass, "adminpass", "", "Moodle admin password (required)")
-	fs.StringVar(&o.Fullname, "fullname", "", "site full name (default: the recipe's name)")
-	fs.StringVar(&o.Wwwroot, "wwwroot", "", "site URL as the browser sees it (default http://localhost:8080)")
+	fs.StringVar(&o.Fullname, "fullname", "", "site full name (default: the demo name, else the recipe's name)")
+	fs.StringVar(&o.Shortname, "shortname", "", "site short name (default: the demo name, else \"demo\")")
+	fs.StringVar(&o.Wwwroot, "wwwroot", "", "site URL as the browser sees it (default: the site URL from `mdl-demo url` for localhost)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -111,6 +120,9 @@ func cmdStatus() error {
 	if err != nil {
 		return err
 	}
+	fmt.Printf("demo:       %s\n", s.Title())
+	fmt.Printf("console:    %s\n", s.ConsoleURLFor("localhost"))
+	fmt.Printf("site url:   %s\n", s.SiteURLFor("localhost"))
 	if !s.Installed() {
 		fmt.Println("no demo site installed")
 		return nil
@@ -136,6 +148,54 @@ func cmdCron() error {
 		return nil // nothing to do on a fresh container
 	}
 	return moodle.Cron(stdoutLog) // journald captures the output
+}
+
+// cmdURL shows the URLs the console believes it and the site are reachable
+// at, or records overrides for when something sits in front of the container
+// (a reverse proxy, a tunnel) so the install form suggests the right site
+// URL. Overrides live in state.json: temporary like the container, cleared
+// with --clear. Moodle bakes wwwroot in at install, so changing the site URL
+// afterwards does not move an installed site.
+func cmdURL(args []string) error {
+	fs := flag.NewFlagSet("url", flag.ExitOnError)
+	console := fs.String("console", "", "public console URL, e.g. https://demo.example.test")
+	siteURL := fs.String("site", "", "public Moodle site URL, e.g. https://site.demo.example.test")
+	clear := fs.Bool("clear", false, "drop both overrides (back to the port-derived URLs)")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	s, err := state.Load()
+	if err != nil {
+		return err
+	}
+	changed := false
+	if *clear {
+		s.ConsoleURL, s.SiteURL = "", ""
+		changed = true
+	}
+	if *console != "" {
+		if s.ConsoleURL, err = site.NormalizeURL(*console); err != nil {
+			return fmt.Errorf("--console: %w", err)
+		}
+		changed = true
+	}
+	if *siteURL != "" {
+		if s.SiteURL, err = site.NormalizeURL(*siteURL); err != nil {
+			return fmt.Errorf("--site: %w", err)
+		}
+		changed = true
+	}
+	if changed {
+		if err := s.Save(); err != nil {
+			return err
+		}
+	}
+	fmt.Printf("console:  %s\n", s.ConsoleURLFor("localhost"))
+	fmt.Printf("site:     %s\n", s.SiteURLFor("localhost"))
+	if s.Installed() && s.Wwwroot != s.SiteURLFor("localhost") {
+		fmt.Printf("note: the installed site keeps wwwroot %s until it is reset and reinstalled\n", s.Wwwroot)
+	}
+	return nil
 }
 
 func serve() error {

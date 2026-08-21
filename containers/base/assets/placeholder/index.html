@@ -13,7 +13,17 @@
 </style>
 <h1>mdl-demo</h1>
 <p>No demo site is installed yet.</p>
-<p>Open the management UI on the port you mapped for container port
-   <code>8081</code> — with the suggested setup that is
-   <a href="http://localhost:8081">http://localhost:8081</a>.</p>
+<p>Install one from the management console — it is on the port one below
+   this page's: <a id="console" href="/">the console</a>.</p>
+<script>
+  // The console is always on site port − 1 (no port at all means a proxy
+  // sits in front and only the operator knows where the console lives).
+  var a = document.getElementById('console'), p = Number(location.port);
+  if (p > 1) {
+    a.href = location.protocol + '//' + location.hostname + ':' + (p - 1);
+    a.textContent = a.href;
+  } else {
+    a.removeAttribute('href');
+  }
+</script>
 </html>

@@ -1,0 +1,2 @@
+# cmd.exe mis-parses labels/goto in LF-only batch files; keep CRLF everywhere.
+launcher/mdl-demo.cmd text eol=crlf

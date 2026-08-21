@@ -1,0 +1,153 @@
+@echo off
+setlocal EnableExtensions
+rem mdl-demo.cmd - run Moodle/MuTMS demo containers on Windows 11 (WSL containers, wslc).
+rem
+rem   mdl-demo create [NNNN] [--name="Fancy demo"] [--password=secret] [--tag=v0.1.2]
+rem   mdl-demo start|stop|delete [NNNN]
+rem   mdl-demo list
+rem
+rem NNNN is the demo's number: the port of its management console. The
+rem container is named mdl-demo-NNNN, the console is http://localhost:NNNN and
+rem the Moodle site is on the next port, NNNN+1. Without a number, 8081 (and
+rem 8082 for the site). Pick another number to run several demos side by side.
+rem
+rem Inside the container the ports are fixed (8081 console, 8082 site); this
+rem script maps NNNN and NNNN+1 onto them and passes the number in as
+rem MDL_DEMO_PORT, so the console knows its own address.
+
+set "IMAGE=ghcr.io/mutms/mdl-demo"
+if defined MDL_DEMO_IMAGE set "IMAGE=%MDL_DEMO_IMAGE%"
+set "PORT=8081"
+set "NAME="
+set "PASSWORD="
+set "TAG=latest"
+set "POSITIONAL=0"
+
+set "CMD=%~1"
+if "%CMD%"=="" set "CMD=help"
+if /i "%CMD%"=="help" goto usage
+if /i "%CMD%"=="--help" goto usage
+if /i "%CMD%"=="-h" goto usage
+shift
+
+where wslc >nul 2>&1
+if errorlevel 1 (
+    echo mdl-demo: the 'wslc' command is missing - it comes with the WSL containers preview: wsl --update --pre-release 1>&2
+    exit /b 1
+)
+
+rem cmd.exe treats "=" as an argument separator, so --name="Fancy demo"
+rem arrives as two arguments: --name and "Fancy demo" (quotes stripped by %~2).
+:parse
+if "%~1"=="" goto parsed
+set "ARG=%~1"
+if /i "%ARG%"=="--name"     ( set "NAME=%~2" & shift & shift & goto parse )
+if /i "%ARG%"=="--password" ( set "PASSWORD=%~2" & shift & shift & goto parse )
+if /i "%ARG%"=="--tag"      ( set "TAG=%~2" & shift & shift & goto parse )
+if /i "%ARG%"=="--help"     goto usage
+if /i "%ARG%"=="-h"         goto usage
+echo %ARG%| findstr /r "^[0-9][0-9]*$" >nul
+if errorlevel 1 (
+    echo mdl-demo: unexpected argument "%ARG%" - quote names with spaces: --name="My demo" 1>&2
+    exit /b 1
+)
+set /a POSITIONAL+=1
+if %POSITIONAL% GTR 1 (
+    echo mdl-demo: only one demo number allowed 1>&2
+    exit /b 1
+)
+set "PORT=%ARG%"
+shift
+goto parse
+:parsed
+
+if %PORT% LSS 1024 goto badport
+if %PORT% GTR 65534 goto badport
+set "CNAME=mdl-demo-%PORT%"
+set /a SITE=PORT+1
+
+if /i "%CMD%"=="create" goto create
+if /i "%CMD%"=="start"  goto start
+if /i "%CMD%"=="stop"   goto stop
+if /i "%CMD%"=="delete" goto delete
+if /i "%CMD%"=="list"   goto list
+echo mdl-demo: unknown command "%CMD%" (see: mdl-demo help) 1>&2
+exit /b 1
+
+:create
+wslc inspect %CNAME% >nul 2>&1
+if not errorlevel 1 (
+    echo mdl-demo: %CNAME% already exists - "mdl-demo start %PORT%" starts it, "mdl-demo delete %PORT%" removes it 1>&2
+    exit /b 1
+)
+set "ENVS=-e MDL_DEMO_PORT=%PORT%"
+if defined NAME set "ENVS=%ENVS% -e "MDL_DEMO_NAME=%NAME%""
+if defined PASSWORD set "ENVS=%ENVS% -e "MDL_DEMO_PASSWORD=%PASSWORD%""
+wslc run -d --name %CNAME% %ENVS% -p 127.0.0.1:%PORT%:8081 -p 127.0.0.1:%SITE%:8082 %IMAGE%:%TAG% >nul
+if errorlevel 1 exit /b 1
+if defined NAME (echo created %CNAME% ^(%NAME%^)) else (echo created %CNAME%)
+echo console:  http://localhost:%PORT%
+echo site:     http://localhost:%SITE%  (once you install one from the console)
+if not defined PASSWORD echo the console asks you to choose its password on the first visit
+exit /b 0
+
+:start
+wslc inspect %CNAME% >nul 2>&1
+if errorlevel 1 (
+    echo mdl-demo: %CNAME% does not exist - "mdl-demo create %PORT%" makes it 1>&2
+    exit /b 1
+)
+wslc start %CNAME% >nul
+if errorlevel 1 exit /b 1
+echo started %CNAME% - console: http://localhost:%PORT%
+exit /b 0
+
+:stop
+wslc inspect %CNAME% >nul 2>&1
+if errorlevel 1 (
+    echo mdl-demo: %CNAME% does not exist 1>&2
+    exit /b 1
+)
+wslc stop %CNAME% >nul
+if errorlevel 1 exit /b 1
+echo stopped %CNAME% (start it again with "mdl-demo start %PORT%")
+exit /b 0
+
+:delete
+wslc inspect %CNAME% >nul 2>&1
+if errorlevel 1 (
+    echo mdl-demo: %CNAME% does not exist 1>&2
+    exit /b 1
+)
+wslc stop %CNAME% >nul 2>&1
+wslc rm %CNAME% >nul
+if errorlevel 1 exit /b 1
+echo deleted %CNAME% and its demo site
+exit /b 0
+
+:list
+wslc ps -a | findstr /c:"CONTAINER" /c:"mdl-demo-"
+exit /b 0
+
+:badport
+echo mdl-demo: the demo number must be a port between 1024 and 65534 (got "%PORT%") 1>&2
+exit /b 1
+
+:usage
+echo Usage: mdl-demo ^<command^> [NNNN] [options]
+echo.
+echo Commands:
+echo   create [NNNN]   create and start a new demo (console on port NNNN, default 8081)
+echo   start  [NNNN]   start a stopped demo
+echo   stop   [NNNN]   stop a running demo (the site and its data are kept)
+echo   delete [NNNN]   stop and remove a demo, including its site and data
+echo   list            show all demos
+echo.
+echo Options for create:
+echo   --name="..."    label shown in the console heading, also the Moodle site name
+echo   --password=...  console password (otherwise the console asks on first visit)
+echo   --tag=...       image version, e.g. --tag=v0.1.2 (default: latest)
+echo.
+echo The demo's number NNNN is the port of its console: http://localhost:NNNN.
+echo The Moodle site is on the next port, NNNN+1.
+exit /b 0

@@ -32,7 +32,7 @@ const footerHTML = `{{define "footer"}}
 
 const styleHTML = `<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>mdl-demo</title>
+<title>{{.Title}}</title>
 <script src="/static/htmx.min.js"></script>
 <style>
   :root {
@@ -185,7 +185,7 @@ const shellHTML = `{{define "page"}}<!doctype html>
 ` + styleHTML + `
 <header>
   <div>
-    <h1>mdl-demo <span>— Moodle demo console</span></h1>
+    <h1>{{.ID}} <span>— {{if .Name}}{{.Name}}{{else}}Moodle demo console{{end}}</span></h1>
     <p class="sub">{{.Version}}</p>
   </div>
   <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="subtle">Log out</button></form>
@@ -293,7 +293,7 @@ const helpHTML = `{{define "help"}}
 const debugHTML = `{{define "debug"}}<!doctype html>
 <html lang="en">
 ` + styleHTML + `
-<header><div><h1>mdl-demo <span>— diagnostics</span></h1>
+<header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>— diagnostics</span></h1>
 <p class="sub"><a href="/">← back</a></p></div></header>
 {{template "services" .}}
 <section>
@@ -343,7 +343,7 @@ const progressHTML = `{{define "jobstatus"}}
 const loginHTML = `{{define "login"}}<!doctype html>
 <html lang="en">
 ` + styleHTML + `
-<header><div><h1>mdl-demo <span>— log in</span></h1></div></header>
+<header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>— log in</span></h1></div></header>
 <section>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   <form class="stack" method="post" action="/login">
@@ -359,7 +359,7 @@ const loginHTML = `{{define "login"}}<!doctype html>
 const setupHTML = `{{define "setup"}}<!doctype html>
 <html lang="en">
 ` + styleHTML + `
-<header><div><h1>mdl-demo <span>— first-time setup</span></h1></div></header>
+<header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>— first-time setup</span></h1></div></header>
 <section>
   <p class="empty">Set the management password for this container. (You can also
   provide it at container creation with <code>-e MDL_DEMO_PASSWORD=…</code>.)</p>
@@ -380,7 +380,7 @@ const setupHTML = `{{define "setup"}}<!doctype html>
 const installHTML = `{{define "install"}}<!doctype html>
 <html lang="en">
 ` + styleHTML + `
-<header><div><h1>mdl-demo <span>— install a demo site</span></h1>
+<header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>— install a demo site</span></h1>
 <p class="sub"><a href="/">← back</a></p></div></header>
 <section>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
@@ -394,6 +394,12 @@ const installHTML = `{{define "install"}}<!doctype html>
     </label>
     <label>Demo site URL (the address you open the demo at)
       <input type="url" name="wwwroot" value="{{.SuggestedURL}}" required>
+    </label>
+    <label>Site name
+      <input type="text" name="fullname" value="{{.Fullname}}" placeholder="the recipe's name" maxlength="254">
+    </label>
+    <label>Short name (shown in the navigation)
+      <input type="text" name="shortname" value="{{.Shortname}}" maxlength="100">
     </label>
     <div><button>Install</button></div>
   </form>

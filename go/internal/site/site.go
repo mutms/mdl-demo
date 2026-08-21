@@ -5,8 +5,10 @@ package site
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/mutms/mdl-demo/internal/apache"
@@ -21,8 +23,9 @@ import (
 type Options struct {
 	Recipe    string
 	AdminPass string
-	Fullname  string // default: the recipe's name
-	Wwwroot   string // default http://localhost:8080
+	Fullname  string // default: the demo name, else the recipe's name
+	Shortname string // default: the demo name, else "demo"
+	Wwwroot   string // default: the recorded site URL for localhost
 }
 
 // Install provisions the whole site: database, code tree, config, Apache,
@@ -31,17 +34,30 @@ func Install(logf execx.Logf, o Options) error {
 	if o.Recipe == "" || o.AdminPass == "" {
 		return fmt.Errorf("recipe and admin password are required")
 	}
+	st, err := state.Load()
+	if err != nil {
+		return err
+	}
 	if o.Wwwroot == "" {
-		o.Wwwroot = "http://localhost:8080"
+		o.Wwwroot = st.SiteURLFor("localhost")
 	}
 	recipe, err := recipes.Get(o.Recipe)
 	if err != nil {
 		return err
 	}
 	if o.Fullname == "" {
-		o.Fullname = recipe.Name
+		o.Fullname = st.Name
+		if o.Fullname == "" {
+			o.Fullname = recipe.Name
+		}
 		if o.Fullname == "" {
 			o.Fullname = recipe.ID
+		}
+	}
+	if o.Shortname == "" {
+		o.Shortname = st.Name
+		if o.Shortname == "" {
+			o.Shortname = "demo"
 		}
 	}
 
@@ -99,7 +115,7 @@ func Install(logf execx.Logf, o Options) error {
 	}
 
 	logf("Installing Moodle database (this also takes a few minutes)")
-	if err := moodle.InstallDatabase(logf, o.Fullname, o.AdminPass); err != nil {
+	if err := moodle.InstallDatabase(logf, o.Fullname, o.Shortname, o.AdminPass); err != nil {
 		return err
 	}
 
@@ -108,15 +124,17 @@ func Install(logf execx.Logf, o Options) error {
 		return err
 	}
 
-	s, err := state.Load()
+	// Reload: the console may have recorded something (a URL override, say)
+	// while the install ran.
+	st, err = state.Load()
 	if err != nil {
 		return err
 	}
-	s.Recipe = recipe.ID
-	s.Wwwroot = o.Wwwroot
-	s.AdminPass = o.AdminPass
-	s.InstalledAt = time.Now().UTC()
-	if err := s.Save(); err != nil {
+	st.Recipe = recipe.ID
+	st.Wwwroot = o.Wwwroot
+	st.AdminPass = o.AdminPass
+	st.InstalledAt = time.Now().UTC()
+	if err := st.Save(); err != nil {
 		return err
 	}
 
@@ -136,7 +154,7 @@ func Install(logf execx.Logf, o Options) error {
 // half-assembled tree left by an interrupted install, a broken install. Every
 // step therefore runs best-effort and logs its own failure instead of aborting
 // the ones after it. What makes the result "reset worked" for the user is the
-// placeholder serving on 8080 and the cleared state the UI reads; a database or
+// placeholder serving on 8082 and the cleared state the UI reads; a database or
 // a tree that will not go away (e.g. Postgres momentarily down) is a warning to
 // retry, not a reason to leave the site stuck — so only those two steps can
 // fail the reset, and it stays safe to run again.
@@ -150,7 +168,7 @@ func Reset(logf execx.Logf) error {
 	logf("Disabling Moodle cron")
 	_ = svc.Current().DisableCron(logf)
 
-	logf("Restoring placeholder site on port 8080")
+	logf("Restoring placeholder site")
 	placeholderErr := apache.RestorePlaceholder(logf)
 	warn("restoring the placeholder", placeholderErr)
 
@@ -186,6 +204,19 @@ func clearSiteState() error {
 	s.Recipe, s.Wwwroot, s.AdminPass = "", "", ""
 	s.InstalledAt = time.Time{}
 	return s.Save()
+}
+
+// NormalizeURL validates a URL the operator entered (the demo site URL that
+// becomes wwwroot, or a console/site override) and returns it canonical: an
+// http(s) URL with a host and no trailing slash ($CFG->wwwroot is stored
+// without one). A path is kept — Moodle can live under a subpath — but the
+// empty/garbage cases are rejected.
+func NormalizeURL(raw string) (string, error) {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+		return "", fmt.Errorf("not an http(s) URL")
+	}
+	return strings.TrimRight(u.String(), "/"), nil
 }
 
 // clearDir empties dir without removing it (it is baked into the image).

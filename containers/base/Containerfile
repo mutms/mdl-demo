@@ -1,16 +1,19 @@
 # mdl-demo — self-contained Moodle/MuTMS demo image.
 #
 # Debian trixie with mdl-demo's own Go init as PID 1: it starts and
-# supervises PostgreSQL, php-fpm and Apache (port 8080) and serves the
-# management UI (port 8081). No systemd on purpose — a standard OCI
-# runtime gives PID 1 no CAP_SYS_ADMIN and often a read-only cgroup tree,
+# supervises PostgreSQL, php-fpm and Apache (port 8082) and serves the
+# management console (port 8081). Outside, the console port is the demo's
+# identity (MDL_DEMO_PORT, default 8081) and the site is always on the next
+# one, so the mapping is NNNN:8081 and NNNN+1:8082. No systemd on purpose —
+# a standard OCI runtime gives PID 1 no CAP_SYS_ADMIN and often a read-only
+# cgroup tree,
 # which systemd cannot boot under (the WSL containers preview proved this
 # terminally), while the Go init needs no capabilities, no cgroups and no
 # tmpfs. The SAME run command therefore works on rootful podman,
 # Apple `container` and WSL containers:
 #
-#   <runtime> run -d --name demo \
-#       -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 \
+#   <runtime> run -d --name mdl-demo-8081 \
+#       -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 \
 #       -e MDL_DEMO_PASSWORD=... mdl-demo
 #
 # Build from the REPO ROOT (the build stage copies go/):
@@ -84,7 +87,8 @@ RUN for sapi in fpm cli; do \
             > /etc/php/8.3/$sapi/conf.d/99-moodle.ini; \
     done
 
-# Apache: PHP via FPM socket, Moodle 5 router needs rewrite. Port 8080 only.
+# Apache: PHP via FPM socket, Moodle 5 router needs rewrite. Port 8082 only
+# (8081 is the Go console; both numbers are fixed inside the container).
 # The placeholder vhost is swapped for the real Moodle vhost by mdl-demo at
 # install time (the docroot depends on the Moodle version's tree layout).
 COPY containers/base/assets/placeholder/ /var/www/placeholder/
@@ -92,7 +96,7 @@ COPY containers/base/assets/000-placeholder.conf /etc/apache2/sites-available/
 RUN a2enmod proxy_fcgi rewrite setenvif \
     && a2dissite 000-default \
     && a2ensite 000-placeholder \
-    && sed -i 's/^Listen 80$/Listen 8080/' /etc/apache2/ports.conf \
+    && sed -i 's/^Listen 80$/Listen 8082/' /etc/apache2/ports.conf \
     && echo 'ServerName localhost' > /etc/apache2/conf-available/servername.conf \
     && a2enconf servername
 
@@ -114,7 +118,7 @@ LABEL org.opencontainers.image.source=https://github.com/mutms/mdl-demo \
       org.opencontainers.image.description="Throwaway Moodle/MuTMS demo sites in one command" \
       org.opencontainers.image.licenses=GPL-3.0-or-later
 
-EXPOSE 8080 8081
+EXPOSE 8081 8082
 
 # mdl-demo init as PID 1: supervises the services, reaps orphans, and turns
 # SIGTERM (the default stop signal) into an ordered shutdown.

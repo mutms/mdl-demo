@@ -1,9 +1,12 @@
 # mdl-demo — agent/contributor brief
 
 A self-contained OCI image: users run one container and get a throwaway
-Moodle/MuTMS demo site (Apache on 8080) managed by a small web UI (8081).
-Runs identically, with no special flags, on rootful podman, Apple
-`container` (macOS) and WSL containers (Windows).
+Moodle/MuTMS demo site (Apache on container port 8082) managed by a small
+web console (8081). Outside, the console port NNNN (`MDL_DEMO_PORT`, default
+8081) is the demo's identity — container `mdl-demo-NNNN`, site on NNNN+1 —
+so several demos run side by side. Runs identically, with no special flags,
+on rootful podman, Apple `container` (macOS) and WSL containers (Windows);
+`launcher/` holds the macOS and Windows user-facing launcher scripts.
 
 ## Architecture
 
@@ -11,7 +14,7 @@ One Go binary (`go/`, module `github.com/mutms/mdl-demo`, stdlib only) with
 three jobs: PID 1 of the container, management web UI, and CLI.
 
 - `cmd/mdl-demo` — subcommand dispatch (`init`, `serve`, `recipes`,
-  `install`, `status`, `reset`, `cron`, `version`).
+  `install`, `status`, `reset`, `url`, `cron`, `version`).
 - `internal/initd` — **the container's init**: starts and supervises
   postgresql/php-fpm/apache2 (restart with backoff), central zombie reaper,
   per-minute Moodle cron ticker, ordered shutdown on SIGTERM. The web UI
@@ -27,8 +30,13 @@ three jobs: PID 1 of the container, management web UI, and CLI.
   `job.go`; diagnostics page at `/debug`.
 - `internal/moodle`, `internal/apache`, `internal/pgdb`, `internal/recipes`,
   `internal/state`, `internal/execx` — Moodle tree handling, vhost
-  generation, DB provisioning, recipe catalogue scan, `/etc/mdl-demo/state.json`,
-  command runner with line-streamed logs.
+  generation, DB provisioning, recipe catalogue scan, `/etc/mdl-demo/state.json`
+  (password hash, demo identity adopted once from `MDL_DEMO_PORT`/`MDL_DEMO_NAME`,
+  URL overrides from `mdl-demo url`, installed site), command runner with
+  line-streamed logs.
+- `launcher/mdl-demo` (bash, Apple `container`) and `launcher/mdl-demo.cmd`
+  (pure batch, `wslc`) — `create|start|stop|delete [NNNN]` / `list`; the only
+  place the outside port mapping and env vars are spelled out for users.
 - `containers/base/Containerfile` — two-stage build; stage 1 cross-compiles
   Go for `$TARGETARCH`, stage 2 is the runtime image.
 - Code assembly is delegated to the [mudev](https://github.com/mutms/mudev)
@@ -41,9 +49,16 @@ three jobs: PID 1 of the container, management web UI, and CLI.
 1. **No systemd, no required capabilities.** `mdl-demo init` is PID 1 by
    design: standard OCI runtimes give containers no CAP_SYS_ADMIN and often
    read-only cgroups, which systemd cannot boot under. Any change must keep
-   the image booting with a flag-free `run` command on all three runtimes.
+   the image booting with a flag-free `run` command on all three runtimes —
+   and with nothing but the OS vendor's own CLI: the `launcher/` scripts are
+   optional sugar, every feature must stay reachable from a plain one-line
+   `run` command (env vars + port mappings), which the README always shows.
 2. **One demo site per container.** Fixed paths: tree `/srv/projects/demo`,
    dataroot `/srv/data/demo`, database/user/password `demo`. No multi-site.
+   Container-internal ports are fixed too (console 8081, site 8082); the
+   outside console port is the demo's identity and the site is always
+   console+1 — never add a second port knob. URLs behind a proxy/tunnel come
+   from `mdl-demo url`, not from guessing at Host headers.
 3. **The Moodle code tree stays root-owned; PHP runs as www-data with
    read-only access.** This deliberately disables Moodle's web-based plugin
    installation (plugins come only via recipes/mudev). Never chown the tree
@@ -69,12 +84,13 @@ three jobs: PID 1 of the container, management web UI, and CLI.
 ```sh
 make build test vet fmt-check   # native binary + checks
 make image                      # sudo podman build (run from repo root)
-make run                        # flag-free podman run; UI on :8081
+make run                        # mpd-VM test container mpd-test-mdl-demo on 6381/6382,
+                                # published by mpd's caddy as https://mdl-demo.<vm>.mpd.test
 ```
 
-End-to-end: `sudo podman exec demo mdl-demo install --recipe
+End-to-end: `sudo podman exec mpd-test-mdl-demo mdl-demo install --recipe
 moodle/release/<version> --adminpass 'Test1234!'`, then browse
-http://localhost:8080. `dev/README.md` has the full verification flow, multi-arch
+https://site.mdl-demo.<vm>.mpd.test (or http://127.0.0.1:6382 on the VM). `dev/README.md` has the full verification flow, multi-arch
 builds (build on an Apple silicon Mac — fastest) and release steps.
 
 Typical extension points: new UI feature → handler in

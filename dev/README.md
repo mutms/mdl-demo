@@ -6,7 +6,8 @@ Linux box with rootful podman and Go 1.24+ (Debian trixie: `apt-get install gola
 1. install [mpd-virt](https://github.com/mutms/mpd-virt) and create an mpd VM
 2. ssh into mpd-NNN-vm and clone mdl-demo into /srv/projects/mdl-demo
 3. `make image` — builds the OCI image with rootful podman
-4. `make run` — starts a throwaway instance on localhost:8080/8081
+4. `make run` — starts the test container; mpd publishes it as
+   https://mdl-demo.NNN.mpd.test (console) and https://site.mdl-demo.NNN.mpd.test
 
 ## Build & test
 
@@ -14,21 +15,54 @@ Linux box with rootful podman and Go 1.24+ (Debian trixie: `apt-get install gola
 make build        # native bin/mdl-demo (for quick iteration; the image builds its own)
 make test vet fmt-check
 make image        # sudo podman build -t mdl-demo -f containers/base/Containerfile .
-make run          # sudo podman run -d --name demo -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 mdl-demo
+make run          # replaces the mpd-test-mdl-demo container (VM ports 6381/6382, see below)
 ```
 
 On macOS, `dev/macos-test-demo.sh` is the whole loop: pull, native
-single-arch build (no push), fresh `mdl-demo-test` container on the same
-ports. Code-only rebuilds finish in seconds thanks to layer caching.
+single-arch build (no push), fresh `mdl-demo-test` container on the default
+ports 8081/8082. Code-only rebuilds finish in seconds thanks to layer caching.
 
 Verification after `make run`:
 
 ```sh
-sudo podman logs demo                                # "mdl-demo init: supervising …"
-sudo podman exec demo mdl-demo recipes
-sudo podman exec demo mdl-demo install --recipe moodle/release/5.2.2 --adminpass 'Test1234!'
-curl -s http://127.0.0.1:8080/                       # Moodle front page
+sudo podman logs mpd-test-mdl-demo                   # "demo identity: …", "mdl-demo init: supervising …"
+sudo podman exec mpd-test-mdl-demo mdl-demo status   # identity + URLs
+sudo podman exec mpd-test-mdl-demo mdl-demo recipes
+sudo podman exec mpd-test-mdl-demo mdl-demo install --recipe moodle/release/5.2.2 --adminpass 'Test1234!'
+curl -s http://127.0.0.1:6382/                       # Moodle front page
 ```
+
+## Ports and identity
+
+Inside the container the ports never change: console 8081, Moodle 8082.
+Outside, the console port is the demo's identity — `MDL_DEMO_PORT` (default
+8081), container `mdl-demo-<port>`, site on port+1 — and is recorded in
+`/etc/mdl-demo/state.json` at first start together with `MDL_DEMO_NAME`.
+The launcher scripts in `launcher/` are the user-facing way to set them; the
+README documents the raw `-e`/`-p` form. The macOS launcher can be exercised
+on an mpd VM unchanged: mpd ships `/opt/mpd/bin/container`, a podman-backed
+stand-in for Apple `container` (same verbs, `ls` output normalised):
+
+```sh
+MDL_DEMO_IMAGE=localhost/mdl-demo launcher/mdl-demo create 7777 --name="Shim test"
+launcher/mdl-demo list
+launcher/mdl-demo delete 7777
+```
+
+When something sits in front of the container (mpd's caddy, a
+trycloudflare tunnel), the port-derived URLs are wrong; tell the container
+its public addresses instead:
+
+```sh
+sudo podman exec mpd-test-mdl-demo mdl-demo url --console https://x.example --site https://site.x.example
+sudo podman exec mpd-test-mdl-demo mdl-demo url --clear
+```
+
+The override lives in state.json (temporary like the container) and drives
+the install form's suggested site URL and the `/debug` report. An https
+wwwroot makes the generated config.php set `$CFG->sslproxy`. Moodle bakes
+wwwroot in at install, so set the URL before installing — an installed site
+needs a reset to move.
 
 ## Why mdl-demo's own init (no systemd)
 
@@ -62,24 +96,20 @@ counts, last exits, log tails) as one copy-pasteable block for bug reports.
 The image intentionally has no systemd-resolved (or systemd at all): every
 target runtime manages /etc/resolv.conf itself and nss stays `files dns`.
 
-## Browsing a VM-hosted demo from the host
+## Running inside an mpd VM
 
-When the demo runs under podman inside an mpd dev VM, bind the ports on the
-VM's interfaces instead of loopback and browse from the host over the vmnet
-host-only network (only the host and sibling VMs can reach it; 8081 is
-password-protected):
+mpd has an `mdl-demo` project type: `mpd start mdl-demo` publishes
+`https://mdl-demo.NNN.mpd.test` (console) and `https://site.mdl-demo.NNN.mpd.test`
+(site) through the runtime's caddy, with certificate and DNS, pointing at
+fixed VM ports 6381 and 6382. `make run` is the other half of that contract:
+it removes any previous `mpd-test-mdl-demo` container, starts a new one with
+`MDL_DEMO_PORT=6381` bound on the VM's interfaces (the runtime reaches the VM
+at its bridge address; the vmnet is host-only, and the console is
+password-protected), waits for the console, and runs `mdl-demo url` with the
+two mpd addresses. Open the console from the Mac, accept the prefilled
+`site.` URL in the install form, and the site comes up over https.
 
-```sh
-sudo podman run -d --name demo -p 8080:8080 -p 8081:8081 mdl-demo
-# host browser: http://10.163.NNN.1:8081  (or the VM's mpd.test name)
-```
-
-wwwroot must match the URL the browser uses — Moodle bakes it in at install:
-
-- Web UI: handled automatically — the install form prefills the hostname from
-  the Host header of your 8081 request, so open the UI at the address you will
-  browse the site from and accept the prefill.
-- CLI: pass it explicitly, e.g. `--wwwroot http://10.163.NNN.1:8080`.
+One test demo per VM. Stop it with `sudo podman stop mpd-test-mdl-demo`.
 
 A site installed under one address will not work when visited under another
 (redirects/logins break) — `mdl-demo reset` and reinstall when switching.
@@ -97,7 +127,7 @@ On the target — macOS (Apple `container`):
 
 ```sh
 container image load --input mdl-demo.tar
-container run -d --name demo -p 127.0.0.1:8080:8080 -p 127.0.0.1:8081:8081 mdl-demo
+container run -d --name mdl-demo-8081 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 mdl-demo
 ```
 
 or Linux (podman): `sudo podman load -i mdl-demo.tar`.
@@ -107,8 +137,10 @@ the image by its registry name; setting one up is outside this repo's scope.
 
 ## Layout
 
+- `launcher/` — `mdl-demo` (bash, Apple `container`) and `mdl-demo.cmd`
+  (batch, `wslc`): the user-facing `create|start|stop|delete|list` wrappers.
 - `containers/base/Containerfile` — the image: Debian trixie with `mdl-demo init`
-  as PID 1, Apache+PHP 8.3 (Sury) on 8080, local PostgreSQL, the
+  as PID 1, Apache+PHP 8.3 (Sury) on 8082 and the console on 8081, local PostgreSQL, the
   [mudev](https://github.com/mutms/mudev) + mdl-demo binaries, and the
   [mdl-recipes](https://github.com/mutms/mdl-recipes) /
   [mdl-plugins](https://github.com/mutms/mdl-plugins) catalogues.

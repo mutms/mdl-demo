@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/mutms/mdl-demo/internal/execx"
 )
@@ -77,11 +78,11 @@ func runCLI(logf execx.Logf, secrets []string, rel string, args ...string) error
 // InstallDatabase runs Moodle's CLI installer against the already-written
 // config.php. Flags proven by mpd's install tooling. The admin email is
 // deliberately hardcoded — a demo site never sends mail (noemailever).
-func InstallDatabase(logf execx.Logf, fullname, adminpass string) error {
+func InstallDatabase(logf execx.Logf, fullname, shortname, adminpass string) error {
 	return runCLI(logf, []string{adminpass}, "admin/cli/install_database.php",
 		"--agree-license",
 		"--fullname="+fullname,
-		"--shortname=demo",
+		"--shortname="+shortname,
 		"--summary=mdl-demo site",
 		"--adminpass="+adminpass,
 		"--adminemail=admin@example.com",
@@ -91,6 +92,18 @@ func InstallDatabase(logf execx.Logf, fullname, adminpass string) error {
 // Cron runs Moodle cron (used by moodle-cron.service via `mdl-demo cron`).
 func Cron(logf execx.Logf) error {
 	return RunCLI(logf, "admin/cli/cron.php")
+}
+
+// sslproxy returns the config line for an https wwwroot: TLS always ends
+// outside this container (a reverse proxy or a tunnel speaks https to the
+// browser and plain http to Apache), which is exactly what $CFG->sslproxy
+// tells Moodle. Without it, Moodle sees an http request for an https wwwroot
+// and redirects in a loop.
+func sslproxy(wwwroot string) string {
+	if strings.HasPrefix(wwwroot, "https://") {
+		return "$CFG->sslproxy = true; // TLS is terminated in front of the container\n"
+	}
+	return ""
 }
 
 // WriteConfig generates config.php at the tree root. Regenerated on every
@@ -117,7 +130,7 @@ $CFG->dboptions = array(
 );
 
 $CFG->wwwroot  = '` + wwwroot + `';
-
+` + sslproxy(wwwroot) + `
 $CFG->dataroot = '` + Dataroot + `';
 $CFG->directorypermissions = 02777;
 

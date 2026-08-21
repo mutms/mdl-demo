@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -59,23 +58,6 @@ func verifyPassword(stored, password string) bool {
 		return false
 	}
 	return hmac.Equal(got, want)
-}
-
-// passwordFromPID1 reads MDL_DEMO_PASSWORD from /proc/1/environ. The
-// container runtime hands `-e` variables to PID 1 (systemd), which does not
-// propagate them to units — but mdl-demo runs as root and can read them
-// straight off the init process.
-func passwordFromPID1() string {
-	data, err := os.ReadFile("/proc/1/environ")
-	if err != nil {
-		return ""
-	}
-	for _, kv := range strings.Split(string(data), "\x00") {
-		if v, ok := strings.CutPrefix(kv, "MDL_DEMO_PASSWORD="); ok {
-			return v
-		}
-	}
-	return ""
 }
 
 // sessions is an in-memory session + CSRF-token store; a serve restart
