@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added setting for custom ports
+- Added setting for demo name
+- Added launcher scripts for macOS and Windows
+- Added support for development and testing in mpd
+
+### Changed
+
+- Redesigned developer docs and helper scripts
+
 ### Fixed
 
 - User credentials are masked
