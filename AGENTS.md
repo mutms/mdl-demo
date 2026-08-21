@@ -10,7 +10,7 @@ on rootful podman, Apple `container` (macOS) and WSL containers (Windows);
 
 ## Architecture
 
-One Go binary (`go/`, module `github.com/mutms/mdl-demo`, stdlib only) with
+One Go binary (`go/`, module `github.com/mutms/mdl-demo`, stdlib so far) with
 three jobs: PID 1 of the container, management web UI, and CLI.
 
 - `cmd/mdl-demo` — subcommand dispatch (`init`, `serve`, `recipes`,
@@ -72,8 +72,15 @@ three jobs: PID 1 of the container, management web UI, and CLI.
    `r.php` exists — and only inside `<Directory>` context.
 6. **Stage 2's `FROM --platform=$TARGETPLATFORM` is load-bearing** for
    multi-arch correctness. See the Containerfile comment before touching it.
-7. **Stdlib only; `GOTOOLCHAIN=local` (Debian trixie Go 1.24).** No new Go
-   dependencies, no toolchain downloads; shell out to `mudev`, do not import it.
+7. **`GOTOOLCHAIN=local` (Debian trixie Go 1.24); no toolchain downloads.**
+   Third-party Go modules are allowed when they earn their place (a QR
+   encoder, say) — keep them few, well known and building with Go 1.24, and
+   commit `go.sum`. The code happens to be stdlib-only today, but that is
+   not a rule here: the stdlib-only discipline comes from mpd's proxy, which
+   runs as root on the developer's Mac and must limit the blast radius of
+   bad code; this console runs inside a throwaway container, so it must be
+   secure but the bar is lower. `mudev` stays a shelled-out binary, not an
+   import (it is shipped and promoted as a tool in its own right).
 8. **The web UI footer is a GPL-3.0 §5(d) Appropriate Legal Notice** — keep
    it displayed; forks add their copyright beside it.
 9. **Windows commands in docs are always one line** (PowerShell backtick
