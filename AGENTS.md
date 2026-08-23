@@ -10,7 +10,7 @@ on rootful podman, Apple `container` (macOS) and WSL containers (Windows);
 
 ## Architecture
 
-One Go binary (`go/`, module `github.com/mutms/mdl-demo`, stdlib so far) with
+One Go binary (`go/`, module `github.com/mutms/mdl-demo/go`, stdlib so far) with
 three jobs: PID 1 of the container, management web UI, and CLI.
 
 - `cmd/mdl-demo` — subcommand dispatch (`init`, `serve`, `recipes`,
