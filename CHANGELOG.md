@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added setting for demo name
 - Added launcher scripts for macOS and Windows
 - Added support for development and testing in mpd
+- Added demo launchers
 
 ### Changed
 
