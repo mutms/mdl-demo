@@ -1,3 +1,3 @@
 module github.com/mutms/mdl-demo/go
 
-go 1.24
+go 1.27.0

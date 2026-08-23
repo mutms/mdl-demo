@@ -72,9 +72,10 @@ three jobs: PID 1 of the container, management web UI, and CLI.
    `r.php` exists — and only inside `<Directory>` context.
 6. **Stage 2's `FROM --platform=$TARGETPLATFORM` is load-bearing** for
    multi-arch correctness. See the Containerfile comment before touching it.
-7. **`GOTOOLCHAIN=local` (Debian trixie Go 1.24); no toolchain downloads.**
-   Third-party Go modules are allowed when they earn their place (a QR
-   encoder, say) — keep them few, well known and building with Go 1.24, and
+7. **The `go` directive in `go/go.mod` picks the compiler** (upstream Go,
+   fetched by the go command itself; the image builds on the official
+   `golang` image). Third-party Go modules are allowed when they earn
+   their place (a QR encoder, say) — keep them few and well known, and
    commit `go.sum`. The code happens to be stdlib-only today, but that is
    not a rule here: the stdlib-only discipline comes from mpd's proxy, which
    runs as root on the developer's Mac and must limit the blast radius of

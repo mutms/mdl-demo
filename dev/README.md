@@ -1,7 +1,7 @@
 # mdl-demo - OCI image creation and development
 
 Development happens in an mpd VM ([mpd-virt](https://github.com/mutms/mpd-virt)) or any
-Linux box with rootful podman and Go 1.24+ (Debian trixie: `apt-get install golang-go make`).
+Linux box with rootful podman, Go (any version — go.mod picks the compiler) and make.
 
 1. install [mpd-virt](https://github.com/mutms/mpd-virt) and create an mpd VM
 2. ssh into mpd-NNN-vm and clone mdl-demo into /srv/projects/mdl-demo

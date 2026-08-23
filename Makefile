@@ -4,19 +4,9 @@ PKG     := ./cmd/mdl-demo
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -X main.version=$(VERSION)
 
-# Build with the Go that Debian Trixie ships (golang-go, currently 1.24.x)
-# and nothing else.
-#
-# Go's default GOTOOLCHAIN=auto silently downloads a whole toolchain —
-# 210 MB — when go.mod, or any dependency's go.mod, names a newer version
-# than the installed one. That happens per machine, at build time, over
-# the network, with no warning. `local` turns it into an immediate,
-# legible build failure instead.
-#
-# If you hit that failure: lower the `go` directive in go.mod — do not
-# raise the floor above what Trixie packages. (Same rule, same wording,
-# as mudev's Makefile.)
-export GOTOOLCHAIN = local
+# The `go` directive in go/go.mod picks the compiler: the go command
+# fetches that toolchain itself when the installed one is older
+# (GOTOOLCHAIN=auto, the default). Bump the directive to move to a newer Go.
 
 .PHONY: build build-static test vet fmt fmt-check tidy clean image run
 

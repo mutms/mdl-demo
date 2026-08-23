@@ -22,18 +22,14 @@
 # ---------------------------------------------------------------------------
 # Stage 1: build mudev + mdl-demo. Runs on the build host's native arch and
 # cross-compiles for $TARGETARCH, so a multi-arch build never compiles Go
-# under qemu. GOTOOLCHAIN=local: trixie's golang-go (1.24) or a legible
-# failure, never a silent 210 MB toolchain download.
-FROM --platform=$BUILDPLATFORM debian:trixie AS build
+# under qemu. The official golang image, pinned; a go.mod asking for a newer
+# Go than this makes the go command fetch it.
+FROM --platform=$BUILDPLATFORM golang:1.27.0-trixie AS build
 ARG TARGETARCH
 ARG MUDEV_REF=main
 ARG VERSION=dev
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends golang-go git ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
-ENV GOTOOLCHAIN=local CGO_ENABLED=0 GOFLAGS=-trimpath
+ENV CGO_ENABLED=0 GOFLAGS=-trimpath
 
 # Stamp mudev's version the way its own Makefile does — `git describe` reads
 # the nearest tag, so `mudev --version` in the image identifies the exact build
