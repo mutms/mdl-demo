@@ -26,11 +26,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/mutms/mdl-demo/internal/execx"
-	"github.com/mutms/mdl-demo/internal/moodle"
-	"github.com/mutms/mdl-demo/internal/state"
-	"github.com/mutms/mdl-demo/internal/svc"
-	"github.com/mutms/mdl-demo/internal/webui"
+	"github.com/mutms/mdl-demo/go/internal/execx"
+	"github.com/mutms/mdl-demo/go/internal/moodle"
+	"github.com/mutms/mdl-demo/go/internal/state"
+	"github.com/mutms/mdl-demo/go/internal/svc"
+	"github.com/mutms/mdl-demo/go/internal/webui"
 )
 
 // sigStop is what the image's STOPSIGNAL (SIGRTMIN+3, glibc numbering)

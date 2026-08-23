@@ -15,13 +15,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/mutms/mdl-demo/internal/initd"
-	"github.com/mutms/mdl-demo/internal/moodle"
-	"github.com/mutms/mdl-demo/internal/pgdb"
-	"github.com/mutms/mdl-demo/internal/recipes"
-	"github.com/mutms/mdl-demo/internal/site"
-	"github.com/mutms/mdl-demo/internal/state"
-	"github.com/mutms/mdl-demo/internal/webui"
+	"github.com/mutms/mdl-demo/go/internal/initd"
+	"github.com/mutms/mdl-demo/go/internal/moodle"
+	"github.com/mutms/mdl-demo/go/internal/pgdb"
+	"github.com/mutms/mdl-demo/go/internal/recipes"
+	"github.com/mutms/mdl-demo/go/internal/site"
+	"github.com/mutms/mdl-demo/go/internal/state"
+	"github.com/mutms/mdl-demo/go/internal/webui"
 )
 
 // version is stamped at build time via -ldflags.

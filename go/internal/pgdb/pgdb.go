@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/mutms/mdl-demo/internal/execx"
+	"github.com/mutms/mdl-demo/go/internal/execx"
 )
 
 // Name is the database, role and password of the demo site.

@@ -11,13 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mutms/mdl-demo/internal/apache"
-	"github.com/mutms/mdl-demo/internal/execx"
-	"github.com/mutms/mdl-demo/internal/moodle"
-	"github.com/mutms/mdl-demo/internal/pgdb"
-	"github.com/mutms/mdl-demo/internal/recipes"
-	"github.com/mutms/mdl-demo/internal/state"
-	"github.com/mutms/mdl-demo/internal/svc"
+	"github.com/mutms/mdl-demo/go/internal/apache"
+	"github.com/mutms/mdl-demo/go/internal/execx"
+	"github.com/mutms/mdl-demo/go/internal/moodle"
+	"github.com/mutms/mdl-demo/go/internal/pgdb"
+	"github.com/mutms/mdl-demo/go/internal/recipes"
+	"github.com/mutms/mdl-demo/go/internal/state"
+	"github.com/mutms/mdl-demo/go/internal/svc"
 )
 
 type Options struct {

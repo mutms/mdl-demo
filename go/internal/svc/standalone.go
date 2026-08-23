@@ -3,7 +3,7 @@ package svc
 import (
 	"os/exec"
 
-	"github.com/mutms/mdl-demo/internal/execx"
+	"github.com/mutms/mdl-demo/go/internal/execx"
 )
 
 // standalone is the manager for processes that are NOT PID 1 in a

@@ -12,7 +12,7 @@
 package svc
 
 import (
-	"github.com/mutms/mdl-demo/internal/execx"
+	"github.com/mutms/mdl-demo/go/internal/execx"
 )
 
 // Status feeds the dashboard's services card.

@@ -6,8 +6,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/mutms/mdl-demo/internal/execx"
-	"github.com/mutms/mdl-demo/internal/svc"
+	"github.com/mutms/mdl-demo/go/internal/execx"
+	"github.com/mutms/mdl-demo/go/internal/svc"
 )
 
 const sitePath = "/etc/apache2/sites-available/demo.conf"

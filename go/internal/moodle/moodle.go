@@ -15,7 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mutms/mdl-demo/internal/execx"
+	"github.com/mutms/mdl-demo/go/internal/execx"
 )
 
 const (

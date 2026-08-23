@@ -3,8 +3,8 @@ package webui
 import (
 	"sync"
 
-	"github.com/mutms/mdl-demo/internal/execx"
-	"github.com/mutms/mdl-demo/internal/site"
+	"github.com/mutms/mdl-demo/go/internal/execx"
+	"github.com/mutms/mdl-demo/go/internal/site"
 )
 
 // job is the one background operation (install or reset) the UI may run at

@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mutms/mdl-demo/internal/recipes"
-	"github.com/mutms/mdl-demo/internal/site"
-	"github.com/mutms/mdl-demo/internal/state"
-	"github.com/mutms/mdl-demo/internal/svc"
+	"github.com/mutms/mdl-demo/go/internal/recipes"
+	"github.com/mutms/mdl-demo/go/internal/site"
+	"github.com/mutms/mdl-demo/go/internal/state"
+	"github.com/mutms/mdl-demo/go/internal/svc"
 )
 
 const addr = ":8081"
