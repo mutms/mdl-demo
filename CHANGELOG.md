@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Redesigned developer docs and helper scripts
+- Switched to go 1.27.0
 
 ### Fixed
 
