@@ -46,7 +46,7 @@ clean:
 # COPYs go/ into the image. Rootful podman matches the rootful runtimes
 # (Apple container, WSL) the image targets.
 image:
-	sudo podman build -t mdl-demo --build-arg VERSION=$(VERSION) -f containers/base/Containerfile .
+	sudo podman build -t mdl-demo --build-arg VERSION=$(VERSION) -f container/Containerfile .
 
 # Test container for manual testing inside an mpd VM (see dev/README.md).
 # The name and ports 6381/6382 are a contract with mpd's `mdl-demo` project

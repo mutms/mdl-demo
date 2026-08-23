@@ -14,7 +14,7 @@ Linux box with rootful podman, Go (any version — go.mod picks the compiler) an
 ```sh
 make build        # native bin/mdl-demo (for quick iteration; the image builds its own)
 make test vet fmt-check
-make image        # sudo podman build -t mdl-demo -f containers/base/Containerfile .
+make image        # sudo podman build -t mdl-demo -f container/Containerfile .
 make run          # replaces the mpd-test-mdl-demo container (VM ports 6381/6382, see below)
 ```
 
@@ -139,12 +139,12 @@ the image by its registry name; setting one up is outside this repo's scope.
 
 - `launcher/` — `mdl-demo` (bash, Apple `container`) and `mdl-demo.cmd`
   (batch, `wslc`): the user-facing `create|start|stop|delete|list` wrappers.
-- `containers/base/Containerfile` — the image: Debian trixie with `mdl-demo init`
+- `container/Containerfile` — the image: Debian trixie with `mdl-demo init`
   as PID 1, Apache+PHP 8.3 (Sury) on 8082 and the console on 8081, local PostgreSQL, the
   [mudev](https://github.com/mutms/mudev) + mdl-demo binaries, and the
   [mdl-recipes](https://github.com/mutms/mdl-recipes) /
   [mdl-plugins](https://github.com/mutms/mdl-plugins) catalogues.
-- `containers/base/assets/` — Apache placeholder vhost shown before a site is installed.
+- `container/assets/` — Apache placeholder vhost shown before a site is installed.
 - `go/` — the mdl-demo Go module (`cmd/mdl-demo` + `internal/*`).
 
 One demo site per container: paths are fixed (`/srv/projects/demo`, `/srv/data/demo`,

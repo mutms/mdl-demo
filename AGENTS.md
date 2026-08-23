@@ -37,7 +37,7 @@ three jobs: PID 1 of the container, management web UI, and CLI.
 - `launcher/mdl-demo` (bash, Apple `container`) and `launcher/mdl-demo.cmd`
   (pure batch, `wslc`) — `create|start|stop|delete [NNNN]` / `list`; the only
   place the outside port mapping and env vars are spelled out for users.
-- `containers/base/Containerfile` — two-stage build; stage 1 cross-compiles
+- `container/Containerfile` — two-stage build; stage 1 cross-compiles
   Go for `$TARGETARCH`, stage 2 is the runtime image.
 - Code assembly is delegated to the [mudev](https://github.com/mutms/mudev)
   binary (`mudev clone <recipe>`), with catalogues at

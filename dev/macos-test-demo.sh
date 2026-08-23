@@ -18,7 +18,7 @@ git pull
 
 container build -t mdl-demo-test \
     --build-arg VERSION="$(git describe --tags --always --dirty)" \
-    -f containers/base/Containerfile .
+    -f container/Containerfile .
 
 container run -d --name mdl-demo-test \
     ${MDL_DEMO_PASSWORD:+-e MDL_DEMO_PASSWORD="$MDL_DEMO_PASSWORD"} \
