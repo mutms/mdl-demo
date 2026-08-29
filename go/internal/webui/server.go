@@ -19,6 +19,8 @@ import (
 	"github.com/mutms/mdl-demo/go/internal/site"
 	"github.com/mutms/mdl-demo/go/internal/state"
 	"github.com/mutms/mdl-demo/go/internal/svc"
+	"github.com/mutms/mdl-demo/go/internal/tunnel"
+	qrcode "github.com/skip2/go-qrcode"
 )
 
 const addr = ":8081"
@@ -57,6 +59,9 @@ func Serve(out io.Writer, version string) error {
 	mux.HandleFunc("GET /install", s.auth(s.handleInstallForm))
 	mux.HandleFunc("POST /install", s.auth(s.csrf(s.handleInstall)))
 	mux.HandleFunc("POST /reset", s.auth(s.csrf(s.handleReset)))
+	mux.HandleFunc("POST /tunnel/start", s.auth(s.csrf(s.handleTunnelStart)))
+	mux.HandleFunc("POST /tunnel/stop", s.auth(s.csrf(s.handleTunnelStop)))
+	mux.HandleFunc("GET /tunnel/qr.png", s.auth(s.handleTunnelQR))
 	mux.HandleFunc("POST /logout", s.auth(s.csrf(s.handleLogout)))
 	mux.HandleFunc("GET /login", s.handleLoginForm)
 	mux.HandleFunc("POST /login", s.handleLogin)
@@ -167,6 +172,7 @@ type view struct {
 	Busy        bool
 	Recipe      string
 	Wwwroot     string
+	TunnelURL   string
 	InstalledAt string
 	Services    []serviceRow
 	Users       []userRow
@@ -218,6 +224,7 @@ func (s *Server) buildView(r *http.Request) view {
 		v.Wwwroot = st.Wwwroot
 		v.InstalledAt = st.InstalledAt.Format("2006-01-02 15:04 MST")
 		v.Users = []userRow{{Username: "admin", Password: st.AdminPass, Role: "Site admin"}}
+		v.TunnelURL = tunnel.URL()
 	}
 	for _, s := range svc.Current().Statuses() {
 		v.Services = append(v.Services, serviceRow{Name: s.Name, Status: s.State, Running: s.Running})
@@ -374,6 +381,53 @@ func (s *Server) handleInstall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// The tunnel handlers run synchronously: cloudflared announces its URL in a
+// few seconds, so a plain form POST + redirect beats wiring them into the
+// single-flight job. The captured log tail makes a failure diagnosable.
+func (s *Server) handleTunnelStart(w http.ResponseWriter, r *http.Request) {
+	st, err := state.Load()
+	if err != nil || !st.Installed() {
+		redirect(w, r, "/")
+		return
+	}
+	var tail []string
+	logf := func(line string) {
+		tail = append(tail, line)
+		if len(tail) > 30 {
+			tail = tail[1:]
+		}
+	}
+	if _, err := tunnel.Start(logf); err != nil {
+		http.Error(w, "starting the tunnel failed: "+err.Error()+"\n\n"+strings.Join(tail, "\n"), http.StatusBadGateway)
+		return
+	}
+	redirect(w, r, "/")
+}
+
+func (s *Server) handleTunnelStop(w http.ResponseWriter, r *http.Request) {
+	if err := tunnel.Stop(func(string) {}); err != nil {
+		http.Error(w, "stopping the tunnel failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	redirect(w, r, "/")
+}
+
+func (s *Server) handleTunnelQR(w http.ResponseWriter, r *http.Request) {
+	u := tunnel.URL()
+	if u == "" {
+		http.NotFound(w, r)
+		return
+	}
+	png, err := qrcode.Encode(u, qrcode.Medium, 512)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write(png)
 }
 
 // randomAdminPass generates the Moodle admin password. It is generated, never

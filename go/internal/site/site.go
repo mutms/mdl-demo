@@ -18,6 +18,7 @@ import (
 	"github.com/mutms/mdl-demo/go/internal/recipes"
 	"github.com/mutms/mdl-demo/go/internal/state"
 	"github.com/mutms/mdl-demo/go/internal/svc"
+	"github.com/mutms/mdl-demo/go/internal/tunnel"
 )
 
 type Options struct {
@@ -164,6 +165,8 @@ func Reset(logf execx.Logf) error {
 			logf("warning: " + what + " failed: " + err.Error())
 		}
 	}
+
+	warn("stopping the tunnel", tunnel.Stop(logf))
 
 	logf("Disabling Moodle cron")
 	_ = svc.Current().DisableCron(logf)

@@ -105,10 +105,14 @@ const styleHTML = `<meta charset="utf-8">
     border-radius: 50%; vertical-align: -.1em;
     animation: spin 1s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  button.copy, button.reveal { background: none; border: 0; padding: 0 .1rem;
+  button.copy, button.reveal, button.qr { background: none; border: 0; padding: 0 .1rem;
     margin-left: .15rem; color: var(--dim); cursor: pointer;
     vertical-align: -.15em; line-height: 1; }
-  button.copy:hover, button.reveal:hover { color: var(--fg); }
+  button.copy:hover, button.reveal:hover, button.qr:hover { color: var(--fg); }
+  dialog#qrdialog { border: 1px solid var(--line); border-radius: 12px;
+    padding: 1.1rem; background: #fff; }
+  dialog#qrdialog::backdrop { background: rgba(0,0,0,.55); }
+  dialog#qrdialog img { display: block; width: min(75vmin, 520px); height: auto; }
   button.copy.ok { color: var(--ok); }
   button.reveal { margin-left: .55rem; }
   button.reveal.on { color: var(--accent); }
@@ -166,6 +170,16 @@ document.addEventListener('click', function (e) {
     t.remove();
   }
 });
+// The QR dialog lives outside the polled #site section, so a 5s refresh swap
+// cannot close it mid-presentation; any click (or Esc) dismisses it.
+document.addEventListener('click', function (e) {
+  var q = e.target.closest('button.qr');
+  if (!q) return;
+  var d = document.getElementById('qrdialog');
+  if (!d) return;
+  d.querySelector('img').src = '/tunnel/qr.png?' + Date.now();
+  d.showModal();
+});
 document.addEventListener('click', function (e) {
   var r = e.target.closest('button.reveal');
   if (!r) return;
@@ -192,6 +206,7 @@ const shellHTML = `{{define "page"}}<!doctype html>
 {{template "users" .}}
 {{template "progress" .}}
 {{template "help" .}}
+<dialog id="qrdialog" onclick="this.close()"><img alt="QR code for the tunnel URL"></dialog>
 {{template "footer" .}}
 </html>{{end}}`
 
@@ -206,6 +221,7 @@ const siteHTML = `{{define "site"}}
     {{/* New tab on purpose: landing inside Moodle in the same tab loses
          people — they forget the management UI's address to get back. */}}
     <dt>URL</dt><dd><a href="{{.Wwwroot}}" target="_blank" rel="noopener">{{.Wwwroot}}</a></dd>
+    {{if .TunnelURL}}<dt>Tunnel</dt><dd><a href="{{.TunnelURL}}" target="_blank" rel="noopener">{{.TunnelURL}}</a><button class="qr" type="button" title="Show QR code" aria-label="Show QR code"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3z"/><path d="M21 14v.01M14 21v.01M21 21v.01M17.5 17.5v.01"/></svg></button></dd>{{end}}
     <dt>Installed</dt><dd>{{.InstalledAt}}</dd>
   </dl>
   {{/* Actions live in a row so future ones slot in beside Reset. Restore backup
@@ -219,6 +235,19 @@ const siteHTML = `{{define "site"}}
     </form>
     <button class="subtle" disabled title="Coming soon">Back up data…</button>
     <button class="subtle" disabled title="Coming soon">Restore backup…</button>
+    {{if .TunnelURL}}
+    <form method="post" action="/tunnel/stop">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <button class="subtle">Stop tunnel</button>
+    </form>
+    {{else}}
+    {{/* Quick Tunnel (try.cloudflare.com): a public trycloudflare.com URL
+         for the site, e.g. to hand an audience during a presentation. */}}
+    <form method="post" action="/tunnel/start">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <button class="subtle">Quick Tunnel…</button>
+    </form>
+    {{end}}
   </div>
   {{else if .Busy}}
   <p class="empty"><span class="spin"></span>Working — see progress below.</p>

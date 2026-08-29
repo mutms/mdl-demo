@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added a Quick Tunnel button (Cloudflare, try.cloudflare.com): one click
+  exposes the demo site on a public trycloudflare.com URL — with a QR code
+  popup for audiences — and points Moodle at it until the tunnel stops
+
 - Added setting for custom ports
 - Added setting for demo name
 - Added launcher scripts for macOS and Windows
