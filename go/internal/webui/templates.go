@@ -94,8 +94,6 @@ const styleHTML = `<meta charset="utf-8">
   button:disabled { opacity: .5; cursor: not-allowed; }
   .error { color: var(--err); background: var(--errbg); border-radius: 7px;
     padding: .5rem .7rem; font-size: .88rem; }
-  .success { color: var(--ok); background: var(--okbg); border-radius: 7px;
-    padding: .5rem .7rem; margin: 0 0 .7rem; }
   pre.log { font: .78rem/1.45 ui-monospace, SFMono-Regular, monospace;
     background: var(--bg); border: 1px solid var(--line); border-radius: 7px;
     padding: .7rem .8rem; overflow: auto; white-space: pre-wrap; margin: 0;
@@ -131,8 +129,7 @@ const copyHTML = `{{define "copy"}}<button class="copy" type="button" data-copy=
 // Order and spacing are deliberate: copy (the safe, everyday action) sits right
 // next to the value, and reveal (which puts the password on screen) is pushed
 // off to the side with a gap, so a reach for copy cannot accidentally unmask it.
-const secretHTML = `{{define "secret"}}<span class="secret"><code class="cred secret-val" data-secret="{{.}}" data-copy="{{.}}" title="Click to copy">••••••••</code>{{template "copy" .}}<button class="reveal" type="button" title="Reveal" aria-label="Reveal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></span>{{end}}
-{{define "secretcopy"}}<span class="secret"><code class="cred" data-copy="{{.}}" title="Click to copy">••••••••</code>{{template "copy" .}}</span>{{end}}`
+const secretHTML = `{{define "secret"}}<span class="secret"><code class="cred secret-val" data-secret="{{.}}" data-copy="{{.}}" title="Click to copy">••••••••</code>{{template "copy" .}}<button class="reveal" type="button" title="Reveal" aria-label="Reveal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></span>{{end}}`
 
 // navigator.clipboard needs a secure context — http://localhost qualifies, but
 // browsing via a LAN/VM IP does not, hence the hidden-textarea fallback.
@@ -311,15 +308,11 @@ const debugHTML = `{{define "debug"}}<!doctype html>
 // both addressable fragments (/section/jobstatus and /joblog).
 const progressHTML = `{{define "jobstatus"}}
 <div id="jobstatus"{{if .Job.Running}} hx-get="/section/jobstatus" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
-  <h2>{{if eq .Job.Kind "install"}}Installation{{else}}Reset{{end}}
+  <h2>Progress log
       {{if .Job.Running}}<span class="spin"></span><span class="badge on">running</span>
       {{else if .Job.Failed}}<span class="badge err">failed</span>
       {{else}}<span class="badge on">done</span>{{end}}</h2>
   {{if .Job.Failed}}<p class="error">{{.Job.Error}}</p>{{end}}
-  {{if and (not .Job.Running) (not .Job.Failed) .Job.Wwwroot}}
-  <p class="success">Demo site ready: <a href="{{.Job.Wwwroot}}" target="_blank" rel="noopener">{{.Job.Wwwroot}}</a> —
-     log in as <code class="cred">admin</code> / {{template "secretcopy" .Job.AdminPass}}</p>
-  {{end}}
 </div>
 {{end}}
 
@@ -335,7 +328,7 @@ const progressHTML = `{{define "jobstatus"}}
 {{if .Job.Kind}}
 <section id="progress">
   {{template "jobstatus" .}}
-  <pre id="joblog" class="log{{if not .Job.Running}} short{{end}}">{{template "logtail" .}}</pre>
+  <pre id="joblog" class="log short">{{template "logtail" .}}</pre>
 </section>
 {{end}}
 {{end}}`
@@ -392,9 +385,6 @@ const installHTML = `{{define "install"}}<!doctype html>
         {{end}}
       </select>
     </label>
-    <label>Demo site URL (the address you open the demo at)
-      <input type="url" name="wwwroot" value="{{.SuggestedURL}}" required>
-    </label>
     <label>Site name
       <input type="text" name="fullname" value="{{.Fullname}}" placeholder="the recipe's name" maxlength="254">
     </label>
@@ -404,7 +394,8 @@ const installHTML = `{{define "install"}}<!doctype html>
     <div><button>Install</button></div>
   </form>
   <p class="empty" style="margin-top:.9rem">A strong Moodle admin password is
-  generated automatically and shown here once the site is ready. Installation
+  generated automatically and shown in the Accounts section once the site is
+  ready. Installation
   clones several git repositories and runs the Moodle installer — expect several
   minutes.</p>
 </section>

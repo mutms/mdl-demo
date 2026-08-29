@@ -172,12 +172,11 @@ type view struct {
 	Users       []userRow
 	Job         jobView
 	// Page-specific fields.
-	Error        string
-	Recipes      []recipes.Recipe
-	SuggestedURL string
-	Fullname     string
-	Shortname    string
-	DebugReport  string
+	Error       string
+	Recipes     []recipes.Recipe
+	Fullname    string
+	Shortname   string
+	DebugReport string
 }
 
 type serviceRow struct {
@@ -339,16 +338,10 @@ func (s *Server) handleInstallForm(w http.ResponseWriter, r *http.Request) {
 		v.Error = err.Error()
 	}
 	v.Recipes = list
-	// Suggest the whole URL, not a host + a port field: "port" is jargon a
-	// teacher should never meet. The site is on the console's port + 1 at the
-	// host the browser used for the console — or on whatever `mdl-demo url`
-	// recorded when a proxy or tunnel sits in front; the operator can still
-	// edit the address.
 	st, err := state.Load()
 	if err != nil {
 		st = &state.State{}
 	}
-	v.SuggestedURL = st.SiteURLFor(hostOnly(r.Host))
 	v.Fullname = st.Name
 	v.Shortname = st.Name
 	if v.Shortname == "" {
@@ -358,7 +351,13 @@ func (s *Server) handleInstallForm(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleInstall(w http.ResponseWriter, r *http.Request) {
-	wwwroot, err := site.NormalizeURL(r.FormValue("wwwroot"))
+	// Never asked for: the `mdl-demo url` override when set, else the console's
+	// host on port+1.
+	st, err := state.Load()
+	if err != nil {
+		st = &state.State{}
+	}
+	wwwroot, err := site.NormalizeURL(st.SiteURLFor(hostOnly(r.Host)))
 	if err != nil {
 		http.Error(w, "invalid demo site URL", http.StatusBadRequest)
 		return

@@ -17,9 +17,6 @@ type job struct {
 	dropped int // lines evicted from the front of lines, so an absolute line number stays a stable cursor
 	running bool
 	err     error
-	// adminPass is shown once on the success card and never persisted.
-	adminPass string
-	wwwroot   string
 }
 
 func (j *job) logf(line string) {
@@ -66,9 +63,6 @@ type jobView struct {
 	// Next is the absolute number of the first not-yet-sent line: the cursor
 	// the log tail passes back so the next poll asks only for what came after.
 	Next int
-	// Success-card fields, only set after a finished install.
-	Wwwroot   string
-	AdminPass string
 }
 
 // logTailLimit bounds how many trailing lines a full render carries; the
@@ -89,9 +83,6 @@ func (j *job) view() jobView {
 	}
 	v.Log = append([]string(nil), tail...)
 	v.Next = j.dropped + len(j.lines)
-	if j.kind == "install" && !j.running && j.err == nil {
-		v.Wwwroot, v.AdminPass = j.wwwroot, j.adminPass
-	}
 	return v
 }
 
@@ -118,15 +109,9 @@ func (j *job) logSince(from int) jobView {
 }
 
 func (j *job) startInstall(o site.Options) bool {
-	ok := j.start("install", func(logf execx.Logf) error {
+	return j.start("install", func(logf execx.Logf) error {
 		return site.Install(logf, o)
 	})
-	if ok {
-		j.mu.Lock()
-		j.adminPass, j.wwwroot = o.AdminPass, o.Wwwroot
-		j.mu.Unlock()
-	}
-	return ok
 }
 
 func (j *job) startReset() bool {

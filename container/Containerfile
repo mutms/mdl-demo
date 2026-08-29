@@ -22,12 +22,31 @@
 # ---------------------------------------------------------------------------
 # Stage 1: build mudev + mdl-demo. Runs on the build host's native arch and
 # cross-compiles for $TARGETARCH, so a multi-arch build never compiles Go
-# under qemu. The official golang image, pinned; a go.mod asking for a newer
-# Go than this makes the go command fetch it.
-FROM --platform=$BUILDPLATFORM golang:1.27.0-trixie AS build
+# under qemu. Upstream Go from go.dev on plain pinned Debian — never
+# Debian's golang-go; go.mod picks the compiler.
+FROM --platform=$BUILDPLATFORM debian:13.6 AS build
 ARG TARGETARCH
 ARG MUDEV_REF=main
 ARG VERSION=dev
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git wget ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Pinned with checksums — bump both together.
+ARG GO_VERSION=1.27.0
+RUN set -eux; \
+    arch="$(dpkg --print-architecture)"; \
+    case "$arch" in \
+        amd64) sha256=675c26c449cbb18fc24b74650de1eabbae6e16f64326fd85a283fb3b58280685 ;; \
+        arm64) sha256=51798d2c42d0e1c6ed7fd9f48728b4193abac9e8aad6dbac2fe96a81f5909bda ;; \
+        *) echo "unsupported build architecture: $arch" >&2; exit 1 ;; \
+    esac; \
+    wget -qO /tmp/go.tgz "https://go.dev/dl/go${GO_VERSION}.linux-${arch}.tar.gz"; \
+    echo "$sha256  /tmp/go.tgz" | sha256sum -c --quiet; \
+    tar -C /usr/local -xzf /tmp/go.tgz; \
+    rm /tmp/go.tgz; \
+    ln -s /usr/local/go/bin/go /usr/local/bin/go
 
 ENV CGO_ENABLED=0 GOFLAGS=-trimpath
 
@@ -49,13 +68,15 @@ RUN cd /src/mdl-demo \
 # ---------------------------------------------------------------------------
 # Stage 2: the runtime image.
 #
-# The explicit $TARGETPLATFORM is LOAD-BEARING: stage 1 pulls debian:trixie
-# for the build host's arch, and a bare `FROM debian:trixie` here would
+# The explicit $TARGETPLATFORM is LOAD-BEARING: stage 1 pulls debian:13.6
+# for the build host's arch, and a bare `FROM debian:13.6` here would
 # resolve to that already-present local image by name — producing an "arm64"
 # image whose apt layers are all x86-64 (Exec format error on PID 1).
-FROM --platform=$TARGETPLATFORM debian:trixie
+FROM --platform=$TARGETPLATFORM debian:13.6
 
+# dist-upgrade: these containers live like small VMs — ship current packages.
 RUN apt-get update \
+    && apt-get dist-upgrade -y \
     && apt-get install -y --no-install-recommends \
         curl git ca-certificates gnupg2 lsb-release apt-transport-https \
     && rm -rf /var/lib/apt/lists/*
