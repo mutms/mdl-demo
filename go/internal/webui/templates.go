@@ -12,7 +12,7 @@ import "html/template"
 // fetches to refresh one card without touching the rest.
 var page = template.Must(template.New("page").Parse(
 	shellHTML + siteHTML + usersHTML + servicesHTML + helpHTML + progressHTML +
-		loginHTML + setupHTML + installHTML + debugHTML + footerHTML + copyHTML + secretHTML))
+		loginHTML + setupHTML + installHTML + debugHTML + footerHTML + copyHTML + secretHTML + ssoHTML))
 
 // footerHTML is the GPLv3 "Appropriate Legal Notice" (GPL-3.0 §0, §5(d)):
 // it identifies the author and the project on every page of the interactive
@@ -111,8 +111,11 @@ const styleHTML = `<meta charset="utf-8">
   button.copy:hover, button.reveal:hover, button.qr:hover { color: var(--fg); }
   dialog#qrdialog { border: 1px solid var(--line); border-radius: 12px;
     padding: 1.1rem; background: #fff; }
-  dialog#qrdialog::backdrop { background: rgba(0,0,0,.55); }
+  dialog#qrdialog::backdrop, dialog#ssodialog::backdrop { background: rgba(0,0,0,.55); }
   dialog#qrdialog img { display: block; width: min(75vmin, 520px); height: auto; }
+  dialog#ssodialog { border: 1px solid var(--line); border-radius: 12px;
+    padding: 1.1rem; background: var(--card); color: var(--fg); max-width: 30rem; }
+  img.ssoqr { display: block; width: min(70vmin, 440px); height: auto; margin: .7rem auto 0; }
   button.copy.ok { color: var(--ok); }
   button.reveal { margin-left: .55rem; }
   button.reveal.on { color: var(--accent); }
@@ -207,6 +210,7 @@ const shellHTML = `{{define "page"}}<!doctype html>
 {{template "progress" .}}
 {{template "help" .}}
 <dialog id="qrdialog" onclick="this.close()"><img alt="QR code for the tunnel URL"></dialog>
+<dialog id="ssodialog" onclick="if(event.target===this)this.close()"><div id="ssobody"></div></dialog>
 {{template "footer" .}}
 </html>{{end}}`
 
@@ -283,7 +287,8 @@ const usersHTML = `{{define "users"}}
     <tr>
       <td class="name">{{.Username}} <span class="role">{{.Role}}</span></td>
       <td>{{template "secret" .Password}}</td>
-      <td><button class="subtle" disabled title="Coming soon">Log in…</button></td>
+      <td><button class="subtle" hx-get="/sso/dialog?user={{.Username}}" hx-target="#ssobody"
+          onclick="document.getElementById('ssobody').innerHTML='';document.getElementById('ssodialog').showModal()">Log in…</button></td>
     </tr>
     {{end}}
   </table>
@@ -361,6 +366,33 @@ const progressHTML = `{{define "jobstatus"}}
 </section>
 {{end}}
 {{end}}`
+
+// ssoHTML is the two-stage "Log in…" dialog: stage 1 offers a direct new-tab
+// login plus a QR code; stage 2 shows a single-use QR and polls until the code
+// is claimed, then closes the dialog — the presenter clicks Log in… → QR code…
+// again for the next person, one fresh token each.
+const ssoHTML = `{{define "ssodialog"}}
+<p class="empty">Open the demo site as <code>{{.SSOUser}}</code> — in a new
+   tab here, or on a phone via a single-use QR code.</p>
+<div class="row">
+  <form method="post" action="/sso/login" target="_blank">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <input type="hidden" name="user" value="{{.SSOUser}}">
+    <button>Log in as {{.SSOUser}}</button>
+  </form>
+  <button class="subtle" hx-post="/sso/qr" hx-vals='{"csrf":"{{.CSRF}}","user":"{{.SSOUser}}"}' hx-target="#ssobody">QR code…</button>
+</div>
+{{end}}
+
+{{define "ssoqr"}}
+<p class="empty">Scan to log in as <code>{{.SSOUser}}</code>. Single use —
+   this dialog closes once the code is claimed; open it again for the next
+   person.</p>
+<img class="ssoqr" src="{{.SSOQR}}" alt="Single-use login QR code">
+{{template "ssopoll" .}}
+{{end}}
+
+{{define "ssopoll"}}<div id="ssopoll" hx-get="/sso/status?id={{.SSOTokenID}}" hx-trigger="every 2s" hx-swap="outerHTML"></div>{{end}}`
 
 const loginHTML = `{{define "login"}}<!doctype html>
 <html lang="en">

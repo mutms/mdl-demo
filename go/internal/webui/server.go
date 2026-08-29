@@ -6,17 +6,21 @@ package webui
 
 import (
 	"embed"
+	"encoding/base64"
 	"fmt"
+	"html/template"
 	"io"
 	"io/fs"
 	"net"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/mutms/mdl-demo/go/internal/recipes"
 	"github.com/mutms/mdl-demo/go/internal/site"
+	"github.com/mutms/mdl-demo/go/internal/sso"
 	"github.com/mutms/mdl-demo/go/internal/state"
 	"github.com/mutms/mdl-demo/go/internal/svc"
 	"github.com/mutms/mdl-demo/go/internal/tunnel"
@@ -62,6 +66,10 @@ func Serve(out io.Writer, version string) error {
 	mux.HandleFunc("POST /tunnel/start", s.auth(s.csrf(s.handleTunnelStart)))
 	mux.HandleFunc("POST /tunnel/stop", s.auth(s.csrf(s.handleTunnelStop)))
 	mux.HandleFunc("GET /tunnel/qr.png", s.auth(s.handleTunnelQR))
+	mux.HandleFunc("GET /sso/dialog", s.auth(s.handleSSODialog))
+	mux.HandleFunc("POST /sso/login", s.auth(s.csrf(s.handleSSOLogin)))
+	mux.HandleFunc("POST /sso/qr", s.auth(s.csrf(s.handleSSOQR)))
+	mux.HandleFunc("GET /sso/status", s.auth(s.handleSSOStatus))
 	mux.HandleFunc("POST /logout", s.auth(s.csrf(s.handleLogout)))
 	mux.HandleFunc("GET /login", s.handleLoginForm)
 	mux.HandleFunc("POST /login", s.handleLogin)
@@ -183,6 +191,11 @@ type view struct {
 	Fullname    string
 	Shortname   string
 	DebugReport string
+	// SSO dialog fields (the single-use "Log in…" flow). SSOQR is a data:
+	// image URL — template.URL so html/template's URL sanitizer keeps it.
+	SSOUser    string
+	SSOTokenID string
+	SSOQR      template.URL
 }
 
 type serviceRow struct {
@@ -223,7 +236,7 @@ func (s *Server) buildView(r *http.Request) view {
 		v.Recipe = st.Recipe
 		v.Wwwroot = st.Wwwroot
 		v.InstalledAt = st.InstalledAt.Format("2006-01-02 15:04 MST")
-		v.Users = []userRow{{Username: "admin", Password: st.AdminPass, Role: "Site admin"}}
+		v.Users = demoUsers(st)
 		v.TunnelURL = tunnel.URL()
 	}
 	for _, s := range svc.Current().Statuses() {
@@ -381,6 +394,108 @@ func (s *Server) handleInstall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// demoUsers is the one list behind the Accounts card and the SSO login flow:
+// only names returned here may receive a login token.
+func demoUsers(st *state.State) []userRow {
+	if !st.Installed() {
+		return nil
+	}
+	return []userRow{{Username: "admin", Password: st.AdminPass, Role: "Site admin"}}
+}
+
+func validDemoUser(name string) bool {
+	st, err := state.Load()
+	if err != nil {
+		return false
+	}
+	for _, u := range demoUsers(st) {
+		if u.Username == name {
+			return true
+		}
+	}
+	return false
+}
+
+// siteBase is the site URL login links must work under: the tunnel when
+// active (a phone cannot reach localhost), else the override/derived one.
+func siteBase(r *http.Request) string {
+	if u := tunnel.URL(); u != "" {
+		return u
+	}
+	st, err := state.Load()
+	if err != nil {
+		st = &state.State{}
+	}
+	return st.SiteURLFor(hostOnly(r.Host))
+}
+
+func (s *Server) handleSSODialog(w http.ResponseWriter, r *http.Request) {
+	user := r.FormValue("user")
+	if !validDemoUser(user) {
+		http.Error(w, "unknown demo user", http.StatusBadRequest)
+		return
+	}
+	v := s.buildView(r)
+	v.SSOUser = user
+	s.render(w, "ssodialog", v)
+}
+
+func (s *Server) handleSSOLogin(w http.ResponseWriter, r *http.Request) {
+	user := r.FormValue("user")
+	if !validDemoUser(user) {
+		http.Error(w, "unknown demo user", http.StatusBadRequest)
+		return
+	}
+	token, _, err := sso.Mint(user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, siteBase(r)+"/mdldemo-login.php?token="+token, http.StatusSeeOther)
+}
+
+func (s *Server) handleSSOQR(w http.ResponseWriter, r *http.Request) {
+	user := r.FormValue("user")
+	if !validDemoUser(user) {
+		http.Error(w, "unknown demo user", http.StatusBadRequest)
+		return
+	}
+	token, id, err := sso.Mint(user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	png, err := qrcode.Encode(siteBase(r)+"/mdldemo-login.php?token="+token, qrcode.Medium, 512)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	v := s.buildView(r)
+	v.SSOUser, v.SSOTokenID = user, id
+	v.SSOQR = template.URL("data:image/png;base64," + base64.StdEncoding.EncodeToString(png))
+	s.render(w, "ssoqr", v)
+}
+
+var ssoIDRe = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
+func (s *Server) handleSSOStatus(w http.ResponseWriter, r *http.Request) {
+	id := r.FormValue("id")
+	if !ssoIDRe.MatchString(id) {
+		http.Error(w, "bad token id", http.StatusBadRequest)
+		return
+	}
+	if sso.Pending(id) {
+		v := s.buildView(r)
+		v.SSOTokenID = id
+		s.render(w, "ssopoll", v)
+		return
+	}
+	// Claimed (or expired): swap in a script that closes the dialog — htmx
+	// executes scripts in swapped content.
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprint(w, `<script>document.getElementById('ssodialog').close()</script>`)
 }
 
 // The tunnel handlers run synchronously: cloudflared announces its URL in a
