@@ -139,6 +139,10 @@ $CFG->dboptions = array(
 
 $CFG->wwwroot  = '` + wwwroot + `';
 ` + sslproxy(wwwroot) + `
+// Apache only ever sees loopback (port mapping, cloudflared); real client
+// addresses arrive in X-Forwarded-For. 1 = skip HTTP_CLIENT_IP only.
+$CFG->getremoteaddrconf = 1;
+
 $CFG->dataroot = '` + Dataroot + `';
 $CFG->directorypermissions = 02777;
 
