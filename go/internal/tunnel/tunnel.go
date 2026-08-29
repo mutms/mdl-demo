@@ -72,7 +72,9 @@ func Start(logf execx.Logf) (string, error) {
 
 	logf("Starting Cloudflare Quick Tunnel")
 	logf("$ cloudflared tunnel --no-autoupdate --url " + target)
-	cmd := exec.Command("cloudflared", "tunnel", "--no-autoupdate", "--url", target)
+	// setpriv --no-new-privs: same hardening as the supervised services.
+	cmd := exec.Command("setpriv", "--no-new-privs", "--",
+		"cloudflared", "tunnel", "--no-autoupdate", "--url", target)
 	pipe, err := cmd.StdoutPipe()
 	if err != nil {
 		return "", err

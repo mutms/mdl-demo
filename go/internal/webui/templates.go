@@ -409,9 +409,11 @@ const toolsHTML = `{{define "tools"}}
     <p class="empty">{{t .Lang "Quick Tunnel shares the demo site on a public trycloudflare.com URL, so the audience can open it on their own devices."}}</p>
     <div>
       {{if .TunnelURL}}
+      {{/* Primary on purpose: an active tunnel means the site is public —
+           the way back deserves the loudest button on the card. */}}
       <form method="post" action="/tunnel/stop">
         <input type="hidden" name="csrf" value="{{.CSRF}}">
-        <button class="secondary">{{t .Lang "Stop tunnel"}}</button>
+        <button>{{t .Lang "Stop tunnel"}}</button>
       </form>
       {{else}}
       <form method="post" action="/tunnel/start">

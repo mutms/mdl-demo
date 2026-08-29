@@ -101,16 +101,16 @@ func Run(version string) error {
 	s.procs = []*proc{
 		{name: "postgresql", stop: syscall.SIGINT, newCmd: postgresCmd},
 		{name: "php8.3-fpm", stop: syscall.SIGTERM, newCmd: func() (*exec.Cmd, error) {
-			return exec.Command("/usr/sbin/php-fpm8.3", "--nodaemonize"), nil
+			return nnp("/usr/sbin/php-fpm8.3", "--nodaemonize"), nil
 		}},
 		{name: "apache2", stop: syscall.SIGTERM, newCmd: func() (*exec.Cmd, error) {
-			return exec.Command("apache2ctl", "-DFOREGROUND"), nil
+			return nnp("apache2ctl", "-DFOREGROUND"), nil
 		}},
 		// Mailpit catches all the site's outgoing mail; in-memory on purpose
 		// (throwaway messages, cleared by a container restart). The console
 		// proxies its UI under /mail behind the console session.
 		{name: "mailpit", stop: syscall.SIGTERM, newCmd: func() (*exec.Cmd, error) {
-			return exec.Command("mailpit",
+			return nnp("mailpit",
 				"--smtp", "127.0.0.1:1025",
 				"--listen", "127.0.0.1:8025",
 				"--webroot", "/mail"), nil
@@ -431,6 +431,17 @@ func (s *Supervisor) find(name string) *proc {
 
 // --- helpers ---
 
+// nnp wraps a service in `setpriv --no-new-privs`: nothing in that process
+// tree can ever gain privileges again — setuid binaries go inert for a
+// compromised www-data — the closest portable stand-in for an LSM profile
+// (containers cannot load AppArmor policy, and two of the three target
+// runtimes have no AppArmor at all). Voluntary privilege drops (the
+// apache/php-fpm masters setuid()ing workers to www-data) are unaffected.
+// setpriv execs the service, so the supervised child IS the service.
+func nnp(name string, args ...string) *exec.Cmd {
+	return exec.Command("setpriv", append([]string{"--no-new-privs", "--", name}, args...)...)
+}
+
 // prepareRunDirs recreates the service socket/pid directories. /run may be
 // a plain overlay directory rather than a fresh tmpfs (no runtime flags
 // required), so stale pidfiles/sockets from a previous boot are wiped —
@@ -481,7 +492,9 @@ func postgresCmd() (*exec.Cmd, error) {
 			}
 		}
 	}
-	cmd := exec.Command(bins[0], "-D", datas[0], "-c", "config_file="+confs[0])
+	// nnp execs the postmaster, so the supervised child still IS it (the
+	// credential switch happens at fork, before setpriv runs).
+	cmd := nnp(bins[0], "-D", datas[0], "-c", "config_file="+confs[0])
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Credential: &syscall.Credential{Uid: uint32(uid), Gid: uint32(gid), Groups: groups},
 	}

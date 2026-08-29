@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- All supervised services (postgresql, php-fpm, apache2, mailpit) and the
+  tunnel now run with no_new_privs: nothing in their process trees can ever
+  gain privileges, so setuid binaries are inert to a compromised web process
+
 ### Fixed
 
 - Sign-in notifications and logs now show the visitor's real IP address
