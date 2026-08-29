@@ -13,6 +13,8 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -78,6 +80,15 @@ func Serve(out io.Writer, version string) error {
 	mux.HandleFunc("GET /setup", s.handleSetupForm)
 	mux.HandleFunc("POST /setup", s.handleSetup)
 	mux.HandleFunc("GET /lang", s.handleLang)
+
+	// Mailpit's UI (all the site's outgoing mail) proxied under /mail, behind
+	// the console session like everything else — it is the presenter's tool.
+	// The proxy passes Mailpit's live-update WebSocket through as-is.
+	mailpit := httputil.NewSingleHostReverseProxy(&url.URL{Scheme: "http", Host: "127.0.0.1:8025"})
+	mux.Handle("/mail/", s.auth(mailpit.ServeHTTP))
+	mux.HandleFunc("GET /mail", s.auth(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/mail/", http.StatusMovedPermanently)
+	}))
 
 	assets, err := fs.Sub(static, "static")
 	if err != nil {

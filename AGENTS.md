@@ -16,7 +16,7 @@ three jobs: PID 1 of the container, management web UI, and CLI.
 - `cmd/mdl-demo` — subcommand dispatch (`init`, `serve`, `recipes`,
   `install`, `status`, `reset`, `url`, `cron`, `version`).
 - `internal/initd` — **the container's init**: starts and supervises
-  postgresql/php-fpm/apache2 (restart with backoff), central zombie reaper,
+  postgresql/php-fpm/apache2/mailpit (restart with backoff), central zombie reaper,
   per-minute Moodle cron ticker, ordered shutdown on SIGTERM. The web UI
   runs in-process.
 - `internal/svc` — seam for all service actions (Apache reload, cron, status
@@ -25,7 +25,10 @@ three jobs: PID 1 of the container, management web UI, and CLI.
   Never call service tooling directly from feature code — go through this.
 - `internal/site` — the install/reset orchestrator (used by CLI and UI).
 - `internal/webui` — stdlib HTTP + `html/template` string constants
-  (`templates.go`) + vendored htmx 2 (`static/`, see `VENDOR.md`); sessions,
+  (`templates.go`) + vendored htmx 2 and Pico CSS 2 (`static/`, see
+  `VENDOR.md`; Pico owns the design system, `styleHTML` is theme + custom
+  components — deliberately so forks building branded demos restyle via
+  Pico's variables instead of untangling custom CSS); sessions,
   CSRF and Origin checks in `auth.go`; single-flight background job in
   `job.go`; diagnostics page at `/debug`.
 - `internal/moodle`, `internal/apache`, `internal/pgdb`, `internal/recipes`,

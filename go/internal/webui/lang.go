@@ -152,6 +152,10 @@ var messages = map[string]map[string]string{
 		"It contains service states and recent log lines, no passwords.": "Obsahuje stavy služeb a poslední řádky logů, žádná hesla.",
 		"the recipe's name":                                              "název receptu",
 		"lowercase letters, digits, . _ -":                               "malá písmena, číslice, . _ -",
+
+		"Mail": "Pošta",
+		"Everything the demo site sends lands here — no mail ever leaves the container.": "Vše, co demo stránky odesílají, skončí zde — žádný e-mail nikdy neopustí kontejner.",
+		"Open the mail catcher…": "Otevřít zachycenou poštu…",
 	},
 	"de": {
 		"Moodle demo console": "Moodle-Demo-Konsole",
@@ -237,5 +241,9 @@ var messages = map[string]map[string]string{
 		"It contains service states and recent log lines, no passwords.": "Er enthält Dienststatus und aktuelle Logzeilen, keine Passwörter.",
 		"the recipe's name":                                              "Name des Rezepts",
 		"lowercase letters, digits, . _ -":                               "Kleinbuchstaben, Ziffern, . _ -",
+
+		"Mail": "E-Mail",
+		"Everything the demo site sends lands here — no mail ever leaves the container.": "Alles, was die Demo-Website versendet, landet hier — keine E-Mail verlässt jemals den Container.",
+		"Open the mail catcher…": "Postfang öffnen…",
 	},
 }

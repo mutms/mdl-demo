@@ -14,7 +14,7 @@ import "html/template"
 // section/page. Sections are addressable on their own — that is what htmx
 // fetches to refresh one card without touching the rest.
 var page = template.Must(template.New("page").Funcs(template.FuncMap{"t": tr}).Parse(
-	shellHTML + siteHTML + usersHTML + servicesHTML + helpHTML + progressHTML +
+	shellHTML + siteHTML + usersHTML + mailHTML + servicesHTML + helpHTML + progressHTML +
 		loginHTML + setupHTML + installHTML + debugHTML + footerHTML + copyHTML + secretHTML + ssoHTML + topctlHTML))
 
 // footerHTML is the GPLv3 "Appropriate Legal Notice" (GPL-3.0 §0, §5(d)):
@@ -50,45 +50,37 @@ const styleHTML = `<meta charset="utf-8">
 <title>{{.Title}}</title>
 <script>try{var _t=localStorage.getItem('mdl-demo-theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t}catch(e){}</script>
 <script src="/static/htmx.min.js"></script>
+{{/* Pico is the base layer; the <style> below is the design and wins every
+     conflict. Pico's html[data-theme] contract matches the theme toggle. */}}
+<link rel="stylesheet" href="/static/pico.min.css">
 <style>
+  /* Pico owns the design system; this sheet is the theme plus the components
+     Pico does not have. Identity colors map onto Pico's variables, so Pico's
+     own light/dark switching (matching the data-theme toggle) drives them —
+     only the status palette needs a dark override of its own. */
   :root {
-    color-scheme: light;
-    --fg: #111827; --dim: #6b7280; --line: #d1d5db66;
+    --fg: var(--pico-color); --dim: var(--pico-muted-color);
+    --line: var(--pico-muted-border-color);
+    --card: var(--pico-card-background-color); --bg: var(--pico-background-color);
+    --accent: var(--pico-primary);
     --ok: #15803d; --okbg: #16a34a1f; --idle: #6b7280; --idlebg: #9ca3af22;
     --err: #b91c1c; --errbg: #dc26261a;
-    --card: #ffffff; --bg: #f9fafb; --accent: #1d4ed8;
+    --pico-border-radius: 8px;
   }
-  /* Three-state theme: auto follows the OS unless data-theme pins it. The
-     dark palette appears twice on purpose — once for auto-dark, once for
-     forced dark; keep the two blocks identical. */
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { color-scheme: dark;
-            --fg: #e5e7eb; --dim: #9ca3af; --line: #37415188;
-            --ok: #4ade80; --okbg: #16a34a26; --err: #f87171; --errbg: #dc262626;
-            --card: #111827; --bg: #0b0f19; --accent: #60a5fa; }
+    :root:not([data-theme="light"]) {
+      --ok: #4ade80; --okbg: #16a34a26; --err: #f87171; --errbg: #dc262626; }
   }
-  :root[data-theme="dark"] { color-scheme: dark;
-            --fg: #e5e7eb; --dim: #9ca3af; --line: #37415188;
-            --ok: #4ade80; --okbg: #16a34a26; --err: #f87171; --errbg: #dc262626;
-            --card: #111827; --bg: #0b0f19; --accent: #60a5fa; }
-  * { box-sizing: border-box; }
-  body { font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
-         color: var(--fg); background: var(--bg);
-         margin: 0 auto; padding: 2rem 1.5rem 4rem; max-width: 52rem; }
+  :root[data-theme="dark"] {
+      --ok: #4ade80; --okbg: #16a34a26; --err: #f87171; --errbg: #dc262626; }
+  html { font-size: 93.75%; }
+  body { margin: 0 auto; padding: 2rem 1.5rem 4rem; max-width: 52rem; }
   header { margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: baseline; }
   h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em; }
   h1 span { color: var(--dim); font-weight: 400; }
   .sub { color: var(--dim); margin: .2rem 0 0; font-size: .85rem; }
-  section { background: var(--card); border: 1px solid var(--line);
-            border-radius: 10px; padding: 1rem 1.15rem 1.15rem; margin-bottom: 1.25rem; }
   h2 { font-size: .78rem; text-transform: uppercase; letter-spacing: .07em;
        color: var(--dim); margin: 0 0 .75rem; font-weight: 600; }
-  table { border-collapse: collapse; width: 100%; }
-  th { text-align: left; font-size: .72rem; text-transform: uppercase;
-       letter-spacing: .05em; color: var(--dim); font-weight: 600;
-       padding: 0 .6rem .4rem 0; }
-  td { padding: .4rem .6rem .4rem 0; border-top: 1px solid var(--line);
-       vertical-align: top; }
   td.meta { color: var(--dim); font-family: ui-monospace, SFMono-Regular, monospace;
             font-size: .82rem; }
   .name { font-weight: 600; }
@@ -106,17 +98,11 @@ const styleHTML = `<meta charset="utf-8">
   dl.site dd { margin: 0; font-family: ui-monospace, SFMono-Regular, monospace;
                font-size: .82rem; color: var(--dim); overflow-wrap: anywhere; }
   dl.site dd.name { font-family: inherit; font-size: inherit; font-weight: 600; color: var(--fg); }
-  a { color: inherit; text-underline-offset: 2px; }
-  a:hover { color: var(--accent); text-decoration-color: var(--accent); }
-  form.stack { display: grid; gap: .8rem; max-width: 26rem; }
-  label { display: grid; gap: .25rem; font-size: .85rem; color: var(--dim); }
-  input, select { font: inherit; color: var(--fg); background: var(--bg);
-    border: 1px solid var(--line); border-radius: 7px; padding: .45rem .6rem; }
-  button { font: inherit; font-weight: 600; border: 0; border-radius: 7px;
-    padding: .5rem .9rem; background: var(--accent); color: #fff; cursor: pointer; }
-  button.subtle { background: var(--idlebg); color: var(--fg); font-weight: 400; }
-  button:disabled { opacity: .5; cursor: not-allowed; }
-  .error { color: var(--err); background: var(--errbg); border-radius: 7px;
+  form.stack { max-width: 26rem; }
+  {{/* Pico makes buttons full-width form blocks with generous padding; this
+       console uses them inline in rows, tables and headers, and quieter. */}}
+  button { width: auto; margin-bottom: 0; padding: .4rem .85rem; }
+  .error { color: var(--err); background: var(--errbg); border-radius: var(--pico-border-radius);
     padding: .5rem .7rem; font-size: .88rem; }
   pre.log { font: .78rem/1.45 ui-monospace, SFMono-Regular, monospace;
     background: var(--bg); border: 1px solid var(--line); border-radius: 7px;
@@ -140,10 +126,9 @@ const styleHTML = `<meta charset="utf-8">
     margin-left: .15rem; color: var(--dim); cursor: pointer;
     vertical-align: -.15em; line-height: 1; }
   button.copy:hover, button.reveal:hover, button.qr:hover { color: var(--fg); }
-  dialog { border: 1px solid var(--line); border-radius: 12px; padding: 1.1rem;
-    background: var(--card); color: var(--fg); width: min(30rem, 92vw); min-height: 8rem; }
-  dialog::backdrop { background: rgba(0,0,0,.55); }
-  dialog#qrdialog { background: #fff; width: auto; min-height: 0; }
+  dialog > article { width: min(30rem, 92vw); min-height: 8rem;
+    position: relative; /* anchors .dlgclose */ }
+  dialog#qrdialog article { background: #fff; width: auto; min-height: 0; }
   dialog#qrdialog img { display: block; width: min(75vmin, 520px); height: auto; }
   button.dlgclose { position: absolute; top: .45rem; right: .55rem; background: none;
     border: 0; padding: .2rem; color: var(--dim); font-size: 1.15rem; line-height: 1;
@@ -262,22 +247,26 @@ const shellHTML = `{{define "page"}}<!doctype html>
   </div>
   <div class="row">
     {{template "topctl" .}}
-    <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="subtle">{{t .Lang "Log out"}}</button></form>
+    <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="secondary">{{t .Lang "Log out"}}</button></form>
   </div>
 </header>
 
 {{template "site" .}}
 {{template "users" .}}
+{{template "mail" .}}
 {{template "progress" .}}
 {{template "help" .}}
-<dialog id="qrdialog" onclick="this.close()"><button class="dlgclose" type="button" aria-label="Close">×</button><img alt="QR code for the tunnel URL"></dialog>
+{{/* Pico's modal shape: the dialog is the full-screen overlay, the box is a
+     child <article> (which also gives it the card look for free). */}}
+<dialog id="qrdialog" onclick="this.close()"><article><button class="dlgclose" type="button" aria-label="Close">×</button><img alt="QR code for the tunnel URL"></article></dialog>
 {{/* The close button sits outside #ssobody so htmx stage swaps keep it. */}}
-<dialog id="ssodialog" onclick="if(event.target===this)this.close()"><button class="dlgclose" type="button" aria-label="Close">×</button><div id="ssobody"></div></dialog>
+<dialog id="ssodialog" onclick="if(event.target===this)this.close()"><article><button class="dlgclose" type="button" aria-label="Close">×</button><div id="ssobody"></div></article></dialog>
 {{/* Unconditional, unlike the button that opens it (the Accounts card):
      htmx swaps that card in the moment an install finishes, and a dialog
      rendered only {{if .Installed}} would not exist yet on a page opened
      before the install — the button would target null until a reload. */}}
 <dialog id="createdialog" onclick="if(event.target===this)this.close()">
+  <article>
   <button class="dlgclose" type="button" aria-label="Close">×</button>
   {{/* The password is never asked for: generated like the admin's, shown
        masked on the Accounts card — the whole point of console-side users. */}}
@@ -297,12 +286,13 @@ const shellHTML = `{{define "page"}}<!doctype html>
     </label>
     <div><button>{{t .Lang "Create user"}}</button></div>
   </form>
+  </article>
 </dialog>
 {{template "footer" .}}
 </html>{{end}}`
 
 const siteHTML = `{{define "site"}}
-<section id="site" hx-get="/section/site" hx-trigger="every 5s" hx-swap="outerHTML">
+<article id="site" hx-get="/section/site" hx-trigger="every 5s" hx-swap="outerHTML">
   <h2>{{t .Lang "Demo site"}}</h2>
   {{if .Installed}}
   {{/* One site per container, so its details are a description list, not a
@@ -328,21 +318,21 @@ const siteHTML = `{{define "site"}}
     <form method="post" action="/reset"
           onsubmit="return confirm('{{t .Lang "Wipe the demo site? The database, code tree and all data are deleted."}}')">
       <input type="hidden" name="csrf" value="{{.CSRF}}">
-      <button class="subtle">{{t .Lang "Reset site…"}}</button>
+      <button class="secondary">{{t .Lang "Reset site…"}}</button>
     </form>
-    <button class="subtle" disabled title="{{t .Lang "Coming soon"}}">{{t .Lang "Back up data…"}}</button>
-    <button class="subtle" disabled title="{{t .Lang "Coming soon"}}">{{t .Lang "Restore backup…"}}</button>
+    <button class="secondary" disabled title="{{t .Lang "Coming soon"}}">{{t .Lang "Back up data…"}}</button>
+    <button class="secondary" disabled title="{{t .Lang "Coming soon"}}">{{t .Lang "Restore backup…"}}</button>
     {{if .TunnelURL}}
     <form method="post" action="/tunnel/stop">
       <input type="hidden" name="csrf" value="{{.CSRF}}">
-      <button class="subtle">{{t .Lang "Stop tunnel"}}</button>
+      <button class="secondary">{{t .Lang "Stop tunnel"}}</button>
     </form>
     {{else}}
     {{/* Quick Tunnel (try.cloudflare.com): a public trycloudflare.com URL
          for the site, e.g. to hand an audience during a presentation. */}}
     <form method="post" action="/tunnel/start">
       <input type="hidden" name="csrf" value="{{.CSRF}}">
-      <button class="subtle">{{t .Lang "Quick Tunnel…"}}</button>
+      <button class="secondary">{{t .Lang "Quick Tunnel…"}}</button>
     </form>
     {{end}}
   </div>
@@ -355,10 +345,10 @@ const siteHTML = `{{define "site"}}
        (The installed-state Restore only swaps data onto the current tree.) */}}
   <div class="row" style="margin:.9rem 0 0">
     <a href="/install"><button>{{t .Lang "Install a demo site…"}}</button></a>
-    <button class="subtle" disabled title="{{t .Lang "Coming soon"}}">{{t .Lang "Restore backup…"}}</button>
+    <button class="secondary" disabled title="{{t .Lang "Coming soon"}}">{{t .Lang "Restore backup…"}}</button>
   </div>
   {{end}}
-</section>
+</article>
 {{end}}`
 
 // The accounts section sits between the site summary and the log — its own
@@ -372,7 +362,7 @@ const siteHTML = `{{define "site"}}
 const usersHTML = `{{define "users"}}
 <div id="users"{{if .Busy}} hx-get="/section/users" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
 {{if .Installed}}
-<section>
+<article>
   <h2>{{t .Lang "Accounts"}}</h2>
   <table>
     <tr><th>{{t .Lang "User"}}</th><th>{{t .Lang "Password"}}</th><th></th></tr>
@@ -380,21 +370,21 @@ const usersHTML = `{{define "users"}}
     <tr>
       <td class="name">{{.Username}} <span class="role">{{t $.Lang .Role}}</span></td>
       <td>{{template "secret" .Password}}</td>
-      <td><button class="subtle" hx-get="/sso/dialog?user={{.Username}}" hx-target="#ssobody"
+      <td><button class="secondary" hx-get="/sso/dialog?user={{.Username}}" hx-target="#ssobody"
           onclick="document.getElementById('ssobody').innerHTML='';document.getElementById('ssodialog').showModal()">{{t $.Lang "Log in…"}}</button></td>
     </tr>
     {{end}}
   </table>
   <div class="row" style="margin:.9rem 0 0">
-    <button class="subtle" onclick="document.getElementById('createdialog').showModal()">{{t .Lang "Create user…"}}</button>
+    <button class="secondary" onclick="document.getElementById('createdialog').showModal()">{{t .Lang "Create user…"}}</button>
   </div>
-</section>
+</article>
 {{end}}
 </div>
 {{end}}`
 
 const servicesHTML = `{{define "services"}}
-<section id="services" hx-get="/section/services" hx-trigger="every 5s" hx-swap="outerHTML">
+<article id="services" hx-get="/section/services" hx-trigger="every 5s" hx-swap="outerHTML">
   <h2>{{t .Lang "Services"}}</h2>
   <table>
     <tr><th>{{t .Lang "Service"}}</th><th>{{t .Lang "Status"}}</th></tr>
@@ -405,16 +395,30 @@ const servicesHTML = `{{define "services"}}
     </tr>
     {{end}}
   </table>
-</section>
+</article>
+{{end}}`
+
+// The mail card links the Mailpit catcher (proxied under /mail): the demo
+// site's entire outbox, for showing an audience what Moodle sends.
+const mailHTML = `{{define "mail"}}
+{{if .Installed}}
+<article>
+  <h2>{{t .Lang "Mail"}}</h2>
+  <p class="empty">{{t .Lang "Everything the demo site sends lands here — no mail ever leaves the container."}}</p>
+  <div class="row" style="margin:.9rem 0 0">
+    <a href="/mail/" target="_blank" rel="noopener"><button class="secondary">{{t .Lang "Open the mail catcher…"}}</button></a>
+  </div>
+</article>
+{{end}}
 {{end}}`
 
 // help is an unmarked (headingless) section on the dashboard — the diagnostics
 // pointer for now, and room for a note or two later.
 const helpHTML = `{{define "help"}}
-<section>
+<article>
   <p class="empty">{{t .Lang "Something misbehaving?"}} <a href="/debug">{{t .Lang "The diagnostics page"}}</a>
      {{t .Lang "has a report you can copy into a bug report."}}</p>
-</section>
+</article>
 {{end}}`
 
 const debugHTML = `{{define "debug"}}<!doctype html>
@@ -423,12 +427,12 @@ const debugHTML = `{{define "debug"}}<!doctype html>
 <header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>{{t .Lang "— diagnostics"}}</span></h1>
 <p class="sub"><a href="/">{{t .Lang "← back"}}</a></p></div>{{template "topctl" .}}</header>
 {{template "services" .}}
-<section>
+<article>
   <p class="empty">{{t .Lang "Copy the whole block below into a bug report"}}
      (<a href="https://github.com/mutms/mdl-demo/issues">github.com/mutms/mdl-demo/issues</a>).
      {{t .Lang "It contains service states and recent log lines, no passwords."}}</p>
   <pre class="log cred">{{.DebugReport}}</pre>
-</section>
+</article>
 {{template "footer" .}}
 </html>{{end}}`
 
@@ -456,10 +460,10 @@ const progressHTML = `{{define "jobstatus"}}
 
 {{define "progress"}}
 {{if .Job.Kind}}
-<section id="progress">
+<article id="progress">
   {{template "jobstatus" .}}
   <pre id="joblog" class="log short">{{template "logtail" .}}</pre>
-</section>
+</article>
 {{end}}
 {{end}}`
 
@@ -478,7 +482,7 @@ const ssoHTML = `{{define "ssodialog"}}
     <input type="hidden" name="user" value="{{.SSOUser}}">
     <button>{{t .Lang "Log in as"}} {{.SSOUser}}</button>
   </form>
-  <button class="subtle" hx-post="/sso/qr" hx-vals='{"csrf":"{{.CSRF}}","user":"{{.SSOUser}}"}' hx-target="#ssobody">{{t .Lang "QR code…"}}</button>
+  <button class="secondary" hx-post="/sso/qr" hx-vals='{"csrf":"{{.CSRF}}","user":"{{.SSOUser}}"}' hx-target="#ssobody">{{t .Lang "QR code…"}}</button>
 </div>
 {{end}}
 
@@ -495,7 +499,7 @@ const loginHTML = `{{define "login"}}<!doctype html>
 <html lang="{{.Lang}}">
 ` + styleHTML + `
 <header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>{{t .Lang "— log in"}}</span></h1></div>{{template "topctl" .}}</header>
-<section>
+<article>
   {{if .Error}}<p class="error">{{t .Lang .Error}}</p>{{end}}
   <form class="stack" method="post" action="/login">
     <label>{{t .Lang "Management password"}}
@@ -503,7 +507,7 @@ const loginHTML = `{{define "login"}}<!doctype html>
     </label>
     <div><button>{{t .Lang "Log in"}}</button></div>
   </form>
-</section>
+</article>
 {{template "footer" .}}
 </html>{{end}}`
 
@@ -511,7 +515,7 @@ const setupHTML = `{{define "setup"}}<!doctype html>
 <html lang="{{.Lang}}">
 ` + styleHTML + `
 <header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>{{t .Lang "— first-time setup"}}</span></h1></div>{{template "topctl" .}}</header>
-<section>
+<article>
   <p class="empty">{{t .Lang "Set the management password for this container."}}
   {{t .Lang "(You can also provide it at container creation with"}} <code>-e MDL_DEMO_PASSWORD=…</code>.)</p>
   {{if .Error}}<p class="error">{{t .Lang .Error}}</p>{{end}}
@@ -524,7 +528,7 @@ const setupHTML = `{{define "setup"}}<!doctype html>
     </label>
     <div><button>{{t .Lang "Set password"}}</button></div>
   </form>
-</section>
+</article>
 {{template "footer" .}}
 </html>{{end}}`
 
@@ -533,7 +537,7 @@ const installHTML = `{{define "install"}}<!doctype html>
 ` + styleHTML + `
 <header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>{{t .Lang "— install a demo site"}}</span></h1>
 <p class="sub"><a href="/">{{t .Lang "← back"}}</a></p></div>{{template "topctl" .}}</header>
-<section>
+<article>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   <form class="stack" method="post" action="/install">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
@@ -552,6 +556,6 @@ const installHTML = `{{define "install"}}<!doctype html>
     <div><button>{{t .Lang "Install"}}</button></div>
   </form>
   <p class="empty" style="margin-top:.9rem">{{t .Lang "A strong Moodle admin password is generated automatically and shown in the Accounts section once the site is ready. Installation clones several git repositories and runs the Moodle installer — expect several minutes."}}</p>
-</section>
+</article>
 {{template "footer" .}}
 </html>{{end}}`

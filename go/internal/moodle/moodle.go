@@ -153,10 +153,11 @@ $CFG->admin = 'admin';
 // instead of failing on them. Plugins come in via recipes/mudev only.
 $CFG->disableupdateautodeploy = true;
 
-// Demo failsafes: never send real mail, and tell Moodle the site is not
-// reachable from the internet — blocks site registration and other
-// public outreach (localhost-only demo).
-$CFG->noemailever = true;
+// Demo failsafes: all outgoing mail lands in the built-in Mailpit catcher
+// (console → Mail) — nothing ever leaves the container, and teachers see
+// exactly what Moodle would send. site_is_public=false blocks site
+// registration and other public outreach.
+$CFG->smtphosts = '127.0.0.1:1025';
 $CFG->noreplyaddress = 'noreply@example.com';
 $CFG->site_is_public = false;
 

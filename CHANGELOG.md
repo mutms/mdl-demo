@@ -22,6 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   language, switchable in the header; installing a site also installs the
   matching Moodle language pack and makes it the site default
 - Added a dark mode toggle in the header (auto → light → dark)
+- Added a built-in mail catcher (Mailpit): every mail the demo site sends is
+  viewable from the console's Mail card and nothing leaves the container
+- Restyled the console on vendored Pico CSS 2: Pico owns typography, forms,
+  tables, buttons, dialogs and dark mode; a small theme keeps the console's
+  identity (badges, log pane, masked credentials)
 - Added setting for custom ports
 - Added setting for demo name
 - Added launcher scripts for macOS and Windows

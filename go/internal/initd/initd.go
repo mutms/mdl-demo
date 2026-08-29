@@ -106,6 +106,15 @@ func Run(version string) error {
 		{name: "apache2", stop: syscall.SIGTERM, newCmd: func() (*exec.Cmd, error) {
 			return exec.Command("apache2ctl", "-DFOREGROUND"), nil
 		}},
+		// Mailpit catches all the site's outgoing mail; in-memory on purpose
+		// (throwaway messages, cleared by a container restart). The console
+		// proxies its UI under /mail behind the console session.
+		{name: "mailpit", stop: syscall.SIGTERM, newCmd: func() (*exec.Cmd, error) {
+			return exec.Command("mailpit",
+				"--smtp", "127.0.0.1:1025",
+				"--listen", "127.0.0.1:8025",
+				"--webroot", "/mail"), nil
+		}},
 	}
 	for _, p := range s.procs {
 		p.exitCh = make(chan syscall.WaitStatus, 1)

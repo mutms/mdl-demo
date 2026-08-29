@@ -36,7 +36,7 @@ func (standalone) DisableCron(logf execx.Logf) error {
 
 func (standalone) Statuses() []Status {
 	var out []Status
-	for _, name := range []string{"postgres", "php-fpm8.3", "apache2"} {
+	for _, name := range []string{"postgres", "php-fpm8.3", "apache2", "mailpit"} {
 		running := exec.Command("pidof", name).Run() == nil
 		st := Status{Name: name, State: "inactive", Running: running}
 		if running {

@@ -98,6 +98,21 @@ RUN curl -fsSL https://packages.sury.org/php/apt.gpg \
 # into the docroot as mdl-demo/ on site install.
 COPY php/ /usr/share/mdl-demo/php/
 
+# Mailpit catches all the demo site's outgoing mail (console → Mail card);
+# official release binary. Pinned with checksums — bump both together.
+ARG MAILPIT_VERSION=v1.31.0
+RUN set -eux; \
+    arch="$(dpkg --print-architecture)"; \
+    case "$arch" in \
+        amd64) sha256=076b5ded9a2182842b93e761b9586a1a251445bffe2666f9f22a6dc14470237d ;; \
+        arm64) sha256=db3e685ed59d58354a29a4e7bfd0497f050af771a41e122aabdb0bd4fb915952 ;; \
+        *) echo "unsupported architecture: $arch" >&2; exit 1 ;; \
+    esac; \
+    curl -fsSL -o /tmp/mailpit.tgz "https://github.com/axllent/mailpit/releases/download/${MAILPIT_VERSION}/mailpit-linux-${arch}.tar.gz"; \
+    echo "$sha256  /tmp/mailpit.tgz" | sha256sum -c --quiet; \
+    tar -C /usr/local/bin -xzf /tmp/mailpit.tgz mailpit; \
+    rm /tmp/mailpit.tgz
+
 # cloudflared for the console's Quick Tunnel button (try.cloudflare.com).
 RUN curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg -o /usr/share/keyrings/cloudflare-main.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main" \
