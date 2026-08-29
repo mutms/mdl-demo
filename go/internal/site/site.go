@@ -27,6 +27,11 @@ type Options struct {
 	Fullname  string // default: the demo name, else the recipe's name
 	Shortname string // default: the demo name, else "demo"
 	Wwwroot   string // default: the recorded site URL for localhost
+	// Lang is the site's default language ("cs", "de", …): the matching
+	// Moodle language pack is installed and set as default. Empty or "en"
+	// leaves the site English. The web UI passes its own display language —
+	// an audience that reads Czech gets a Czech Moodle.
+	Lang string
 }
 
 // Install provisions the whole site: database, code tree, config, Apache,
@@ -122,6 +127,13 @@ func Install(logf execx.Logf, o Options) error {
 	logf("Installing Moodle database (this also takes a few minutes)")
 	if err := moodle.InstallDatabase(logf, o.Fullname, o.Shortname, o.AdminPass); err != nil {
 		return err
+	}
+
+	if o.Lang != "" && o.Lang != "en" {
+		logf("Installing Moodle language pack " + o.Lang + " and making it the site default")
+		if err := moodle.InstallLanguage(logf, o.Lang); err != nil {
+			logf("warning: language pack " + o.Lang + " failed — the site stays in English: " + err.Error())
+		}
 	}
 
 	logf("Enabling Moodle cron")

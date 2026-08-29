@@ -109,6 +109,7 @@ func cmdInstall(args []string) error {
 	fs.StringVar(&o.Fullname, "fullname", "", "site full name (default: the demo name, else the recipe's name)")
 	fs.StringVar(&o.Shortname, "shortname", "", "site short name (default: the demo name, else \"demo\")")
 	fs.StringVar(&o.Wwwroot, "wwwroot", "", "site URL as the browser sees it (default: the site URL from `mdl-demo url` for localhost)")
+	fs.StringVar(&o.Lang, "lang", "", "site default language, e.g. cs or de: installs the language pack (default: English)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}

@@ -77,6 +77,7 @@ func Serve(out io.Writer, version string) error {
 	mux.HandleFunc("POST /login", s.handleLogin)
 	mux.HandleFunc("GET /setup", s.handleSetupForm)
 	mux.HandleFunc("POST /setup", s.handleSetup)
+	mux.HandleFunc("GET /lang", s.handleLang)
 
 	assets, err := fs.Sub(static, "static")
 	if err != nil {
@@ -177,6 +178,7 @@ type view struct {
 	ID          string
 	Name        string
 	Title       string
+	Lang        string
 	CSRF        string
 	Installed   bool
 	Busy        bool
@@ -215,10 +217,10 @@ type userRow struct {
 	Role     string
 }
 
-// baseView is the view every page starts from, logged in or not: version
-// and the demo identity.
-func (s *Server) baseView() view {
-	v := view{Version: s.version}
+// baseView is the view every page starts from, logged in or not: version,
+// the demo identity, and the display language.
+func (s *Server) baseView(r *http.Request) view {
+	v := view{Version: s.version, Lang: requestLang(r)}
 	st, err := state.Load()
 	if err != nil {
 		st = &state.State{}
@@ -228,7 +230,7 @@ func (s *Server) baseView() view {
 }
 
 func (s *Server) buildView(r *http.Request) view {
-	v := s.baseView()
+	v := s.baseView(r)
 	v.Job, v.Busy = s.job.view(), !s.job.idle()
 	if sess, ok := s.sessions.get(r); ok {
 		v.CSRF = sess.csrf
@@ -272,12 +274,12 @@ func (s *Server) handleJobLog(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleLoginForm(w http.ResponseWriter, r *http.Request) {
-	s.render(w, "login", s.baseView())
+	s.render(w, "login", s.baseView(r))
 }
 
 // viewError is a bare page view carrying an error message.
-func (s *Server) viewError(msg string) view {
-	v := s.baseView()
+func (s *Server) viewError(r *http.Request, msg string) view {
+	v := s.baseView(r)
 	v.Error = msg
 	return v
 }
@@ -288,13 +290,13 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.sessions.throttled(r) {
-		s.render(w, "login", s.viewError("Too many failed attempts — try again later."))
+		s.render(w, "login", s.viewError(r, "Too many failed attempts — try again later."))
 		return
 	}
 	st, err := state.Load()
 	if err != nil || st.PasswordHash == "" || !verifyPassword(st.PasswordHash, r.FormValue("password")) {
 		s.sessions.recordFail(r)
-		s.render(w, "login", s.viewError("Wrong password."))
+		s.render(w, "login", s.viewError(r, "Wrong password."))
 		return
 	}
 	s.sessions.start(w)
@@ -307,7 +309,7 @@ func (s *Server) handleSetupForm(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
-	s.render(w, "setup", s.baseView())
+	s.render(w, "setup", s.baseView(r))
 }
 
 // handleSetup sets the initial password. Only possible while none is set —
@@ -328,11 +330,11 @@ func (s *Server) handleSetup(w http.ResponseWriter, r *http.Request) {
 	}
 	pw, pw2 := r.FormValue("password"), r.FormValue("password2")
 	if len(pw) < 8 {
-		s.render(w, "setup", s.viewError("Password must be at least 8 characters."))
+		s.render(w, "setup", s.viewError(r, "Password must be at least 8 characters."))
 		return
 	}
 	if pw != pw2 {
-		s.render(w, "setup", s.viewError("Passwords do not match."))
+		s.render(w, "setup", s.viewError(r, "Passwords do not match."))
 		return
 	}
 	hash, err := hashPassword(pw)
@@ -390,6 +392,7 @@ func (s *Server) handleInstall(w http.ResponseWriter, r *http.Request) {
 		Wwwroot:   wwwroot,
 		Fullname:  strings.TrimSpace(r.FormValue("fullname")),
 		Shortname: strings.TrimSpace(r.FormValue("shortname")),
+		Lang:      requestLang(r),
 	}
 	if !s.job.startInstall(o) {
 		http.Error(w, "another operation is already running", http.StatusConflict)

@@ -18,7 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a Create user… button to the Accounts card: demo accounts with
   generated passwords and an optional global role (Manager or a second site
   administrator), ready for the single-use login links
-
+- Added Czech and German console translations: detected from the browser
+  language, switchable in the header; installing a site also installs the
+  matching Moodle language pack and makes it the site default
+- Added a dark mode toggle in the header (auto → light → dark)
 - Added setting for custom ports
 - Added setting for demo name
 - Added launcher scripts for macOS and Windows

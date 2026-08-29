@@ -89,6 +89,14 @@ func InstallDatabase(logf execx.Logf, fullname, shortname, adminpass string) err
 	)
 }
 
+// InstallLanguage downloads a Moodle language pack and makes it the site
+// default, via php/cli/installlang.php (core ships no CLI for langimport).
+// Callers treat failure as a warning: no language pack must not mean no
+// site — it just stays English.
+func InstallLanguage(logf execx.Logf, lang string) error {
+	return RunCLI(logf, "mdl-demo/cli/installlang.php", "--lang="+lang)
+}
+
 // Cron runs Moodle cron (used by moodle-cron.service via `mdl-demo cron`).
 func Cron(logf execx.Logf) error {
 	return RunCLI(logf, "admin/cli/cron.php")

@@ -4,15 +4,18 @@ package webui
 // a section and the view type that feeds it can be read side by side (same
 // convention as mpd's portal, whose look this UI follows). Every value is
 // escaped by html/template; nothing here interpolates raw.
+//
+// User-facing strings render through {{t .Lang "…"}} (tr in lang.go): the
+// English text is the catalog key and its own fallback.
 
 import "html/template"
 
 // page holds the whole template set: the shell plus one named template per
 // section/page. Sections are addressable on their own — that is what htmx
 // fetches to refresh one card without touching the rest.
-var page = template.Must(template.New("page").Parse(
+var page = template.Must(template.New("page").Funcs(template.FuncMap{"t": tr}).Parse(
 	shellHTML + siteHTML + usersHTML + servicesHTML + helpHTML + progressHTML +
-		loginHTML + setupHTML + installHTML + debugHTML + footerHTML + copyHTML + secretHTML + ssoHTML))
+		loginHTML + setupHTML + installHTML + debugHTML + footerHTML + copyHTML + secretHTML + ssoHTML + topctlHTML))
 
 // footerHTML is the GPLv3 "Appropriate Legal Notice" (GPL-3.0 §0, §5(d)):
 // it identifies the author and the project on every page of the interactive
@@ -30,23 +33,44 @@ const footerHTML = `{{define "footer"}}
 </footer>
 {{end}}`
 
+// topctlHTML is the header's right-side controls, on every page including
+// login/setup: the language switcher (cookie via GET /lang) and the theme
+// toggle cycling auto → light → dark (localStorage, handler in scriptHTML).
+const topctlHTML = `{{define "topctl"}}<div class="row topctl">
+  <nav class="langs">
+    <a href="/lang?set=en"{{if eq .Lang "en"}} class="cur"{{end}}>EN</a><a href="/lang?set=cs"{{if eq .Lang "cs"}} class="cur"{{end}}>CS</a><a href="/lang?set=de"{{if eq .Lang "de"}} class="cur"{{end}}>DE</a>
+  </nav>
+  <button id="themebtn" type="button" title="{{t .Lang "Theme"}}">◐</button>
+</div>{{end}}`
+
+// The inline theme snippet runs before the body parses, so the chosen theme
+// is stamped on <html> before first paint — no light flash for dark users.
 const styleHTML = `<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{.Title}}</title>
+<script>try{var _t=localStorage.getItem('mdl-demo-theme');if(_t==='light'||_t==='dark')document.documentElement.dataset.theme=_t}catch(e){}</script>
 <script src="/static/htmx.min.js"></script>
 <style>
   :root {
-    color-scheme: light dark;
+    color-scheme: light;
     --fg: #111827; --dim: #6b7280; --line: #d1d5db66;
     --ok: #15803d; --okbg: #16a34a1f; --idle: #6b7280; --idlebg: #9ca3af22;
     --err: #b91c1c; --errbg: #dc26261a;
     --card: #ffffff; --bg: #f9fafb; --accent: #1d4ed8;
   }
+  /* Three-state theme: auto follows the OS unless data-theme pins it. The
+     dark palette appears twice on purpose — once for auto-dark, once for
+     forced dark; keep the two blocks identical. */
   @media (prefers-color-scheme: dark) {
-    :root { --fg: #e5e7eb; --dim: #9ca3af; --line: #37415188;
+    :root:not([data-theme="light"]) { color-scheme: dark;
+            --fg: #e5e7eb; --dim: #9ca3af; --line: #37415188;
             --ok: #4ade80; --okbg: #16a34a26; --err: #f87171; --errbg: #dc262626;
             --card: #111827; --bg: #0b0f19; --accent: #60a5fa; }
   }
+  :root[data-theme="dark"] { color-scheme: dark;
+            --fg: #e5e7eb; --dim: #9ca3af; --line: #37415188;
+            --ok: #4ade80; --okbg: #16a34a26; --err: #f87171; --errbg: #dc262626;
+            --card: #111827; --bg: #0b0f19; --accent: #60a5fa; }
   * { box-sizing: border-box; }
   body { font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
          color: var(--fg); background: var(--bg);
@@ -100,6 +124,13 @@ const styleHTML = `<meta charset="utf-8">
     max-height: 22rem; }
   pre.log.short { max-height: 5cm; }
   .row { display: flex; gap: .6rem; align-items: center; }
+  .topctl { gap: .45rem; }
+  .langs a { font-size: .75rem; color: var(--dim); text-decoration: none;
+    padding: .15rem .3rem; border-radius: 5px; }
+  .langs a.cur { background: var(--idlebg); color: var(--fg); font-weight: 600; }
+  #themebtn { background: none; border: 0; color: var(--dim); font-size: 1rem;
+    cursor: pointer; padding: .15rem .3rem; line-height: 1; }
+  #themebtn:hover { color: var(--fg); }
   .spin { display: inline-block; width: .85em; height: .85em; margin-right: .35em;
     border: 2px solid var(--line); border-top-color: var(--accent);
     border-radius: 50%; vertical-align: -.1em;
@@ -180,6 +211,26 @@ document.addEventListener('click', function (e) {
   var c = e.target.closest('button.dlgclose');
   if (c) c.closest('dialog').close();
 });
+// Theme toggle: auto → light → dark. Auto = no data-theme, no stored value.
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('#themebtn');
+  if (!b) return;
+  var cur = document.documentElement.dataset.theme || 'auto';
+  var next = cur === 'auto' ? 'light' : cur === 'light' ? 'dark' : 'auto';
+  try {
+    if (next === 'auto') localStorage.removeItem('mdl-demo-theme');
+    else localStorage.setItem('mdl-demo-theme', next);
+  } catch (err) {}
+  if (next === 'auto') delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = next;
+  b.textContent = next === 'auto' ? '◐' : next === 'light' ? '☀' : '☾';
+});
+document.addEventListener('DOMContentLoaded', function () {
+  var b = document.getElementById('themebtn');
+  if (!b) return;
+  var t = document.documentElement.dataset.theme || 'auto';
+  b.textContent = t === 'light' ? '☀' : t === 'dark' ? '☾' : '◐';
+});
 // The QR dialog lives outside the polled #site section, so a 5s refresh swap
 // cannot close it mid-presentation; any click (or Esc) dismisses it.
 document.addEventListener('click', function (e) {
@@ -202,14 +253,17 @@ document.addEventListener('click', function (e) {
 </script>`
 
 const shellHTML = `{{define "page"}}<!doctype html>
-<html lang="en">
+<html lang="{{.Lang}}">
 ` + styleHTML + `
 <header>
   <div>
-    <h1>{{.ID}} <span>— {{if .Name}}{{.Name}}{{else}}Moodle demo console{{end}}</span></h1>
+    <h1>{{.ID}} <span>— {{if .Name}}{{.Name}}{{else}}{{t .Lang "Moodle demo console"}}{{end}}</span></h1>
     <p class="sub">{{.Version}}</p>
   </div>
-  <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="subtle">Log out</button></form>
+  <div class="row">
+    {{template "topctl" .}}
+    <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="subtle">{{t .Lang "Log out"}}</button></form>
+  </div>
 </header>
 
 {{template "site" .}}
@@ -229,19 +283,19 @@ const shellHTML = `{{define "page"}}<!doctype html>
        masked on the Accounts card — the whole point of console-side users. */}}
   <form class="stack" method="post" action="/users/create">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
-    <label>Username
-      <input name="username" required pattern="[a-z0-9._-]+" title="lowercase letters, digits, . _ -">
+    <label>{{t .Lang "Username"}}
+      <input name="username" required pattern="[a-z0-9._-]+" title="{{t .Lang "lowercase letters, digits, . _ -"}}">
     </label>
-    <label>First name <input name="firstname" required maxlength="100"></label>
-    <label>Last name <input name="lastname" required maxlength="100"></label>
-    <label>Global role
+    <label>{{t .Lang "First name"}} <input name="firstname" required maxlength="100"></label>
+    <label>{{t .Lang "Last name"}} <input name="lastname" required maxlength="100"></label>
+    <label>{{t .Lang "Global role"}}
       <select name="role">
-        <option value="">None (plain user)</option>
-        <option value="manager">Manager</option>
-        <option value="admin">Administrator</option>
+        <option value="">{{t .Lang "None (plain user)"}}</option>
+        <option value="manager">{{t .Lang "Manager"}}</option>
+        <option value="admin">{{t .Lang "Administrator"}}</option>
       </select>
     </label>
-    <div><button>Create user</button></div>
+    <div><button>{{t .Lang "Create user"}}</button></div>
   </form>
 </dialog>
 {{template "footer" .}}
@@ -249,59 +303,59 @@ const shellHTML = `{{define "page"}}<!doctype html>
 
 const siteHTML = `{{define "site"}}
 <section id="site" hx-get="/section/site" hx-trigger="every 5s" hx-swap="outerHTML">
-  <h2>Demo site</h2>
+  <h2>{{t .Lang "Demo site"}}</h2>
   {{if .Installed}}
   {{/* One site per container, so its details are a description list, not a
        one-row table. */}}
   <dl class="site">
-    <dt>Recipe</dt><dd class="name">{{.Recipe}}</dd>
+    <dt>{{t .Lang "Recipe"}}</dt><dd class="name">{{.Recipe}}</dd>
     {{/* New tab on purpose: landing inside Moodle in the same tab loses
          people — they forget the management UI's address to get back. */}}
     {{/* While the tunnel runs, the tunnel URL IS the site's URL (wwwroot is
          rewritten to it); showing the local one here would send clicks on a
          301-hop through the original host — and nowhere at all off-LAN. */}}
     {{if .TunnelURL}}
-    <dt>URL</dt><dd><a href="{{.TunnelURL}}" target="_blank" rel="noopener">{{.TunnelURL}}</a><button class="qr" type="button" title="Show QR code" aria-label="Show QR code"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3z"/><path d="M21 14v.01M14 21v.01M21 21v.01M17.5 17.5v.01"/></svg></button> <span class="badge on">tunnel</span></dd>
+    <dt>{{t .Lang "URL"}}</dt><dd><a href="{{.TunnelURL}}" target="_blank" rel="noopener">{{.TunnelURL}}</a><button class="qr" type="button" title="QR" aria-label="QR"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3z"/><path d="M21 14v.01M14 21v.01M21 21v.01M17.5 17.5v.01"/></svg></button> <span class="badge on">{{t .Lang "tunnel"}}</span></dd>
     {{else}}
-    <dt>URL</dt><dd><a href="{{.Wwwroot}}" target="_blank" rel="noopener">{{.Wwwroot}}</a></dd>
+    <dt>{{t .Lang "URL"}}</dt><dd><a href="{{.Wwwroot}}" target="_blank" rel="noopener">{{.Wwwroot}}</a></dd>
     {{end}}
-    <dt>Installed</dt><dd>{{.InstalledAt}}</dd>
+    <dt>{{t .Lang "Installed"}}</dt><dd>{{.InstalledAt}}</dd>
   </dl>
   {{/* Actions live in a row so future ones slot in beside Reset. Restore backup
        appears in both states: here (site installed) it swaps data onto the
        current tree; from empty it reinstalls the backup's recipe first. */}}
   <div class="row" style="margin:.9rem 0 0">
     <form method="post" action="/reset"
-          onsubmit="return confirm('Wipe the demo site? The database, code tree and all data are deleted.')">
+          onsubmit="return confirm('{{t .Lang "Wipe the demo site? The database, code tree and all data are deleted."}}')">
       <input type="hidden" name="csrf" value="{{.CSRF}}">
-      <button class="subtle">Reset site…</button>
+      <button class="subtle">{{t .Lang "Reset site…"}}</button>
     </form>
-    <button class="subtle" disabled title="Coming soon">Back up data…</button>
-    <button class="subtle" disabled title="Coming soon">Restore backup…</button>
+    <button class="subtle" disabled title="{{t .Lang "Coming soon"}}">{{t .Lang "Back up data…"}}</button>
+    <button class="subtle" disabled title="{{t .Lang "Coming soon"}}">{{t .Lang "Restore backup…"}}</button>
     {{if .TunnelURL}}
     <form method="post" action="/tunnel/stop">
       <input type="hidden" name="csrf" value="{{.CSRF}}">
-      <button class="subtle">Stop tunnel</button>
+      <button class="subtle">{{t .Lang "Stop tunnel"}}</button>
     </form>
     {{else}}
     {{/* Quick Tunnel (try.cloudflare.com): a public trycloudflare.com URL
          for the site, e.g. to hand an audience during a presentation. */}}
     <form method="post" action="/tunnel/start">
       <input type="hidden" name="csrf" value="{{.CSRF}}">
-      <button class="subtle">Quick Tunnel…</button>
+      <button class="subtle">{{t .Lang "Quick Tunnel…"}}</button>
     </form>
     {{end}}
   </div>
   {{else if .Busy}}
-  <p class="empty"><span class="spin"></span>Working — see progress below.</p>
+  <p class="empty"><span class="spin"></span>{{t .Lang "Working — see progress below."}}</p>
   {{else}}
-  <p class="empty">No demo site installed yet.</p>
+  <p class="empty">{{t .Lang "No demo site installed yet."}}</p>
   {{/* Restore backup works from empty because a backup records the recipe it
        came from — restoring can reinstall that code tree, then load the data.
        (The installed-state Restore only swaps data onto the current tree.) */}}
   <div class="row" style="margin:.9rem 0 0">
-    <a href="/install"><button>Install a demo site…</button></a>
-    <button class="subtle" disabled title="Coming soon">Restore backup…</button>
+    <a href="/install"><button>{{t .Lang "Install a demo site…"}}</button></a>
+    <button class="subtle" disabled title="{{t .Lang "Coming soon"}}">{{t .Lang "Restore backup…"}}</button>
   </div>
   {{end}}
 </section>
@@ -319,20 +373,20 @@ const usersHTML = `{{define "users"}}
 <div id="users"{{if .Busy}} hx-get="/section/users" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
 {{if .Installed}}
 <section>
-  <h2>Accounts</h2>
+  <h2>{{t .Lang "Accounts"}}</h2>
   <table>
-    <tr><th>User</th><th>Password</th><th></th></tr>
+    <tr><th>{{t .Lang "User"}}</th><th>{{t .Lang "Password"}}</th><th></th></tr>
     {{range .Users}}
     <tr>
-      <td class="name">{{.Username}} <span class="role">{{.Role}}</span></td>
+      <td class="name">{{.Username}} <span class="role">{{t $.Lang .Role}}</span></td>
       <td>{{template "secret" .Password}}</td>
       <td><button class="subtle" hx-get="/sso/dialog?user={{.Username}}" hx-target="#ssobody"
-          onclick="document.getElementById('ssobody').innerHTML='';document.getElementById('ssodialog').showModal()">Log in…</button></td>
+          onclick="document.getElementById('ssobody').innerHTML='';document.getElementById('ssodialog').showModal()">{{t $.Lang "Log in…"}}</button></td>
     </tr>
     {{end}}
   </table>
   <div class="row" style="margin:.9rem 0 0">
-    <button class="subtle" onclick="document.getElementById('createdialog').showModal()">Create user…</button>
+    <button class="subtle" onclick="document.getElementById('createdialog').showModal()">{{t .Lang "Create user…"}}</button>
   </div>
 </section>
 {{end}}
@@ -341,9 +395,9 @@ const usersHTML = `{{define "users"}}
 
 const servicesHTML = `{{define "services"}}
 <section id="services" hx-get="/section/services" hx-trigger="every 5s" hx-swap="outerHTML">
-  <h2>Services</h2>
+  <h2>{{t .Lang "Services"}}</h2>
   <table>
-    <tr><th>Service</th><th>Status</th></tr>
+    <tr><th>{{t .Lang "Service"}}</th><th>{{t .Lang "Status"}}</th></tr>
     {{range .Services}}
     <tr>
       <td class="name">{{.Name}}</td>
@@ -358,21 +412,21 @@ const servicesHTML = `{{define "services"}}
 // pointer for now, and room for a note or two later.
 const helpHTML = `{{define "help"}}
 <section>
-  <p class="empty">Something misbehaving? The <a href="/debug">diagnostics page</a>
-     has a report you can copy into a bug report.</p>
+  <p class="empty">{{t .Lang "Something misbehaving?"}} <a href="/debug">{{t .Lang "The diagnostics page"}}</a>
+     {{t .Lang "has a report you can copy into a bug report."}}</p>
 </section>
 {{end}}`
 
 const debugHTML = `{{define "debug"}}<!doctype html>
-<html lang="en">
+<html lang="{{.Lang}}">
 ` + styleHTML + `
-<header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>— diagnostics</span></h1>
-<p class="sub"><a href="/">← back</a></p></div></header>
+<header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>{{t .Lang "— diagnostics"}}</span></h1>
+<p class="sub"><a href="/">{{t .Lang "← back"}}</a></p></div>{{template "topctl" .}}</header>
 {{template "services" .}}
 <section>
-  <p class="empty">Copy the whole block below into a bug report
+  <p class="empty">{{t .Lang "Copy the whole block below into a bug report"}}
      (<a href="https://github.com/mutms/mdl-demo/issues">github.com/mutms/mdl-demo/issues</a>).
-     It contains service states and recent log lines, no passwords.</p>
+     {{t .Lang "It contains service states and recent log lines, no passwords."}}</p>
   <pre class="log cred">{{.DebugReport}}</pre>
 </section>
 {{template "footer" .}}
@@ -384,10 +438,10 @@ const debugHTML = `{{define "debug"}}<!doctype html>
 // both addressable fragments (/section/jobstatus and /joblog).
 const progressHTML = `{{define "jobstatus"}}
 <div id="jobstatus"{{if .Job.Running}} hx-get="/section/jobstatus" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
-  <h2>Progress log
-      {{if .Job.Running}}<span class="spin"></span><span class="badge on">running</span>
-      {{else if .Job.Failed}}<span class="badge err">failed</span>
-      {{else}}<span class="badge on">done</span>{{end}}</h2>
+  <h2>{{t .Lang "Progress log"}}
+      {{if .Job.Running}}<span class="spin"></span><span class="badge on">{{t .Lang "running"}}</span>
+      {{else if .Job.Failed}}<span class="badge err">{{t .Lang "failed"}}</span>
+      {{else}}<span class="badge on">{{t .Lang "done"}}</span>{{end}}</h2>
   {{if .Job.Failed}}<p class="error">{{.Job.Error}}</p>{{end}}
 </div>
 {{end}}
@@ -414,95 +468,90 @@ const progressHTML = `{{define "jobstatus"}}
 // is claimed, then closes the dialog — the presenter clicks Log in… → QR code…
 // again for the next person, one fresh token each.
 const ssoHTML = `{{define "ssodialog"}}
-<p class="empty">Open the demo site as <code>{{.SSOUser}}</code> — in a new
-   tab here, or on a phone via a single-use QR code.</p>
+<p class="empty">{{t .Lang "Open the demo site as"}} <code>{{.SSOUser}}</code>
+   {{t .Lang "— in a new tab here, or on a phone via a single-use QR code."}}</p>
 <div class="row">
   {{/* The new tab takes over; onsubmit closes the dialog behind it. */}}
   <form method="post" action="/sso/login" target="_blank"
         onsubmit="document.getElementById('ssodialog').close()">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
     <input type="hidden" name="user" value="{{.SSOUser}}">
-    <button>Log in as {{.SSOUser}}</button>
+    <button>{{t .Lang "Log in as"}} {{.SSOUser}}</button>
   </form>
-  <button class="subtle" hx-post="/sso/qr" hx-vals='{"csrf":"{{.CSRF}}","user":"{{.SSOUser}}"}' hx-target="#ssobody">QR code…</button>
+  <button class="subtle" hx-post="/sso/qr" hx-vals='{"csrf":"{{.CSRF}}","user":"{{.SSOUser}}"}' hx-target="#ssobody">{{t .Lang "QR code…"}}</button>
 </div>
 {{end}}
 
 {{define "ssoqr"}}
-<p class="empty">Scan to log in as <code>{{.SSOUser}}</code>. Single use —
-   this dialog closes once the code is claimed; open it again for the next
-   person.</p>
-<img class="ssoqr" src="{{.SSOQR}}" alt="Single-use login QR code">
+<p class="empty">{{t .Lang "Scan to log in as"}} <code>{{.SSOUser}}</code>.
+   {{t .Lang "Single use — this dialog closes once the code is claimed; open it again for the next person."}}</p>
+<img class="ssoqr" src="{{.SSOQR}}" alt="QR">
 {{template "ssopoll" .}}
 {{end}}
 
 {{define "ssopoll"}}<div id="ssopoll" hx-get="/sso/status?id={{.SSOTokenID}}" hx-trigger="every 2s" hx-swap="outerHTML"></div>{{end}}`
 
 const loginHTML = `{{define "login"}}<!doctype html>
-<html lang="en">
+<html lang="{{.Lang}}">
 ` + styleHTML + `
-<header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>— log in</span></h1></div></header>
+<header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>{{t .Lang "— log in"}}</span></h1></div>{{template "topctl" .}}</header>
 <section>
-  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  {{if .Error}}<p class="error">{{t .Lang .Error}}</p>{{end}}
   <form class="stack" method="post" action="/login">
-    <label>Management password
+    <label>{{t .Lang "Management password"}}
       <input type="password" name="password" autofocus required>
     </label>
-    <div><button>Log in</button></div>
+    <div><button>{{t .Lang "Log in"}}</button></div>
   </form>
 </section>
 {{template "footer" .}}
 </html>{{end}}`
 
 const setupHTML = `{{define "setup"}}<!doctype html>
-<html lang="en">
+<html lang="{{.Lang}}">
 ` + styleHTML + `
-<header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>— first-time setup</span></h1></div></header>
+<header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>{{t .Lang "— first-time setup"}}</span></h1></div>{{template "topctl" .}}</header>
 <section>
-  <p class="empty">Set the management password for this container. (You can also
-  provide it at container creation with <code>-e MDL_DEMO_PASSWORD=…</code>.)</p>
-  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  <p class="empty">{{t .Lang "Set the management password for this container."}}
+  {{t .Lang "(You can also provide it at container creation with"}} <code>-e MDL_DEMO_PASSWORD=…</code>.)</p>
+  {{if .Error}}<p class="error">{{t .Lang .Error}}</p>{{end}}
   <form class="stack" method="post" action="/setup">
-    <label>New password
+    <label>{{t .Lang "New password"}}
       <input type="password" name="password" minlength="8" autofocus required>
     </label>
-    <label>Repeat password
+    <label>{{t .Lang "Repeat password"}}
       <input type="password" name="password2" minlength="8" required>
     </label>
-    <div><button>Set password</button></div>
+    <div><button>{{t .Lang "Set password"}}</button></div>
   </form>
 </section>
 {{template "footer" .}}
 </html>{{end}}`
 
 const installHTML = `{{define "install"}}<!doctype html>
-<html lang="en">
+<html lang="{{.Lang}}">
 ` + styleHTML + `
-<header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>— install a demo site</span></h1>
-<p class="sub"><a href="/">← back</a></p></div></header>
+<header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>{{t .Lang "— install a demo site"}}</span></h1>
+<p class="sub"><a href="/">{{t .Lang "← back"}}</a></p></div>{{template "topctl" .}}</header>
 <section>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   <form class="stack" method="post" action="/install">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
-    <label>Site recipe
+    <label>{{t .Lang "Site recipe"}}
       <select name="recipe" required>
         {{range .Recipes}}<option value="{{.ID}}">{{.ID}} — {{.Name}}</option>
         {{end}}
       </select>
     </label>
-    <label>Site name
-      <input type="text" name="fullname" value="{{.Fullname}}" placeholder="the recipe's name" maxlength="254">
+    <label>{{t .Lang "Site name"}}
+      <input type="text" name="fullname" value="{{.Fullname}}" placeholder="{{t .Lang "the recipe's name"}}" maxlength="254">
     </label>
-    <label>Short name (shown in the navigation)
+    <label>{{t .Lang "Short name (shown in the navigation)"}}
       <input type="text" name="shortname" value="{{.Shortname}}" maxlength="100">
     </label>
-    <div><button>Install</button></div>
+    <div><button>{{t .Lang "Install"}}</button></div>
   </form>
-  <p class="empty" style="margin-top:.9rem">A strong Moodle admin password is
-  generated automatically and shown in the Accounts section once the site is
-  ready. Installation
-  clones several git repositories and runs the Moodle installer — expect several
-  minutes.</p>
+  <p class="empty" style="margin-top:.9rem">{{t .Lang "A strong Moodle admin password is generated automatically and shown in the Accounts section once the site is ready. Installation clones several git repositories and runs the Moodle installer — expect several minutes."}}</p>
 </section>
 {{template "footer" .}}
 </html>{{end}}`
