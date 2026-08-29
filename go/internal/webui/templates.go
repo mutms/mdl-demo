@@ -219,7 +219,10 @@ const shellHTML = `{{define "page"}}<!doctype html>
 <dialog id="qrdialog" onclick="this.close()"><button class="dlgclose" type="button" aria-label="Close">×</button><img alt="QR code for the tunnel URL"></dialog>
 {{/* The close button sits outside #ssobody so htmx stage swaps keep it. */}}
 <dialog id="ssodialog" onclick="if(event.target===this)this.close()"><button class="dlgclose" type="button" aria-label="Close">×</button><div id="ssobody"></div></dialog>
-{{if .Installed}}
+{{/* Unconditional, unlike the button that opens it (the Accounts card):
+     htmx swaps that card in the moment an install finishes, and a dialog
+     rendered only {{if .Installed}} would not exist yet on a page opened
+     before the install — the button would target null until a reload. */}}
 <dialog id="createdialog" onclick="if(event.target===this)this.close()">
   <button class="dlgclose" type="button" aria-label="Close">×</button>
   {{/* The password is never asked for: generated like the admin's, shown
@@ -241,7 +244,6 @@ const shellHTML = `{{define "page"}}<!doctype html>
     <div><button>Create user</button></div>
   </form>
 </dialog>
-{{end}}
 {{template "footer" .}}
 </html>{{end}}`
 
