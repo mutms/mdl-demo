@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added single-use login links to the Accounts card: the Log in… button opens
   a dialog with a direct new-tab login and a one-time QR code (closes when
   claimed) so an audience can take turns on a demo account without passwords
+- Added a Create user… button to the Accounts card: demo accounts with
+  generated passwords and an optional global role (Manager or a second site
+  administrator), ready for the single-use login links
 
 - Added setting for custom ports
 - Added setting for demo name

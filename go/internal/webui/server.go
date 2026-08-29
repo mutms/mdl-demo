@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mutms/mdl-demo/go/internal/moodle"
 	"github.com/mutms/mdl-demo/go/internal/recipes"
 	"github.com/mutms/mdl-demo/go/internal/site"
 	"github.com/mutms/mdl-demo/go/internal/sso"
@@ -66,6 +67,7 @@ func Serve(out io.Writer, version string) error {
 	mux.HandleFunc("POST /tunnel/start", s.auth(s.csrf(s.handleTunnelStart)))
 	mux.HandleFunc("POST /tunnel/stop", s.auth(s.csrf(s.handleTunnelStop)))
 	mux.HandleFunc("GET /tunnel/qr.png", s.auth(s.handleTunnelQR))
+	mux.HandleFunc("POST /users/create", s.auth(s.csrf(s.handleUserCreate)))
 	mux.HandleFunc("GET /sso/dialog", s.auth(s.handleSSODialog))
 	mux.HandleFunc("POST /sso/login", s.auth(s.csrf(s.handleSSOLogin)))
 	mux.HandleFunc("POST /sso/qr", s.auth(s.csrf(s.handleSSOQR)))
@@ -384,7 +386,7 @@ func (s *Server) handleInstall(w http.ResponseWriter, r *http.Request) {
 	}
 	o := site.Options{
 		Recipe:    r.FormValue("recipe"),
-		AdminPass: randomAdminPass(),
+		AdminPass: randomPassword(),
 		Wwwroot:   wwwroot,
 		Fullname:  strings.TrimSpace(r.FormValue("fullname")),
 		Shortname: strings.TrimSpace(r.FormValue("shortname")),
@@ -402,7 +404,77 @@ func demoUsers(st *state.State) []userRow {
 	if !st.Installed() {
 		return nil
 	}
-	return []userRow{{Username: "admin", Password: st.AdminPass, Role: "Site admin"}}
+	rows := []userRow{{Username: "admin", Password: st.AdminPass, Role: "Site admin"}}
+	for _, u := range st.Users {
+		rows = append(rows, userRow{Username: u.Username, Password: u.Password, Role: u.Role})
+	}
+	return rows
+}
+
+// ssoURL is the single-use login link for token, on the URL the visitor's
+// device can actually reach.
+func ssoURL(r *http.Request, token string) string {
+	return siteBase(r) + "/mdl-demo/login.php?token=" + token
+}
+
+var usernameRe = regexp.MustCompile(`^[a-z0-9._-]{1,100}$`)
+
+// roleLabels maps the createuser.php --role values to Accounts-card labels
+// and doubles as the allowlist for the form's role field.
+var roleLabels = map[string]string{"": "User", "manager": "Manager", "admin": "Site admin"}
+
+func (s *Server) handleUserCreate(w http.ResponseWriter, r *http.Request) {
+	st, err := state.Load()
+	if err != nil || !st.Installed() {
+		redirect(w, r, "/")
+		return
+	}
+	username := strings.TrimSpace(r.FormValue("username"))
+	firstname := strings.TrimSpace(r.FormValue("firstname"))
+	lastname := strings.TrimSpace(r.FormValue("lastname"))
+	role := r.FormValue("role")
+	label, roleOK := roleLabels[role]
+	switch {
+	case !usernameRe.MatchString(username):
+		http.Error(w, "username must be 1-100 of a-z 0-9 . _ -", http.StatusBadRequest)
+		return
+	case firstname == "" || lastname == "" || len(firstname) > 100 || len(lastname) > 100:
+		http.Error(w, "first and last name are required", http.StatusBadRequest)
+		return
+	case !roleOK:
+		http.Error(w, "unknown role", http.StatusBadRequest)
+		return
+	}
+	for _, u := range demoUsers(st) {
+		if u.Username == username {
+			http.Error(w, "user "+username+" already exists", http.StatusConflict)
+			return
+		}
+	}
+	password := randomPassword()
+	var tail []string
+	logf := func(line string) {
+		tail = append(tail, line)
+		if len(tail) > 20 {
+			tail = tail[1:]
+		}
+	}
+	if err := moodle.CreateUser(logf, username, password, firstname, lastname, role); err != nil {
+		http.Error(w, "creating the user failed: "+err.Error()+"\n\n"+strings.Join(tail, "\n"), http.StatusInternalServerError)
+		return
+	}
+	// Reload: the install job may have written state while the script ran.
+	st, err = state.Load()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	st.Users = append(st.Users, state.DemoUser{Username: username, Password: password, Role: label})
+	if err := st.Save(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	redirect(w, r, "/")
 }
 
 func validDemoUser(name string) bool {
@@ -453,7 +525,7 @@ func (s *Server) handleSSOLogin(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, siteBase(r)+"/mdldemo-login.php?token="+token, http.StatusSeeOther)
+	http.Redirect(w, r, ssoURL(r, token), http.StatusSeeOther)
 }
 
 func (s *Server) handleSSOQR(w http.ResponseWriter, r *http.Request) {
@@ -467,7 +539,7 @@ func (s *Server) handleSSOQR(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	png, err := qrcode.Encode(siteBase(r)+"/mdldemo-login.php?token="+token, qrcode.Medium, 512)
+	png, err := qrcode.Encode(ssoURL(r, token), qrcode.Medium, 512)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -545,13 +617,14 @@ func (s *Server) handleTunnelQR(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(png)
 }
 
-// randomAdminPass generates the Moodle admin password. It is generated, never
+// randomPassword generates a demo account password (admin and created users
+// alike). It is generated, never
 // asked for: a demo that may be exposed to the internet must not hang on
 // someone choosing a strong password. The "Demo-…3!" shape keeps every default
 // policy class present (upper, lower, digit, symbol) whatever the random middle
 // is; the result is stored (plain text, for a throwaway site) and shown masked
 // so the operator can retrieve it later without it ever being typed.
-func randomAdminPass() string {
+func randomPassword() string {
 	return "Demo-" + randomToken()[:8] + "3!"
 }
 

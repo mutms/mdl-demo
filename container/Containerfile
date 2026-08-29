@@ -94,6 +94,10 @@ RUN curl -fsSL https://packages.sury.org/php/apt.gpg \
         php8.3-pgsql php8.3-soap php8.3-xml php8.3-zip php8.3-opcache \
     && rm -rf /var/lib/apt/lists/*
 
+# The console's Moodle-side PHP (web endpoints + cli/ scripts); installed
+# into the docroot as mdl-demo/ on site install.
+COPY php/ /usr/share/mdl-demo/php/
+
 # cloudflared for the console's Quick Tunnel button (try.cloudflare.com).
 RUN curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg -o /usr/share/keyrings/cloudflare-main.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main" \

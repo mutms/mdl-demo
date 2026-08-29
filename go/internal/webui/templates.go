@@ -109,12 +109,15 @@ const styleHTML = `<meta charset="utf-8">
     margin-left: .15rem; color: var(--dim); cursor: pointer;
     vertical-align: -.15em; line-height: 1; }
   button.copy:hover, button.reveal:hover, button.qr:hover { color: var(--fg); }
-  dialog#qrdialog { border: 1px solid var(--line); border-radius: 12px;
-    padding: 1.1rem; background: #fff; }
-  dialog#qrdialog::backdrop, dialog#ssodialog::backdrop { background: rgba(0,0,0,.55); }
+  dialog { border: 1px solid var(--line); border-radius: 12px; padding: 1.1rem;
+    background: var(--card); color: var(--fg); width: min(30rem, 92vw); min-height: 8rem; }
+  dialog::backdrop { background: rgba(0,0,0,.55); }
+  dialog#qrdialog { background: #fff; width: auto; min-height: 0; }
   dialog#qrdialog img { display: block; width: min(75vmin, 520px); height: auto; }
-  dialog#ssodialog { border: 1px solid var(--line); border-radius: 12px;
-    padding: 1.1rem; background: var(--card); color: var(--fg); max-width: 30rem; }
+  button.dlgclose { position: absolute; top: .45rem; right: .55rem; background: none;
+    border: 0; padding: .2rem; color: var(--dim); font-size: 1.15rem; line-height: 1;
+    cursor: pointer; }
+  button.dlgclose:hover { color: var(--fg); }
   img.ssoqr { display: block; width: min(70vmin, 440px); height: auto; margin: .7rem auto 0; }
   button.copy.ok { color: var(--ok); }
   button.reveal { margin-left: .55rem; }
@@ -173,6 +176,10 @@ document.addEventListener('click', function (e) {
     t.remove();
   }
 });
+document.addEventListener('click', function (e) {
+  var c = e.target.closest('button.dlgclose');
+  if (c) c.closest('dialog').close();
+});
 // The QR dialog lives outside the polled #site section, so a 5s refresh swap
 // cannot close it mid-presentation; any click (or Esc) dismisses it.
 document.addEventListener('click', function (e) {
@@ -209,8 +216,32 @@ const shellHTML = `{{define "page"}}<!doctype html>
 {{template "users" .}}
 {{template "progress" .}}
 {{template "help" .}}
-<dialog id="qrdialog" onclick="this.close()"><img alt="QR code for the tunnel URL"></dialog>
-<dialog id="ssodialog" onclick="if(event.target===this)this.close()"><div id="ssobody"></div></dialog>
+<dialog id="qrdialog" onclick="this.close()"><button class="dlgclose" type="button" aria-label="Close">×</button><img alt="QR code for the tunnel URL"></dialog>
+{{/* The close button sits outside #ssobody so htmx stage swaps keep it. */}}
+<dialog id="ssodialog" onclick="if(event.target===this)this.close()"><button class="dlgclose" type="button" aria-label="Close">×</button><div id="ssobody"></div></dialog>
+{{if .Installed}}
+<dialog id="createdialog" onclick="if(event.target===this)this.close()">
+  <button class="dlgclose" type="button" aria-label="Close">×</button>
+  {{/* The password is never asked for: generated like the admin's, shown
+       masked on the Accounts card — the whole point of console-side users. */}}
+  <form class="stack" method="post" action="/users/create">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>Username
+      <input name="username" required pattern="[a-z0-9._-]+" title="lowercase letters, digits, . _ -">
+    </label>
+    <label>First name <input name="firstname" required maxlength="100"></label>
+    <label>Last name <input name="lastname" required maxlength="100"></label>
+    <label>Global role
+      <select name="role">
+        <option value="">None (plain user)</option>
+        <option value="manager">Manager</option>
+        <option value="admin">Administrator</option>
+      </select>
+    </label>
+    <div><button>Create user</button></div>
+  </form>
+</dialog>
+{{end}}
 {{template "footer" .}}
 </html>{{end}}`
 
@@ -292,6 +323,9 @@ const usersHTML = `{{define "users"}}
     </tr>
     {{end}}
   </table>
+  <div class="row" style="margin:.9rem 0 0">
+    <button class="subtle" onclick="document.getElementById('createdialog').showModal()">Create user…</button>
+  </div>
 </section>
 {{end}}
 </div>
@@ -375,7 +409,9 @@ const ssoHTML = `{{define "ssodialog"}}
 <p class="empty">Open the demo site as <code>{{.SSOUser}}</code> — in a new
    tab here, or on a phone via a single-use QR code.</p>
 <div class="row">
-  <form method="post" action="/sso/login" target="_blank">
+  {{/* The new tab takes over; onsubmit closes the dialog behind it. */}}
+  <form method="post" action="/sso/login" target="_blank"
+        onsubmit="document.getElementById('ssodialog').close()">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
     <input type="hidden" name="user" value="{{.SSOUser}}">
     <button>Log in as {{.SSOUser}}</button>

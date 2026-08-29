@@ -105,8 +105,8 @@ func Install(logf execx.Logf, o Options) error {
 	if err := moodle.WriteConfig(o.Wwwroot); err != nil {
 		return err
 	}
-	logf("Writing the single-use login handler (mdldemo-login.php)")
-	if err := moodle.WriteSSOScript(); err != nil {
+	logf("Installing the console's PHP endpoints (mdl-demo/)")
+	if err := moodle.InstallPHP(logf); err != nil {
 		return err
 	}
 
@@ -209,6 +209,7 @@ func clearSiteState() error {
 		return err
 	}
 	s.Recipe, s.Wwwroot, s.AdminPass = "", "", ""
+	s.Users = nil
 	s.InstalledAt = time.Time{}
 	return s.Save()
 }

@@ -34,6 +34,10 @@ three jobs: PID 1 of the container, management web UI, and CLI.
   (password hash, demo identity adopted once from `MDL_DEMO_PORT`/`MDL_DEMO_NAME`,
   URL overrides from `mdl-demo url`, installed site), command runner with
   line-streamed logs.
+- `php/` — the console's Moodle-side PHP: web endpoints at the top (e.g. the
+  single-use login handler), CLI scripts under `php/cli/`. Baked into the
+  image at `/usr/share/mdl-demo/php` and copied into the docroot as
+  `mdl-demo/` on site install (root-owned, like the whole tree).
 - `launcher/mdl-demo` (bash, Apple `container`) and `launcher/mdl-demo.cmd`
   (pure batch, `wslc`) — `create|start|stop|delete [NNNN]` / `list`; the only
   place the outside port mapping and env vars are spelled out for users.

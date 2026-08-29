@@ -51,13 +51,15 @@ func Run(logf Logf, dir string, name string, args ...string) error {
 // (e.g. --adminpass=…), which would otherwise be printed into a log that streams
 // to a possibly-shared screen.
 func RunSecret(logf Logf, secrets []string, dir string, name string, args ...string) error {
-	echo := "$ " + name + " " + strings.Join(args, " ")
+	// Masked once, used for the echo AND the error: a returned error surfaces
+	// in logs and on screens just like the echo does.
+	masked := name + " " + strings.Join(args, " ")
 	for _, s := range secrets {
 		if s != "" {
-			echo = strings.ReplaceAll(echo, s, "***")
+			masked = strings.ReplaceAll(masked, s, "***")
 		}
 	}
-	logf(echo)
+	logf("$ " + masked)
 
 	cmd := exec.Command(name, args...)
 	cmd.Dir = dir
@@ -85,7 +87,7 @@ func RunSecret(logf Logf, secrets []string, dir string, name string, args ...str
 	}
 
 	if err := wait(); err != nil {
-		return fmt.Errorf("%s %s: %w", name, strings.Join(args, " "), err)
+		return fmt.Errorf("%s: %w", masked, err)
 	}
 	return nil
 }

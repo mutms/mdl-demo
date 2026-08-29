@@ -57,6 +57,18 @@ type State struct {
 	// demo behind the management password).
 	AdminPass   string    `json:"admin_pass,omitempty"`
 	InstalledAt time.Time `json:"installed_at,omitzero"`
+	// Users are the extra demo accounts created from the console — recorded
+	// here (passwords plain, same reasoning as AdminPass) so the Accounts
+	// card and the single-use login links know them.
+	Users []DemoUser `json:"users,omitempty"`
+}
+
+// DemoUser is one console-created demo account; Role is the display label
+// ("Manager", "Site admin", "User").
+type DemoUser struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Role     string `json:"role"`
 }
 
 func (s *State) Installed() bool { return s.Recipe != "" }
