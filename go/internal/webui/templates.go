@@ -257,8 +257,14 @@ const siteHTML = `{{define "site"}}
     <dt>Recipe</dt><dd class="name">{{.Recipe}}</dd>
     {{/* New tab on purpose: landing inside Moodle in the same tab loses
          people — they forget the management UI's address to get back. */}}
+    {{/* While the tunnel runs, the tunnel URL IS the site's URL (wwwroot is
+         rewritten to it); showing the local one here would send clicks on a
+         301-hop through the original host — and nowhere at all off-LAN. */}}
+    {{if .TunnelURL}}
+    <dt>URL</dt><dd><a href="{{.TunnelURL}}" target="_blank" rel="noopener">{{.TunnelURL}}</a><button class="qr" type="button" title="Show QR code" aria-label="Show QR code"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3z"/><path d="M21 14v.01M14 21v.01M21 21v.01M17.5 17.5v.01"/></svg></button> <span class="badge on">tunnel</span></dd>
+    {{else}}
     <dt>URL</dt><dd><a href="{{.Wwwroot}}" target="_blank" rel="noopener">{{.Wwwroot}}</a></dd>
-    {{if .TunnelURL}}<dt>Tunnel</dt><dd><a href="{{.TunnelURL}}" target="_blank" rel="noopener">{{.TunnelURL}}</a><button class="qr" type="button" title="Show QR code" aria-label="Show QR code"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3z"/><path d="M21 14v.01M14 21v.01M21 21v.01M17.5 17.5v.01"/></svg></button></dd>{{end}}
+    {{end}}
     <dt>Installed</dt><dd>{{.InstalledAt}}</dd>
   </dl>
   {{/* Actions live in a row so future ones slot in beside Reset. Restore backup
