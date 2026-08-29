@@ -48,6 +48,7 @@ type Server struct {
 // this point (the CLI, `mdl-demo url`) can rely on the identity being there.
 func Serve(out io.Writer, version string) error {
 	s := &Server{version: version, sessions: newSessions(), job: &job{}}
+	logSink.Store(s.job)
 
 	if err := adoptEnv(out); err != nil {
 		return err
@@ -55,7 +56,7 @@ func Serve(out io.Writer, version string) error {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", s.auth(s.handleHome))
-	for _, name := range []string{"site", "users", "services", "progress", "jobstatus"} {
+	for _, name := range []string{"site", "users", "tools", "services", "progress", "jobstatus"} {
 		section := name
 		mux.HandleFunc("GET /section/"+section, s.auth(func(w http.ResponseWriter, r *http.Request) {
 			s.renderFragment(w, r, section)

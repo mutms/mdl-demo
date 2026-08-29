@@ -315,7 +315,11 @@ func (s *Supervisor) cronLoop() {
 		if err != nil || !st.Installed() || !moodle.Detected() {
 			continue
 		}
-		if err := moodle.Cron(func(string) {}); err != nil {
+		// Output streams into the web UI's Site log ("cron:"-prefixed);
+		// errors also land on PID 1's stderr for podman logs.
+		logf := func(line string) { webui.SiteLog("cron: " + line) }
+		if err := moodle.Cron(logf); err != nil {
+			logf("failed: " + err.Error())
 			fmt.Fprintf(os.Stderr, "moodle cron: %v\n", err)
 		}
 	}

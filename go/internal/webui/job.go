@@ -2,6 +2,7 @@ package webui
 
 import (
 	"sync"
+	"sync/atomic"
 
 	"github.com/mutms/mdl-demo/go/internal/execx"
 	"github.com/mutms/mdl-demo/go/internal/site"
@@ -30,6 +31,29 @@ func (j *job) logf(line string) {
 		j.dropped += drop
 	}
 	j.mu.Unlock()
+}
+
+// logSink is the running server's job: anything noteworthy outside the
+// install/reset flow — cron ticks, and whatever comes next — streams into
+// the Site log through it (the UI runs in-process under mdl-demo init).
+// Atomic because Serve and the writers start as sibling goroutines.
+var logSink atomic.Pointer[job]
+
+// SiteLog appends one line to the Site log; callers prefix their lines
+// ("cron: …") so sources stay tellable apart. Lines are dropped until a
+// job has run — the Site log card only renders once one exists.
+func SiteLog(line string) {
+	j := logSink.Load()
+	if j == nil {
+		return
+	}
+	j.mu.Lock()
+	kind := j.kind
+	j.mu.Unlock()
+	if kind == "" {
+		return
+	}
+	j.logf(line)
 }
 
 // start launches fn in a goroutine unless a job is already running.

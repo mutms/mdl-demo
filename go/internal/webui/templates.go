@@ -14,7 +14,7 @@ import "html/template"
 // section/page. Sections are addressable on their own — that is what htmx
 // fetches to refresh one card without touching the rest.
 var page = template.Must(template.New("page").Funcs(template.FuncMap{"t": tr}).Parse(
-	shellHTML + siteHTML + usersHTML + mailHTML + servicesHTML + helpHTML + progressHTML +
+	shellHTML + siteHTML + usersHTML + toolsHTML + servicesHTML + helpHTML + progressHTML +
 		loginHTML + setupHTML + installHTML + debugHTML + footerHTML + copyHTML + secretHTML + ssoHTML + topctlHTML))
 
 // footerHTML is the GPLv3 "Appropriate Legal Notice" (GPL-3.0 §0, §5(d)):
@@ -110,12 +110,23 @@ const styleHTML = `<meta charset="utf-8">
     max-height: 22rem; }
   pre.log.short { max-height: 5cm; }
   .row { display: flex; gap: .6rem; align-items: center; }
+  .tools { display: grid; grid-template-columns: 1fr auto; gap: .55rem .9rem;
+    align-items: center; }
+  .tools p { margin: 0; padding: 0; }
+  .tools > div { justify-self: end; }
+  .tools button { white-space: nowrap; }
+  {{/* Pico styles bare <nav>; pin the header controls' own metrics so the
+       lang links and the theme glyph sit on one center line. */}}
+  header > .row, .topctl { align-items: center; }
+  header form { margin: 0; }
   .topctl { gap: .45rem; }
-  .langs a { font-size: .75rem; color: var(--dim); text-decoration: none;
-    padding: .15rem .3rem; border-radius: 5px; }
+  .langs { display: flex; align-items: center; margin: 0; padding: 0; }
+  .langs a { font-size: .75rem; line-height: 1; color: var(--dim);
+    text-decoration: none; padding: .25rem .3rem; border-radius: 5px; }
   .langs a.cur { background: var(--idlebg); color: var(--fg); font-weight: 600; }
   #themebtn { background: none; border: 0; color: var(--dim); font-size: 1rem;
-    cursor: pointer; padding: .15rem .3rem; line-height: 1; }
+    cursor: pointer; padding: .2rem .3rem; margin: 0; line-height: 1;
+    display: inline-flex; align-items: center; }
   #themebtn:hover { color: var(--fg); }
   .spin { display: inline-block; width: .85em; height: .85em; margin-right: .35em;
     border: 2px solid var(--line); border-top-color: var(--accent);
@@ -253,7 +264,7 @@ const shellHTML = `{{define "page"}}<!doctype html>
 
 {{template "site" .}}
 {{template "users" .}}
-{{template "mail" .}}
+{{template "tools" .}}
 {{template "progress" .}}
 {{template "help" .}}
 {{/* Pico's modal shape: the dialog is the full-screen overlay, the box is a
@@ -318,23 +329,10 @@ const siteHTML = `{{define "site"}}
     <form method="post" action="/reset"
           onsubmit="return confirm('{{t .Lang "Wipe the demo site? The database, code tree and all data are deleted."}}')">
       <input type="hidden" name="csrf" value="{{.CSRF}}">
-      <button class="secondary">{{t .Lang "Reset site…"}}</button>
+      <button class="secondary">{{t .Lang "Reset site"}}</button>
     </form>
-    <button class="secondary" disabled title="{{t .Lang "Coming soon"}}">{{t .Lang "Back up data…"}}</button>
-    <button class="secondary" disabled title="{{t .Lang "Coming soon"}}">{{t .Lang "Restore backup…"}}</button>
-    {{if .TunnelURL}}
-    <form method="post" action="/tunnel/stop">
-      <input type="hidden" name="csrf" value="{{.CSRF}}">
-      <button class="secondary">{{t .Lang "Stop tunnel"}}</button>
-    </form>
-    {{else}}
-    {{/* Quick Tunnel (try.cloudflare.com): a public trycloudflare.com URL
-         for the site, e.g. to hand an audience during a presentation. */}}
-    <form method="post" action="/tunnel/start">
-      <input type="hidden" name="csrf" value="{{.CSRF}}">
-      <button class="secondary">{{t .Lang "Quick Tunnel…"}}</button>
-    </form>
-    {{end}}
+    <button class="secondary" disabled title="{{t .Lang "Coming soon"}}">{{t .Lang "Back up data"}}</button>
+    <button class="secondary" disabled title="{{t .Lang "Coming soon"}}">{{t .Lang "Restore backup"}}</button>
   </div>
   {{else if .Busy}}
   <p class="empty"><span class="spin"></span>{{t .Lang "Working — see progress below."}}</p>
@@ -344,8 +342,8 @@ const siteHTML = `{{define "site"}}
        came from — restoring can reinstall that code tree, then load the data.
        (The installed-state Restore only swaps data onto the current tree.) */}}
   <div class="row" style="margin:.9rem 0 0">
-    <a href="/install"><button>{{t .Lang "Install a demo site…"}}</button></a>
-    <button class="secondary" disabled title="{{t .Lang "Coming soon"}}">{{t .Lang "Restore backup…"}}</button>
+    <a href="/install"><button>{{t .Lang "Install a demo site"}}</button></a>
+    <button class="secondary" disabled title="{{t .Lang "Coming soon"}}">{{t .Lang "Restore backup"}}</button>
   </div>
   {{end}}
 </article>
@@ -371,12 +369,12 @@ const usersHTML = `{{define "users"}}
       <td class="name">{{.Username}} <span class="role">{{t $.Lang .Role}}</span></td>
       <td>{{template "secret" .Password}}</td>
       <td><button class="secondary" hx-get="/sso/dialog?user={{.Username}}" hx-target="#ssobody"
-          onclick="document.getElementById('ssobody').innerHTML='';document.getElementById('ssodialog').showModal()">{{t $.Lang "Log in…"}}</button></td>
+          onclick="document.getElementById('ssobody').innerHTML='';document.getElementById('ssodialog').showModal()">{{t $.Lang "Log in"}}</button></td>
     </tr>
     {{end}}
   </table>
   <div class="row" style="margin:.9rem 0 0">
-    <button class="secondary" onclick="document.getElementById('createdialog').showModal()">{{t .Lang "Create user…"}}</button>
+    <button class="secondary" onclick="document.getElementById('createdialog').showModal()">{{t .Lang "Create user"}}</button>
   </div>
 </article>
 {{end}}
@@ -398,18 +396,35 @@ const servicesHTML = `{{define "services"}}
 </article>
 {{end}}`
 
-// The mail card links the Mailpit catcher (proxied under /mail): the demo
-// site's entire outbox, for showing an audience what Moodle sends.
-const mailHTML = `{{define "mail"}}
-{{if .Installed}}
-<article>
-  <h2>{{t .Lang "Mail"}}</h2>
-  <p class="empty">{{t .Lang "Everything the demo site sends lands here — no mail ever leaves the container."}}</p>
-  <div class="row" style="margin:.9rem 0 0">
-    <a href="/mail/" target="_blank" rel="noopener"><button class="secondary">{{t .Lang "Open the mail catcher…"}}</button></a>
+// The tools card is the presenter's utility belt: the Quick Tunnel switch
+// (its status — URL, badge, QR — lives on the site card, since it IS the
+// site's URL while active) and the Mailpit catcher (proxied under /mail).
+// Polled like the site card so the tunnel button follows state changes made
+// in another tab.
+const toolsHTML = `{{define "tools"}}
+<article id="tools" hx-get="/section/tools" hx-trigger="every 5s" hx-swap="outerHTML">
+  <h2>{{t .Lang "Tools"}}</h2>
+  <div class="tools">
+    {{if .Installed}}
+    <p class="empty">{{t .Lang "Quick Tunnel shares the demo site on a public trycloudflare.com URL, so the audience can open it on their own devices."}}</p>
+    <div>
+      {{if .TunnelURL}}
+      <form method="post" action="/tunnel/stop">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <button class="secondary">{{t .Lang "Stop tunnel"}}</button>
+      </form>
+      {{else}}
+      <form method="post" action="/tunnel/start">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <button class="secondary">{{t .Lang "Quick Tunnel"}}</button>
+      </form>
+      {{end}}
+    </div>
+    {{end}}
+    <p class="empty">{{t .Lang "The mail catcher holds every mail the site sends — password resets, forum digests — and no mail ever leaves the container."}}</p>
+    <div><a href="/mail/" target="_blank" rel="noopener"><button class="secondary">{{t .Lang "Open the mail catcher"}}</button></a></div>
   </div>
 </article>
-{{end}}
 {{end}}`
 
 // help is an unmarked (headingless) section on the dashboard — the diagnostics
@@ -442,21 +457,23 @@ const debugHTML = `{{define "debug"}}<!doctype html>
 // both addressable fragments (/section/jobstatus and /joblog).
 const progressHTML = `{{define "jobstatus"}}
 <div id="jobstatus"{{if .Job.Running}} hx-get="/section/jobstatus" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
-  <h2>{{t .Lang "Progress log"}}
+  {{/* No "done" badge: cron streams in here after the job, so the log is
+       never really finished — only running and failed say anything. */}}
+  <h2>{{t .Lang "Site log"}}
       {{if .Job.Running}}<span class="spin"></span><span class="badge on">{{t .Lang "running"}}</span>
-      {{else if .Job.Failed}}<span class="badge err">{{t .Lang "failed"}}</span>
-      {{else}}<span class="badge on">{{t .Lang "done"}}</span>{{end}}</h2>
+      {{else if .Job.Failed}}<span class="badge err">{{t .Lang "failed"}}</span>{{end}}</h2>
   {{if .Job.Failed}}<p class="error">{{.Job.Error}}</p>{{end}}
 </div>
 {{end}}
 
 {{/* logtail is both the initial log body and every incremental poll response:
-     the batch of lines, then — while the job runs — a self-replacing cursor
-     that fetches only what comes after .Job.Next and, on swap, scrolls the log
-     box to the bottom. When the job ends the cursor is absent, so polling
-     stops. */}}
+     the batch of lines, then a self-replacing cursor that fetches only what
+     comes after .Job.Next. While the job runs it polls fast and pins the log
+     to the bottom; afterwards it keeps polling slowly (per-minute cron output
+     streams into the same log) without the scroll pin, so reading the log is
+     never yanked away. */}}
 {{define "logtail"}}{{range .Job.Log}}{{.}}
-{{end}}{{if .Job.Running}}<span id="logcursor" hx-get="/joblog?from={{.Job.Next}}" hx-trigger="every 500ms" hx-target="this" hx-swap="outerHTML scroll:#joblog:bottom"></span>{{end}}{{end}}
+{{end}}{{if .Job.Running}}<span id="logcursor" hx-get="/joblog?from={{.Job.Next}}" hx-trigger="every 500ms" hx-target="this" hx-swap="outerHTML scroll:#joblog:bottom"></span>{{else if .Job.Kind}}<span id="logcursor" hx-get="/joblog?from={{.Job.Next}}" hx-trigger="every 5s" hx-target="this" hx-swap="outerHTML"></span>{{end}}{{end}}
 
 {{define "progress"}}
 {{if .Job.Kind}}
@@ -467,9 +484,9 @@ const progressHTML = `{{define "jobstatus"}}
 {{end}}
 {{end}}`
 
-// ssoHTML is the two-stage "Log in…" dialog: stage 1 offers a direct new-tab
+// ssoHTML is the two-stage "Log in" dialog: stage 1 offers a direct new-tab
 // login plus a QR code; stage 2 shows a single-use QR and polls until the code
-// is claimed, then closes the dialog — the presenter clicks Log in… → QR code…
+// is claimed, then closes the dialog — the presenter clicks Log in → QR code
 // again for the next person, one fresh token each.
 const ssoHTML = `{{define "ssodialog"}}
 <p class="empty">{{t .Lang "Open the demo site as"}} <code>{{.SSOUser}}</code>
@@ -482,7 +499,7 @@ const ssoHTML = `{{define "ssodialog"}}
     <input type="hidden" name="user" value="{{.SSOUser}}">
     <button>{{t .Lang "Log in as"}} {{.SSOUser}}</button>
   </form>
-  <button class="secondary" hx-post="/sso/qr" hx-vals='{"csrf":"{{.CSRF}}","user":"{{.SSOUser}}"}' hx-target="#ssobody">{{t .Lang "QR code…"}}</button>
+  <button class="secondary" hx-post="/sso/qr" hx-vals='{"csrf":"{{.CSRF}}","user":"{{.SSOUser}}"}' hx-target="#ssobody">{{t .Lang "QR code"}}</button>
 </div>
 {{end}}
 
