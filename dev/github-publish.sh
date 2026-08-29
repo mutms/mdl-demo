@@ -45,7 +45,9 @@ fi
 
 echo "publishing $IMAGE:$TAG (and :latest)"
 
-container build --arch arm64 --arch amd64 --build-arg VERSION="$TAG" -t "$IMAGE:$TAG" -f container/Containerfile .
+# --pull --no-cache: a release is always built on the freshly pulled base
+# with current packages, never from stale local layers.
+container build --pull --no-cache --arch arm64 --arch amd64 --build-arg VERSION="$TAG" -t "$IMAGE:$TAG" -f container/Containerfile .
 container image push "$IMAGE:$TAG"
 container image tag "$IMAGE:$TAG" "$IMAGE:latest"
 container image push "$IMAGE:latest"

@@ -24,7 +24,7 @@
 # cross-compiles for $TARGETARCH, so a multi-arch build never compiles Go
 # under qemu. Upstream Go from go.dev on plain pinned Debian — never
 # Debian's golang-go; go.mod picks the compiler.
-FROM --platform=$BUILDPLATFORM debian:13.6 AS build
+FROM --platform=$BUILDPLATFORM debian:trixie AS build
 ARG TARGETARCH
 ARG MUDEV_REF=main
 ARG VERSION=dev
@@ -68,11 +68,11 @@ RUN cd /src/mdl-demo \
 # ---------------------------------------------------------------------------
 # Stage 2: the runtime image.
 #
-# The explicit $TARGETPLATFORM is LOAD-BEARING: stage 1 pulls debian:13.6
-# for the build host's arch, and a bare `FROM debian:13.6` here would
+# The explicit $TARGETPLATFORM is LOAD-BEARING: stage 1 pulls debian:trixie
+# for the build host's arch, and a bare `FROM debian:trixie` here would
 # resolve to that already-present local image by name — producing an "arm64"
 # image whose apt layers are all x86-64 (Exec format error on PID 1).
-FROM --platform=$TARGETPLATFORM debian:13.6
+FROM --platform=$TARGETPLATFORM debian:trixie
 
 # dist-upgrade: these containers live like small VMs — ship current packages.
 RUN apt-get update \

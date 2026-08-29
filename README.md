@@ -52,6 +52,21 @@ Rootful podman (or any compatible runtime); no launcher on Linux:
 sudo podman run -d --name mdl-demo-8081 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 ghcr.io/mutms/mdl-demo
 ```
 
+## Updating
+
+While mdl-demo is in development the image changes often, and your container
+tool silently reuses the copy it already downloaded. Pull the newest image
+before creating a demo:
+
+```sh
+container image pull ghcr.io/mutms/mdl-demo    # macOS
+wslc pull ghcr.io/mutms/mdl-demo               # Windows
+sudo podman pull ghcr.io/mutms/mdl-demo        # Linux
+```
+
+The update reaches newly created demos only; delete and recreate a demo to
+move it to the new version.
+
 ## Several demos, or other ports
 
 Every demo has a number: the port of its console, with the site on the
