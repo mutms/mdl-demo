@@ -82,6 +82,30 @@ func TableCount() (int, error) {
 	return strconv.Atoi(out)
 }
 
+// uri connects as the demo role over TCP. Dumps and loads go through it
+// rather than peer-auth postgres: the demo role then owns everything a load
+// creates (no --no-owner surprises for Moodle), and the process needs no
+// runuser, so it can write dump files into root-only staging directories.
+// The "password" is the fixed, publicly documented convention — not a secret.
+const uri = "postgresql://" + Name + ":" + Name + "@127.0.0.1/" + Name
+
+// DumpTo writes a plain-SQL dump of the demo database to file. Plain format
+// on purpose: the backup archive is gzipped as a whole, and plain SQL loads
+// with psql alone. The dump goes to a file, never through the line logger —
+// it can be gigabytes.
+func DumpTo(logf execx.Logf, file string) error {
+	if err := WaitReady(logf); err != nil {
+		return err
+	}
+	return execx.Run(logf, "", "pg_dump", "--no-owner", "--no-privileges", "-f", file, uri)
+}
+
+// LoadFrom replays a plain-SQL dump into the (freshly provisioned, empty)
+// demo database.
+func LoadFrom(logf execx.Logf, file string) error {
+	return execx.Run(logf, "", "psql", "-v", "ON_ERROR_STOP=1", "-q", "-f", file, uri)
+}
+
 // Drop removes the demo database and role. WITH (FORCE) kicks any lingering
 // connections (php-fpm workers) instead of failing on them.
 func Drop(logf execx.Logf) error {

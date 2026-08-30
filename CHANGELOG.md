@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Backup and restore: a new Backups page (Tools card) snapshots the whole demo
+  site — database, uploaded files and the exact code recipe — into one
+  portable .mdb file. Backups survive a site reset, can be downloaded and
+  uploaded, and restore is self-contained (no recipe catalogue needed).
+  A backup can also be restored into a different recipe — back up on one
+  Moodle version, restore into a newer one and the data is upgraded to match.
+  Passwords are never stored in backups; every restore generates fresh ones
+  for all console accounts. Also available as `mdl-demo backup` / `restore`.
+- Backups can be pre-bundled in the image: any .mdb in the repo's backups/
+  directory ships at /srv/backups — how a fork bakes a prepared demo site
+  into its own image, restorable with one click and no installation wait
+- Recipe overlay: vendor/stream/version.yaml files in the repo's recipes/
+  directory are merged into the recipe catalogue at image build, so forks
+  can ship their own site recipes
+
 ### Security
 
 - All supervised services (postgresql, php-fpm, apache2, mailpit) and the

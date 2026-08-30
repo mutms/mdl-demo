@@ -1,5 +1,10 @@
 {{define "site"}}
-<article id="site" hx-get="/section/site" hx-trigger="every 5s" hx-swap="outerHTML">
+{{/* The poll keeps an installed card's tunnel state fresh and swaps a busy
+     card to "ready" when the job ends — but the empty-idle chooser must NOT
+     poll: the swap would fold the accordions back to their server-rendered
+     state under the user's hands. Nothing changes there except through this
+     page's own clicks, which all navigate anyway. */}}
+<article id="site"{{if or .Installed .Busy}} hx-get="/section/site" hx-trigger="every 5s" hx-swap="outerHTML"{{end}}>
   <h2>{{t .Lang "Demo site"}}</h2>
   {{if .Installed}}
   {{/* One site per container, so its details are a description list, not a
@@ -18,29 +23,102 @@
     {{end}}
     <dt>{{t .Lang "Installed"}}</dt><dd>{{.InstalledAt}}</dd>
   </dl>
-  {{/* Actions live in a row so future ones slot in beside Reset. Restore backup
-       appears in both states: here (site installed) it swaps data onto the
-       current tree; from empty it reinstalls the backup's recipe first. */}}
+  {{/* Actions live in a row so future ones slot in beside Reset; backup and
+       restore live on the Backups page (Tools card) to keep this one minimal. */}}
   <div class="row" style="margin:.9rem 0 0">
     <form method="post" action="/reset"
           onsubmit="return confirm('{{t .Lang "Wipe the demo site? The database, code tree and all data are deleted."}}')">
       <input type="hidden" name="csrf" value="{{.CSRF}}">
       <button class="secondary">{{t .Lang "Reset site"}}</button>
     </form>
-    <button class="secondary" disabled title="{{t .Lang "Coming soon"}}">{{t .Lang "Back up data"}}</button>
-    <button class="secondary" disabled title="{{t .Lang "Coming soon"}}">{{t .Lang "Restore backup"}}</button>
   </div>
   {{else if .Busy}}
   <p class="empty"><span class="spin"></span>{{t .Lang "Working — see progress below."}}</p>
   {{else}}
-  <p class="empty">{{t .Lang "No demo site installed yet."}}</p>
-  {{/* Restore backup works from empty because a backup records the recipe it
-       came from — restoring can reinstall that code tree, then load the data.
-       (The installed-state Restore only swaps data onto the current tree.) */}}
-  <div class="row" style="margin:.9rem 0 0">
-    <a href="/install"><button>{{t .Lang "Install a demo site"}}</button></a>
-    <button class="secondary" disabled title="{{t .Lang "Coming soon"}}">{{t .Lang "Restore backup"}}</button>
+  {{/* The empty dashboard IS the chooser: a demo without a site is useless,
+       so the two ways to get one — recipes and backups — are laid out right
+       here, one click each. Defaults do the rest (generated admin password,
+       site name from the demo name / recipe). */}}
+  <p class="empty">{{t .Lang "No demo site installed yet — install a fresh site from a recipe, or restore a backup."}}</p>
+  {{/* One pair of name fields for whichever recipe gets installed — a
+       delegated submit handler (head.html) copies them into the row's form.
+       Outside any form on purpose: an input cannot belong to many forms. */}}
+  <div class="row" style="align-items:flex-start; gap:.9rem; margin:.6rem 0 0">
+    <label style="flex:1">{{t .Lang "Site name"}}
+      <input id="fullname" value="{{.Fullname}}" placeholder="{{t .Lang "the recipe's name"}}" maxlength="254">
+    </label>
+    <label style="flex:1">{{t .Lang "Short name (shown in the navigation)"}}
+      <input id="shortname" value="{{.Shortname}}" maxlength="100">
+    </label>
   </div>
+  <h2 style="margin-top:1.1rem">{{t .Lang "Install a fresh site"}}</h2>
+  {{/* One collapsible card per vendor/stream, versions newest-first inside;
+       the most likely target (first vendor's release stream) starts open.
+       Native details/summary — Pico styles it, and it needs no JS to survive
+       the section's 5s htmx poll. */}}
+  {{range $g := .RecipeGroups}}
+  <details{{if $g.Open}} open{{end}}>
+    <summary><span class="name">{{$g.Vendor}}/{{$g.Stream}}</span> <span class="badge">{{$g.Total}}</span></summary>
+    <table>
+      {{range $g.Current}}
+      <tr>
+        <td class="name">{{.Version}}{{if .Name}}<br><span class="role">{{.Name}}{{if .Description}} — {{.Description}}{{end}}</span>{{end}}</td>
+        <td style="text-align:right">
+          <form method="post" action="/install"
+                onsubmit="return confirm('{{t $.Lang "Install this recipe now? Expect several minutes."}}')">
+            <input type="hidden" name="csrf" value="{{$.CSRF}}">
+            <input type="hidden" name="recipe" value="{{.ID}}">
+            <button class="act">{{t $.Lang "Install"}}</button>
+          </form>
+        </td>
+      </tr>
+      {{end}}
+    </table>
+    {{/* Superseded point releases (a newer one of the same series exists);
+         still installable — upgrade demos need them — just out of the way. */}}
+    {{if $g.Older}}
+    <details>
+      <summary><span class="role">{{t $.Lang "older versions"}}</span> <span class="badge">{{len $g.Older}}</span></summary>
+      <table>
+        {{range $g.Older}}
+        <tr>
+          <td class="name">{{.Version}}{{if .Name}}<br><span class="role">{{.Name}}{{if .Description}} — {{.Description}}{{end}}</span>{{end}}</td>
+          <td style="text-align:right">
+            <form method="post" action="/install"
+                  onsubmit="return confirm('{{t $.Lang "Install this recipe now? Expect several minutes."}}')">
+              <input type="hidden" name="csrf" value="{{$.CSRF}}">
+              <input type="hidden" name="recipe" value="{{.ID}}">
+              <button class="act">{{t $.Lang "Install"}}</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+      </table>
+    </details>
+    {{end}}
+  </details>
+  {{end}}
+  {{if .Backups}}
+  <h2 style="margin-top:1.1rem">{{t .Lang "Restore a backup"}}</h2>
+  <table>
+    {{range .Backups}}{{if .Restorable}}
+    <tr>
+      <td class="name">{{.Name}}{{if .Recipe}}<br><span class="role">{{.Recipe}}</span>{{end}}</td>
+      <td class="meta">{{.Created}}</td>
+      <td style="text-align:right">
+        <form method="post" action="/backups/restore"
+              onsubmit="return confirm('{{t $.Lang "Restore this backup now? Expect a few minutes."}}')">
+          <input type="hidden" name="csrf" value="{{$.CSRF}}">
+          <input type="hidden" name="file" value="{{.Name}}">
+          <input type="hidden" name="back" value="/">
+          <button class="act">{{t $.Lang "Restore"}}</button>
+        </form>
+      </td>
+    </tr>
+    {{end}}{{end}}
+  </table>
+  {{end}}
+  <p class="empty" style="margin-top:.9rem">{{t .Lang "A strong Moodle admin password is generated automatically and shown in the Accounts section once the site is ready. Installation clones several git repositories and runs the Moodle installer — expect several minutes."}}</p>
   {{end}}
 </article>
 {{end}}

@@ -17,7 +17,7 @@
     <tr>
       <td class="name">{{.Username}} <span class="role">{{t $.Lang .Role}}</span></td>
       <td>{{template "secret" .Password}}</td>
-      <td><button class="secondary" hx-get="/sso/dialog?user={{.Username}}" hx-target="#ssobody"
+      <td><button class="act" hx-get="/sso/dialog?user={{.Username}}" hx-target="#ssobody"
           onclick="document.getElementById('ssobody').innerHTML='';document.getElementById('ssodialog').showModal()">{{t $.Lang "Log in"}}</button></td>
     </tr>
     {{end}}

@@ -51,6 +51,9 @@ type State struct {
 
 	Recipe  string `json:"recipe,omitempty"`
 	Wwwroot string `json:"wwwroot,omitempty"`
+	// Fullname is the Moodle site's full name as installed (or restored) —
+	// the source for suggested backup file names.
+	Fullname string `json:"fullname,omitempty"`
 	// AdminPass is the demo site's admin password, kept in plain text on
 	// purpose: the UI shows it on the site card so users can always find
 	// it (this file is root-only 0600, and the whole site is a throwaway

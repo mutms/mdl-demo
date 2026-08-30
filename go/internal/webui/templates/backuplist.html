@@ -1,0 +1,38 @@
+{{/* The backups listing, its own fragment so it can refresh while a backup
+     or restore job runs (the finished backup appears without a reload) and go
+     quiet when idle. Restore always wipes and rebuilds the whole site from
+     the archive — never mixes restored data with the current tree. */}}
+{{define "backuplist"}}
+<article id="backuplist"{{if .Busy}} hx-get="/section/backuplist" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
+  <h2>{{t .Lang "Backups"}}</h2>
+  {{if .Backups}}
+  <table>
+    <tr><th>{{t .Lang "File"}}</th><th>{{t .Lang "Created"}}</th><th>{{t .Lang "Size"}}</th><th></th></tr>
+    {{range .Backups}}
+    <tr>
+      <td class="name">{{.Name}}
+        {{if .Restorable}}{{if .Recipe}}<br><span class="role">{{.Recipe}}</span>{{end}}
+        {{else}}<br><span class="role">{{t $.Lang "not a recognized backup archive"}}</span>{{end}}</td>
+      <td class="meta">{{.Created}}</td>
+      <td class="meta">{{.Size}}</td>
+      <td><div class="row" style="justify-content:flex-end; gap:.15rem">
+        {{if .Restorable}}
+        <button class="act" data-restore="{{.Name}}">{{t $.Lang "Restore"}}</button>
+        {{end}}
+        <a class="ibtn" href="/backups/download?f={{.Name}}" title="{{t $.Lang "Download"}}" aria-label="{{t $.Lang "Download"}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></a>
+        <form method="post" action="/backups/delete"
+              onsubmit="return confirm('{{t $.Lang "Delete this backup file?"}}')">
+          <input type="hidden" name="csrf" value="{{$.CSRF}}">
+          <input type="hidden" name="file" value="{{.Name}}">
+          <button class="ibtn" title="{{t $.Lang "Delete"}}" aria-label="{{t $.Lang "Delete"}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
+        </form>
+      </div></td>
+    </tr>
+    {{end}}
+  </table>
+  {{else}}
+  <p class="empty">{{t .Lang "No backups yet."}}</p>
+  {{end}}
+  <p class="empty" style="margin-top:.9rem">{{t .Lang "Backups survive a site reset but live inside this container — deleting the container deletes them. Download the ones you want to keep."}}</p>
+</article>
+{{end}}

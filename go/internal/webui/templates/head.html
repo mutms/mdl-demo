@@ -88,10 +88,21 @@
     border-radius: 50%; vertical-align: -.1em;
     animation: spin 1s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  button.copy, button.reveal, button.qr { background: none; border: 0; padding: 0 .1rem;
+  button.copy, button.reveal, button.qr, button.ibtn, a.ibtn { background: none; border: 0; padding: 0 .1rem;
     margin-left: .15rem; color: var(--dim); cursor: pointer;
-    vertical-align: -.15em; line-height: 1; }
-  button.copy:hover, button.reveal:hover, button.qr:hover { color: var(--fg); }
+    vertical-align: -.15em; line-height: 1; display: inline-flex; align-items: center; }
+  button.copy:hover, button.reveal:hover, button.qr:hover,
+  button.ibtn:hover, a.ibtn:hover { color: var(--fg); }
+  {{/* Recipe chooser accordions (Pico styles details/summary). */}}
+  details summary .badge { margin-left: .35rem; }
+  details table { margin: .4rem 0 .2rem; }
+  details table tr:last-child td { border-bottom: 0; }
+  {{/* Quiet row-level action: a link-looking button, so the repeated verbs in
+       tables (Log in, Restore) stop competing with the cards' real buttons. */}}
+  button.act, a.act { background: none; border: 0; color: var(--accent);
+    padding: .2rem .3rem; margin: 0; font-size: .88rem; line-height: 1.2;
+    cursor: pointer; text-decoration: none; white-space: nowrap; }
+  button.act:hover, a.act:hover { text-decoration: underline; color: var(--accent); }
   dialog > article { width: min(30rem, 92vw); min-height: 8rem;
     position: relative; /* anchors .dlgclose */ }
   dialog#qrdialog article { background: #fff; width: auto; min-height: 0; }
@@ -175,6 +186,34 @@ document.addEventListener('click', function (e) {
   if (!d) return;
   d.querySelector('img').src = '/tunnel/qr.png?' + Date.now();
   d.showModal();
+});
+// Chooser: the shared name fields apply to whichever recipe gets installed —
+// copied into the submitting row's form. Delegated; runs whether or not the
+// confirm passes (harmless hidden inputs on a cancelled submit).
+document.addEventListener('submit', function (e) {
+  var f = e.target;
+  if (f.getAttribute('action') !== '/install') return;
+  ['fullname', 'shortname'].forEach(function (n) {
+    var src = document.getElementById(n);
+    if (!src) return;
+    f.querySelectorAll('input[name="' + n + '"]').forEach(function (o) { o.remove(); });
+    var h = document.createElement('input');
+    h.type = 'hidden'; h.name = n; h.value = src.value;
+    f.appendChild(h);
+  });
+});
+// Backups page: "Restore" fills the dialog with the row's file name and
+// resets the recipe choice to the bundled default. Delegated, so it survives
+// the list fragment's htmx swaps.
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-restore]');
+  if (!b) return;
+  var f = document.getElementById('restorefile');
+  if (!f) return;
+  f.value = b.dataset.restore;
+  document.getElementById('restorename').textContent = b.dataset.restore;
+  document.querySelector('#restoredialog select').selectedIndex = 0;
+  document.getElementById('restoredialog').showModal();
 });
 document.addEventListener('click', function (e) {
   var r = e.target.closest('button.reveal');

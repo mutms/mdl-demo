@@ -32,6 +32,12 @@ three jobs: PID 1 of the container, management web UI, and CLI.
   Pico's variables instead of untangling custom CSS); sessions,
   CSRF and Origin checks in `auth.go`; single-flight background job in
   `job.go`; diagnostics page at `/debug`.
+- `internal/backup` — the `.mdb` backup file format (validation, safe
+  extraction); the backup/restore orchestration is in `internal/site`.
+  `backups/*.mdb` in the repo is baked into the image at `/srv/backups`
+  (pre-bundled demo sites for forks; see `backups/README.md`), and
+  `recipes/<vendor>/<stream>/<version>.yaml` overlays merge into the recipe
+  catalogue at image build (see `recipes/README.md`).
 - `internal/moodle`, `internal/apache`, `internal/pgdb`, `internal/recipes`,
   `internal/state`, `internal/execx` — Moodle tree handling, vhost
   generation, DB provisioning, recipe catalogue scan, `/etc/mdl-demo/state.json`

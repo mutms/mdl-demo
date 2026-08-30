@@ -15,11 +15,13 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/mutms/mdl-demo/go/internal/backup"
 	"github.com/mutms/mdl-demo/go/internal/moodle"
 	"github.com/mutms/mdl-demo/go/internal/recipes"
 	"github.com/mutms/mdl-demo/go/internal/site"
@@ -64,13 +66,22 @@ func Serve(out io.Writer, version string) error {
 	}
 	mux.HandleFunc("GET /joblog", s.auth(s.handleJobLog))
 	mux.HandleFunc("GET /debug", s.auth(s.handleDebug))
-	mux.HandleFunc("GET /install", s.auth(s.handleInstallForm))
 	mux.HandleFunc("POST /install", s.auth(s.csrf(s.handleInstall)))
 	mux.HandleFunc("POST /reset", s.auth(s.csrf(s.handleReset)))
 	mux.HandleFunc("POST /tunnel/start", s.auth(s.csrf(s.handleTunnelStart)))
 	mux.HandleFunc("POST /tunnel/stop", s.auth(s.csrf(s.handleTunnelStop)))
 	mux.HandleFunc("GET /tunnel/qr.png", s.auth(s.handleTunnelQR))
 	mux.HandleFunc("POST /users/create", s.auth(s.csrf(s.handleUserCreate)))
+	mux.HandleFunc("GET /backups", s.auth(s.handleBackupsPage))
+	mux.HandleFunc("GET /section/backuplist", s.auth(s.handleBackupList))
+	mux.HandleFunc("POST /backups/create", s.auth(s.csrf(s.handleBackupCreate)))
+	mux.HandleFunc("POST /backups/restore", s.auth(s.csrf(s.handleBackupRestore)))
+	mux.HandleFunc("POST /backups/delete", s.auth(s.csrf(s.handleBackupDelete)))
+	mux.HandleFunc("GET /backups/download", s.auth(s.handleBackupDownload))
+	// Upload is NOT behind s.csrf: its FormValue call would spool the whole
+	// multipart body (gigabytes) to a temp copy before the handler ever runs.
+	// The handler streams instead and checks origin + csrf itself.
+	mux.HandleFunc("POST /backups/upload", s.auth(s.handleBackupUpload))
 	mux.HandleFunc("GET /sso/dialog", s.auth(s.handleSSODialog))
 	mux.HandleFunc("POST /sso/login", s.auth(s.csrf(s.handleSSOLogin)))
 	mux.HandleFunc("POST /sso/qr", s.auth(s.csrf(s.handleSSOQR)))
@@ -202,8 +213,9 @@ type view struct {
 	Users       []userRow
 	Job         jobView
 	// Page-specific fields.
-	Error       string
-	Recipes     []recipes.Recipe
+	Error   string
+	Recipes []recipes.Recipe
+	// Chooser name fields (prefilled defaults for the one-click install).
 	Fullname    string
 	Shortname   string
 	DebugReport string
@@ -212,6 +224,76 @@ type view struct {
 	SSOUser    string
 	SSOTokenID string
 	SSOQR      template.URL
+	// Backups page.
+	Backups []backupRow
+	// The empty dashboard's recipe chooser, grouped for collapsible cards.
+	RecipeGroups []recipeGroup
+}
+
+// recipeGroup is one vendor/stream accordion on the chooser. Current holds
+// the newest version of each series (5.2.x, 5.1.x, …) — outdated point
+// releases are derived, never curated: they fold into Older automatically the
+// moment a newer one lands in the catalogue. Open marks the card that starts
+// expanded; Total is the badge count.
+type recipeGroup struct {
+	Vendor, Stream string
+	Open           bool
+	Total          int
+	Current, Older []recipes.Recipe
+}
+
+// series is the version's maintenance branch: everything before the last dot
+// ("5.2.2" → "5.2"); a dotless version is its own series.
+func series(version string) string {
+	if i := strings.LastIndex(version, "."); i > 0 {
+		return version[:i]
+	}
+	return version
+}
+
+// groupRecipes folds the sorted catalogue list into vendor/stream groups,
+// splits each into current-per-series vs older versions, and starts the most
+// likely target expanded: the first vendor's "release" stream, else the
+// first group.
+func groupRecipes(list []recipes.Recipe) []recipeGroup {
+	var groups []recipeGroup
+	seen := map[string]bool{}
+	for _, rec := range list {
+		if n := len(groups); n == 0 || groups[n-1].Vendor != rec.Vendor || groups[n-1].Stream != rec.Stream {
+			groups = append(groups, recipeGroup{Vendor: rec.Vendor, Stream: rec.Stream})
+			clear(seen)
+		}
+		g := &groups[len(groups)-1]
+		g.Total++
+		// Versions sort newest-first within a group, so the first of a series
+		// is its newest.
+		if s := series(rec.Version); !seen[s] {
+			seen[s] = true
+			g.Current = append(g.Current, rec)
+		} else {
+			g.Older = append(g.Older, rec)
+		}
+	}
+	for i := range groups {
+		if groups[i].Vendor == groups[0].Vendor && groups[i].Stream == "release" {
+			groups[i].Open = true
+			return groups
+		}
+	}
+	if len(groups) > 0 {
+		groups[0].Open = true
+	}
+	return groups
+}
+
+type backupRow struct {
+	Name    string
+	Size    string
+	Created string
+	Recipe  string
+	// Restorable is false for a file that is not a readable .mdb archive
+	// (a foreign upload, say): it can be downloaded or deleted, not restored.
+	Restorable bool
 }
 
 type serviceRow struct {
@@ -254,6 +336,21 @@ func (s *Server) buildView(r *http.Request) view {
 		v.InstalledAt = st.InstalledAt.Format("2006-01-02 15:04 MST")
 		v.Users = demoUsers(st)
 		v.TunnelURL = tunnel.URL()
+	} else {
+		// The empty dashboard IS the chooser: an uninstalled demo has exactly
+		// two useful actions — install a recipe or restore a backup — so the
+		// site card lists both. Cheap enough for the 5s section poll (recipe
+		// header scan + first-tar-entry meta reads).
+		list, _ := recipes.List()
+		v.RecipeGroups = groupRecipes(list)
+		v.Backups, _ = backupRows()
+		if err == nil {
+			v.Fullname = st.Name
+			v.Shortname = st.Name
+		}
+		if v.Shortname == "" {
+			v.Shortname = "demo"
+		}
 	}
 	for _, s := range svc.Current().Statuses() {
 		v.Services = append(v.Services, serviceRow{Name: s.Name, Status: s.State, Running: s.Running})
@@ -363,29 +460,6 @@ func (s *Server) handleSetup(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func (s *Server) handleInstallForm(w http.ResponseWriter, r *http.Request) {
-	v := s.buildView(r)
-	if v.Installed || v.Busy {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
-	}
-	list, err := recipes.List()
-	if err != nil {
-		v.Error = err.Error()
-	}
-	v.Recipes = list
-	st, err := state.Load()
-	if err != nil {
-		st = &state.State{}
-	}
-	v.Fullname = st.Name
-	v.Shortname = st.Name
-	if v.Shortname == "" {
-		v.Shortname = "demo"
-	}
-	s.render(w, "install", v)
-}
-
 func (s *Server) handleInstall(w http.ResponseWriter, r *http.Request) {
 	// Never asked for: the `mdl-demo url` override when set, else the console's
 	// host on port+1.
@@ -400,7 +474,7 @@ func (s *Server) handleInstall(w http.ResponseWriter, r *http.Request) {
 	}
 	o := site.Options{
 		Recipe:    r.FormValue("recipe"),
-		AdminPass: randomPassword(),
+		AdminPass: site.RandomPassword(),
 		Wwwroot:   wwwroot,
 		Fullname:  strings.TrimSpace(r.FormValue("fullname")),
 		Shortname: strings.TrimSpace(r.FormValue("shortname")),
@@ -411,6 +485,209 @@ func (s *Server) handleInstall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+// backupRows shapes the backups listing for the template. Reading each file's
+// metadata is cheap by format contract: meta.json is always the first tar
+// entry.
+func backupRows() ([]backupRow, error) {
+	list, err := backup.List()
+	if err != nil {
+		return nil, err
+	}
+	var rows []backupRow
+	for _, b := range list {
+		row := backupRow{
+			Name:    b.Name,
+			Size:    fmt.Sprintf("%.1f MB", float64(b.Size)/1e6),
+			Created: b.ModTime.Format("2006-01-02 15:04"),
+		}
+		if b.Meta != nil {
+			row.Recipe = b.Meta.Recipe
+			row.Restorable = true
+		}
+		rows = append(rows, row)
+	}
+	return rows, nil
+}
+
+func (s *Server) backupsView(r *http.Request) view {
+	v := s.buildView(r)
+	rows, err := backupRows()
+	if err != nil {
+		v.Error = err.Error()
+	}
+	v.Backups = rows
+	return v
+}
+
+func (s *Server) handleBackupsPage(w http.ResponseWriter, r *http.Request) {
+	v := s.backupsView(r)
+	// The "Restore into…" dialog needs the recipe catalogue.
+	if list, err := recipes.List(); err == nil {
+		v.Recipes = list
+	}
+	s.render(w, "backups", v)
+}
+
+func (s *Server) handleBackupList(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "backuplist", s.backupsView(r))
+}
+
+func (s *Server) handleBackupCreate(w http.ResponseWriter, r *http.Request) {
+	if !s.job.startBackup(s.version) {
+		http.Error(w, "another operation is already running", http.StatusConflict)
+		return
+	}
+	http.Redirect(w, r, "/backups", http.StatusSeeOther)
+}
+
+func (s *Server) handleBackupRestore(w http.ResponseWriter, r *http.Request) {
+	file := r.FormValue("file")
+	if err := backup.CheckName(file); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	// Same wwwroot rule as install; an installed site keeps its URL.
+	st, err := state.Load()
+	if err != nil {
+		st = &state.State{}
+	}
+	wwwroot := st.Wwwroot
+	if wwwroot == "" {
+		wwwroot = st.SiteURLFor(hostOnly(r.Host))
+	}
+	wwwroot, err = site.NormalizeURL(wwwroot)
+	if err != nil {
+		http.Error(w, "invalid demo site URL", http.StatusBadRequest)
+		return
+	}
+	o := site.RestoreOptions{
+		File:    file,
+		Wwwroot: wwwroot,
+		Recipe:  strings.TrimSpace(r.FormValue("recipe")),
+	}
+	if !s.job.startRestore(o) {
+		http.Error(w, "another operation is already running", http.StatusConflict)
+		return
+	}
+	// The dashboard's chooser restores land back on the dashboard.
+	back := "/backups"
+	if r.FormValue("back") == "/" {
+		back = "/"
+	}
+	http.Redirect(w, r, back, http.StatusSeeOther)
+}
+
+func (s *Server) handleBackupDelete(w http.ResponseWriter, r *http.Request) {
+	// A running restore may be reading the file it was started from.
+	if !s.job.idle() {
+		http.Error(w, "another operation is already running", http.StatusConflict)
+		return
+	}
+	if err := backup.Delete(r.FormValue("file")); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	http.Redirect(w, r, "/backups", http.StatusSeeOther)
+}
+
+func (s *Server) handleBackupDownload(w http.ResponseWriter, r *http.Request) {
+	name := r.URL.Query().Get("f")
+	path, err := backup.Path(name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", `attachment; filename="`+name+`"`)
+	// ServeFile keeps the Content-Type set above and adds Range support —
+	// a gigabyte download over a flaky link can resume.
+	http.ServeFile(w, r, path)
+}
+
+// handleBackupUpload streams a .mdb into the backups directory. It bypasses
+// the s.csrf wrapper (see the route comment) and instead checks the origin
+// up front and requires the form's csrf field to arrive BEFORE the file part
+// — which the form guarantees by input order.
+func (s *Server) handleBackupUpload(w http.ResponseWriter, r *http.Request) {
+	sess, ok := s.sessions.get(r)
+	if !ok || !sameOriginOK(r) {
+		http.Error(w, "cross-site request rejected", http.StatusForbidden)
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 8<<30)
+	mr, err := r.MultipartReader()
+	if err != nil {
+		http.Error(w, "expected a multipart upload", http.StatusBadRequest)
+		return
+	}
+	csrfOK := false
+	for {
+		part, err := mr.NextPart()
+		if err == io.EOF {
+			http.Error(w, "no file in the upload", http.StatusBadRequest)
+			return
+		}
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		switch part.FormName() {
+		case "csrf":
+			val, _ := io.ReadAll(io.LimitReader(part, 1024))
+			csrfOK = string(val) == sess.csrf
+		case "file":
+			if !csrfOK {
+				http.Error(w, "cross-site request rejected", http.StatusForbidden)
+				return
+			}
+			name := part.FileName()
+			if err := backup.CheckName(name); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			dest, err := backup.Path(name)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			if _, err := os.Stat(dest); err == nil {
+				http.Error(w, "a backup named "+name+" already exists", http.StatusConflict)
+				return
+			}
+			if err := s.receiveBackup(part, dest); err != nil {
+				http.Error(w, "upload failed: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+			http.Redirect(w, r, "/backups", http.StatusSeeOther)
+			return
+		}
+	}
+}
+
+// receiveBackup streams the part to a working file, proves it is a readable
+// backup archive, and only then gives it its real name.
+func (s *Server) receiveBackup(part io.Reader, dest string) error {
+	if err := backup.EnsureDir(); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(backup.Dir, ".upload-*.partial")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	if _, err := io.Copy(tmp, part); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if _, err := backup.Validate(tmp.Name()); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), dest)
 }
 
 // demoUsers is the one list behind the Accounts card and the SSO login flow:
@@ -466,7 +743,7 @@ func (s *Server) handleUserCreate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	password := randomPassword()
+	password := site.RandomPassword()
 	var tail []string
 	logf := func(line string) {
 		tail = append(tail, line)
@@ -630,17 +907,6 @@ func (s *Server) handleTunnelQR(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "image/png")
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = w.Write(png)
-}
-
-// randomPassword generates a demo account password (admin and created users
-// alike). It is generated, never
-// asked for: a demo that may be exposed to the internet must not hang on
-// someone choosing a strong password. The "Demo-…3!" shape keeps every default
-// policy class present (upper, lower, digit, symbol) whatever the random middle
-// is; the result is stored (plain text, for a throwaway site) and shown masked
-// so the operator can retrieve it later without it ever being typed.
-func randomPassword() string {
-	return "Demo-" + randomToken()[:8] + "3!"
 }
 
 func (s *Server) handleReset(w http.ResponseWriter, r *http.Request) {

@@ -4,6 +4,8 @@
 package site
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"net/url"
 	"os"
@@ -75,14 +77,7 @@ func Install(logf execx.Logf, o Options) error {
 		return fmt.Errorf("%s is not empty — a site is already installed (use `mdl-demo reset` first)", moodle.Root)
 	}
 
-	logf("Creating dataroot " + moodle.Dataroot)
-	if err := os.MkdirAll(moodle.Dataroot, 02777); err != nil {
-		return err
-	}
-	if err := os.Chmod(moodle.Dataroot, 02777); err != nil {
-		return err
-	}
-	if err := execx.Run(logf, "", "chown", "www-data:www-data", moodle.Dataroot); err != nil {
+	if err := makeDataroot(logf); err != nil {
 		return err
 	}
 
@@ -142,6 +137,7 @@ func Install(logf execx.Logf, o Options) error {
 	}
 	st.Recipe = recipe.ID
 	st.Wwwroot = o.Wwwroot
+	st.Fullname = o.Fullname
 	st.AdminPass = o.AdminPass
 	st.InstalledAt = time.Now().UTC()
 	if err := st.Save(); err != nil {
@@ -213,10 +209,25 @@ func clearSiteState() error {
 	if err != nil {
 		return err
 	}
-	s.Recipe, s.Wwwroot, s.AdminPass = "", "", ""
+	s.Recipe, s.Wwwroot, s.Fullname, s.AdminPass = "", "", "", ""
 	s.Users = nil
 	s.InstalledAt = time.Time{}
 	return s.Save()
+}
+
+// RandomPassword generates a demo account password (admin, created users and
+// restored accounts alike). It is generated, never asked for: a demo that may
+// be exposed to the internet must not hang on someone choosing a strong
+// password. The "Demo-…3!" shape keeps every default policy class present
+// (upper, lower, digit, symbol) whatever the random middle is; the result is
+// stored (plain text, for a throwaway site) and shown masked so the operator
+// can retrieve it later without it ever being typed.
+func RandomPassword() string {
+	b := make([]byte, 8)
+	if _, err := rand.Read(b); err != nil {
+		panic(err) // the kernel CSPRNG failing is not recoverable
+	}
+	return "Demo-" + base64.RawURLEncoding.EncodeToString(b)[:8] + "3!"
 }
 
 // NormalizeURL validates a URL the operator entered (the demo site URL that
@@ -230,6 +241,19 @@ func NormalizeURL(raw string) (string, error) {
 		return "", fmt.Errorf("not an http(s) URL")
 	}
 	return strings.TrimRight(u.String(), "/"), nil
+}
+
+// makeDataroot creates the (empty) dataroot with the ownership and mode
+// Moodle needs — www-data-owned, group-writable with setgid.
+func makeDataroot(logf execx.Logf) error {
+	logf("Creating dataroot " + moodle.Dataroot)
+	if err := os.MkdirAll(moodle.Dataroot, 02777); err != nil {
+		return err
+	}
+	if err := os.Chmod(moodle.Dataroot, 02777); err != nil {
+		return err
+	}
+	return execx.Run(logf, "", "chown", "www-data:www-data", moodle.Dataroot)
 }
 
 // clearDir empties dir without removing it (it is baked into the image).

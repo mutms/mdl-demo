@@ -40,6 +40,8 @@ Commands:
   install   install the demo site from a recipe
   status    show demo identity and site status
   reset     wipe the demo site (database, code tree, data)
+  backup    back up the site (database, data, code recipe) into /srv/backups
+  restore   replace the site with a backup, optionally into another recipe
   url       show or override the console/site URLs (for proxies and tunnels)
   cron      run Moodle cron for the installed site (the init's per-minute ticker)
   version   print the mdl-demo version
@@ -76,6 +78,10 @@ func main() {
 		err = cmdStatus()
 	case "reset":
 		err = site.Reset(stdoutLog)
+	case "backup":
+		err = cmdBackup()
+	case "restore":
+		err = cmdRestore(os.Args[2:])
 	case "url":
 		err = cmdURL(os.Args[2:])
 	case "cron":
@@ -114,6 +120,26 @@ func cmdInstall(args []string) error {
 		return err
 	}
 	return site.Install(stdoutLog, o)
+}
+
+func cmdBackup() error {
+	_, err := site.Backup(stdoutLog, version)
+	return err
+}
+
+func cmdRestore(args []string) error {
+	fs := flag.NewFlagSet("restore", flag.ExitOnError)
+	var o site.RestoreOptions
+	fs.StringVar(&o.Recipe, "recipe", "", "restore into this catalogue recipe instead of the backup's own (the upgrade path)")
+	fs.StringVar(&o.Wwwroot, "wwwroot", "", "site URL as the browser sees it (default: the site URL from `mdl-demo url` for localhost)")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() != 1 {
+		return fmt.Errorf("usage: mdl-demo restore [flags] <file.mdb> (files live in /srv/backups)")
+	}
+	o.File = fs.Arg(0)
+	return site.Restore(stdoutLog, o)
 }
 
 func cmdStatus() error {

@@ -222,7 +222,7 @@ func point(logf execx.Logf, wwwroot string) error {
 	if err := svc.Current().ReloadApache(logf); err != nil {
 		return err
 	}
-	return moodle.RunCLI(logf, "admin/cli/purge_caches.php")
+	return moodle.PurgeCaches(logf)
 }
 
 // startChild mirrors execx: inside PID 1 the reaper-aware hook must start the

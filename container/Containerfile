@@ -155,7 +155,24 @@ COPY --from=build /out/mudev /out/mdl-demo /usr/bin/
 # kept so a running container can `git pull` fresh recipes.
 RUN git clone --depth 1 https://github.com/mutms/mdl-plugins /srv/extra/mdl-plugins \
     && git clone --depth 1 https://github.com/mutms/mdl-recipes /srv/extra/mdl-recipes \
-    && mkdir -p /srv/projects/demo /srv/data /etc/mdl-demo
+    && mkdir -p /srv/projects/demo /srv/data /srv/backups /etc/mdl-demo && chmod 700 /srv/backups
+
+# Pre-bundled site backups: any *.mdb dropped into the repo's backups/ dir
+# ships in the image, ready to restore from the console — how a fork bakes a
+# prepared demo site into its own image (see backups/README.md). Deliberately
+# one of the last layers: a fork refreshing its bundled demo rebuilds almost
+# nothing.
+COPY backups/ /srv/backups/
+RUN chmod 700 /srv/backups && find /srv/backups -type f -exec chmod 600 {} +
+
+# Recipe overlay: <vendor>/<stream>/<version>.yaml files in the repo's
+# recipes/ dir are merged into the catalogue checkout — forks ship their own
+# recipes in the image (see recipes/README.md). The README is stripped so the
+# checkout stays clean for `git pull`.
+COPY recipes/ /srv/extra/recipes-overlay/
+RUN rm -f /srv/extra/recipes-overlay/README.md \
+    && cp -r /srv/extra/recipes-overlay/. /srv/extra/mdl-recipes/ \
+    && rm -rf /srv/extra/recipes-overlay
 
 # Links the ghcr.io package to the repo (and its README to the package page).
 LABEL org.opencontainers.image.source=https://github.com/mutms/mdl-demo \

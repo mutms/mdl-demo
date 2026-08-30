@@ -101,6 +101,37 @@ func Cron(logf execx.Logf) error {
 	return RunCLI(logf, "admin/cli/cron.php")
 }
 
+// Upgrade runs Moodle's CLI upgrade — after a restore it brings the data up
+// to whatever version the code tree is.
+func Upgrade(logf execx.Logf) error {
+	return RunCLI(logf, "admin/cli/upgrade.php", "--non-interactive")
+}
+
+// PurgeCaches purges all Moodle caches, which hold absolute URLs and schema
+// state that would otherwise outlive a wwwroot change or a restore.
+func PurgeCaches(logf execx.Logf) error {
+	return RunCLI(logf, "admin/cli/purge_caches.php")
+}
+
+// Maintenance switches Moodle's config-level maintenance mode (the setting
+// lives in the database). Not used to guard backup/restore — the Apache
+// placeholder does that; this only lifts a maintenance flag a restored dump
+// may carry.
+func Maintenance(logf execx.Logf, enable bool) error {
+	flag := "--disable"
+	if enable {
+		flag = "--enable"
+	}
+	return RunCLI(logf, "admin/cli/maintenance.php", flag)
+}
+
+// SetPassword sets a known account's password via php/cli/setpassword.php
+// (which warns and skips a user that no longer exists).
+func SetPassword(logf execx.Logf, username, password string) error {
+	return runCLI(logf, []string{password}, "mdl-demo/cli/setpassword.php",
+		"--username="+username, "--password="+password)
+}
+
 // sslproxy returns the config line for an https wwwroot: TLS always ends
 // outside this container (a reverse proxy or a tunnel speaks https to the
 // browser and plain http to Apache), which is exactly what $CFG->sslproxy

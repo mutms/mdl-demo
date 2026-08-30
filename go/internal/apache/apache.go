@@ -74,6 +74,19 @@ func EnableDemo(logf execx.Logf) error {
 	return svc.Current().ReloadApache(logf)
 }
 
+// DisableDemo switches the site port to the placeholder WITHOUT touching the
+// generated vhost — for taking the site offline briefly (a backup) and
+// bringing it back with EnableDemo.
+func DisableDemo(logf execx.Logf) error {
+	if err := disableSite(logf, "demo"); err != nil {
+		return err
+	}
+	if err := enableSite(logf, "000-placeholder"); err != nil {
+		return err
+	}
+	return svc.Current().ReloadApache(logf)
+}
+
 // RestorePlaceholder switches the placeholder back and removes the generated vhost.
 func RestorePlaceholder(logf execx.Logf) error {
 	if err := disableSite(logf, "demo"); err != nil {

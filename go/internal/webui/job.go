@@ -79,14 +79,26 @@ func (j *job) start(kind string, fn func(execx.Logf) error) bool {
 type jobView struct {
 	Kind    string
 	Running bool
-	Failed  bool
-	Error   string
+	// Label is what the running badge says — the activity, not a bare
+	// "running": installing, resetting, backing up, restoring.
+	Label  string
+	Failed bool
+	Error  string
 	// Log is the batch of log lines to render — the recent tail on a full
 	// section render, or just the new lines on an incremental /joblog poll.
 	Log []string
 	// Next is the absolute number of the first not-yet-sent line: the cursor
 	// the log tail passes back so the next poll asks only for what came after.
 	Next int
+}
+
+// jobLabels turns a job kind into the running badge's text (the English
+// catalog key, translated in the template).
+var jobLabels = map[string]string{
+	"install": "installing",
+	"reset":   "resetting",
+	"backup":  "backing up",
+	"restore": "restoring",
 }
 
 // logTailLimit bounds how many trailing lines a full render carries; the
@@ -96,7 +108,7 @@ const logTailLimit = 400
 func (j *job) view() jobView {
 	j.mu.Lock()
 	defer j.mu.Unlock()
-	v := jobView{Kind: j.kind, Running: j.running}
+	v := jobView{Kind: j.kind, Running: j.running, Label: jobLabels[j.kind]}
 	if j.err != nil {
 		v.Failed = true
 		v.Error = j.err.Error()
@@ -140,6 +152,19 @@ func (j *job) startInstall(o site.Options) bool {
 
 func (j *job) startReset() bool {
 	return j.start("reset", site.Reset)
+}
+
+func (j *job) startBackup(version string) bool {
+	return j.start("backup", func(logf execx.Logf) error {
+		_, err := site.Backup(logf, version)
+		return err
+	})
+}
+
+func (j *job) startRestore(o site.RestoreOptions) bool {
+	return j.start("restore", func(logf execx.Logf) error {
+		return site.Restore(logf, o)
+	})
 }
 
 func (j *job) idle() bool {

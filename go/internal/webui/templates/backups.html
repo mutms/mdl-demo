@@ -1,0 +1,70 @@
+{{define "backups"}}<!doctype html>
+<html lang="{{.Lang}}">
+{{template "head" .}}
+<header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>{{t .Lang "— backups"}}</span></h1>
+<p class="sub"><a href="/">{{t .Lang "← back"}}</a></p></div>{{template "topctl" .}}</header>
+
+<article>
+  <h2>{{t .Lang "Back up"}}</h2>
+  <div class="tools">
+    <p class="empty">{{t .Lang "A backup packs the database, the uploaded files and the site's exact code recipe into one portable .mdb file."}}</p>
+    <div>
+      {{if .Installed}}
+      <form method="post" action="/backups/create"
+            onsubmit="return confirm('{{t .Lang "Create a backup now? The site is briefly unavailable while it is copied."}}')">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <button>{{t .Lang "Back up data"}}</button>
+      </form>
+      {{else}}
+      <button disabled title="{{t .Lang "No demo site installed yet."}}">{{t .Lang "Back up data"}}</button>
+      {{end}}
+    </div>
+  </div>
+</article>
+
+{{template "progress" .}}
+
+{{template "backuplist" .}}
+
+<article>
+  <h2>{{t .Lang "Upload"}}</h2>
+  <div class="tools">
+    <p class="empty">{{t .Lang "Upload a .mdb file created here or by another demo container."}}</p>
+    {{/* The csrf input MUST stay before the file input: the streaming upload
+         handler reads the parts in form order and verifies the token before
+         it accepts a single byte of the file. */}}
+    <form method="post" action="/backups/upload" enctype="multipart/form-data" class="row">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <input type="file" name="file" accept=".mdb" required>
+      <button class="secondary">{{t .Lang "Upload"}}</button>
+    </form>
+  </div>
+</article>
+
+{{/* Rendered unconditionally at page level (see shell.html: a dialog inside a
+     swapped fragment would vanish mid-use). The opener button fills in the
+     file name and resets the recipe choice to the bundled default. */}}
+<dialog id="restoredialog" onclick="if(event.target===this)this.close()">
+  <article>
+  <button class="dlgclose" type="button" aria-label="Close">×</button>
+  <p class="empty">{{t .Lang "The site's code is rebuilt from the selected recipe, then the backup's data is loaded and upgraded to match. The bundled recipe restores the exact original site."}}</p>
+  <form class="stack" method="post" action="/backups/restore"
+        onsubmit="return confirm('{{t .Lang "Replace the current demo site with this backup? The existing database, code tree and data are deleted."}}')">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <input type="hidden" name="file" id="restorefile">
+    <p style="margin:0"><code id="restorename"></code></p>
+    <label>{{t .Lang "Site recipe"}}
+      <select name="recipe">
+        {{/* value="" = full restore from the recipe.yaml inside the backup. */}}
+        <option value="" selected>{{t .Lang "Bundled recipe (exact original)"}}</option>
+        {{range .Recipes}}<option value="{{.ID}}">{{.ID}} — {{.Name}}</option>
+        {{end}}
+      </select>
+    </label>
+    <div><button>{{t .Lang "Restore"}}</button></div>
+  </form>
+  </article>
+</dialog>
+
+{{template "footer" .}}
+</html>{{end}}
