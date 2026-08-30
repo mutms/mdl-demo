@@ -1,0 +1,9 @@
+{{/* The header's right-side controls, on every page including login/setup:
+     the language switcher (cookie via GET /lang) and the theme toggle cycling
+     auto → light → dark (localStorage, handler in head.html). */}}
+{{define "topctl"}}<div class="row topctl">
+  <nav class="langs">
+    <a href="/lang?set=en"{{if eq .Lang "en"}} class="cur"{{end}}>EN</a><a href="/lang?set=cs"{{if eq .Lang "cs"}} class="cur"{{end}}>CS</a><a href="/lang?set=de"{{if eq .Lang "de"}} class="cur"{{end}}>DE</a>
+  </nav>
+  <button id="themebtn" type="button" title="{{t .Lang "Theme"}}">◐</button>
+</div>{{end}}

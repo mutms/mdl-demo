@@ -1,0 +1,15 @@
+{{define "login"}}<!doctype html>
+<html lang="{{.Lang}}">
+{{template "head" .}}
+<header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>{{t .Lang "— log in"}}</span></h1></div>{{template "topctl" .}}</header>
+<article>
+  {{if .Error}}<p class="error">{{t .Lang .Error}}</p>{{end}}
+  <form class="stack" method="post" action="/login">
+    <label>{{t .Lang "Management password"}}
+      <input type="password" name="password" autofocus required>
+    </label>
+    <div><button>{{t .Lang "Log in"}}</button></div>
+  </form>
+</article>
+{{template "footer" .}}
+</html>{{end}}

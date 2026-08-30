@@ -1,0 +1,20 @@
+{{define "setup"}}<!doctype html>
+<html lang="{{.Lang}}">
+{{template "head" .}}
+<header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>{{t .Lang "— first-time setup"}}</span></h1></div>{{template "topctl" .}}</header>
+<article>
+  <p class="empty">{{t .Lang "Set the management password for this container."}}
+  {{t .Lang "(You can also provide it at container creation with"}} <code>-e MDL_DEMO_PASSWORD=…</code>.)</p>
+  {{if .Error}}<p class="error">{{t .Lang .Error}}</p>{{end}}
+  <form class="stack" method="post" action="/setup">
+    <label>{{t .Lang "New password"}}
+      <input type="password" name="password" minlength="8" autofocus required>
+    </label>
+    <label>{{t .Lang "Repeat password"}}
+      <input type="password" name="password2" minlength="8" required>
+    </label>
+    <div><button>{{t .Lang "Set password"}}</button></div>
+  </form>
+</article>
+{{template "footer" .}}
+</html>{{end}}

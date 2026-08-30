@@ -1,0 +1,32 @@
+{{/* The tools card is the presenter's utility belt: the Quick Tunnel switch
+     (its status — URL, badge, QR — lives on the site card, since it IS the
+     site's URL while active) and the Mailpit catcher (proxied under /mail).
+     Polled like the site card so the tunnel button follows state changes made
+     in another tab. */}}
+{{define "tools"}}
+<article id="tools" hx-get="/section/tools" hx-trigger="every 5s" hx-swap="outerHTML">
+  <h2>{{t .Lang "Tools"}}</h2>
+  <div class="tools">
+    {{if .Installed}}
+    <p class="empty">{{t .Lang "Quick Tunnel shares the demo site on a public trycloudflare.com URL, so the audience can open it on their own devices."}}</p>
+    <div>
+      {{if .TunnelURL}}
+      {{/* Primary on purpose: an active tunnel means the site is public —
+           the way back deserves the loudest button on the card. */}}
+      <form method="post" action="/tunnel/stop">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <button>{{t .Lang "Stop tunnel"}}</button>
+      </form>
+      {{else}}
+      <form method="post" action="/tunnel/start">
+        <input type="hidden" name="csrf" value="{{.CSRF}}">
+        <button class="secondary">{{t .Lang "Quick Tunnel"}}</button>
+      </form>
+      {{end}}
+    </div>
+    {{end}}
+    <p class="empty">{{t .Lang "The mail catcher holds every mail the site sends — password resets, forum digests — and no mail ever leaves the container."}}</p>
+    <div><a href="/mail/" target="_blank" rel="noopener"><button class="secondary">{{t .Lang "Open the mail catcher"}}</button></a></div>
+  </div>
+</article>
+{{end}}

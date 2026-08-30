@@ -1,0 +1,27 @@
+{{/* The two-stage "Log in" dialog: stage 1 offers a direct new-tab login plus
+     a QR code; stage 2 shows a single-use QR and polls until the code is
+     claimed, then closes the dialog — the presenter clicks Log in → QR code
+     again for the next person, one fresh token each. */}}
+{{define "ssodialog"}}
+<p class="empty">{{t .Lang "Open the demo site as"}} <code>{{.SSOUser}}</code>
+   {{t .Lang "— in a new tab here, or on a phone via a single-use QR code."}}</p>
+<div class="row">
+  {{/* The new tab takes over; onsubmit closes the dialog behind it. */}}
+  <form method="post" action="/sso/login" target="_blank"
+        onsubmit="document.getElementById('ssodialog').close()">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <input type="hidden" name="user" value="{{.SSOUser}}">
+    <button>{{t .Lang "Log in as"}} {{.SSOUser}}</button>
+  </form>
+  <button class="secondary" hx-post="/sso/qr" hx-vals='{"csrf":"{{.CSRF}}","user":"{{.SSOUser}}"}' hx-target="#ssobody">{{t .Lang "QR code"}}</button>
+</div>
+{{end}}
+
+{{define "ssoqr"}}
+<p class="empty">{{t .Lang "Scan to log in as"}} <code>{{.SSOUser}}</code>.
+   {{t .Lang "Single use — this dialog closes once the code is claimed; open it again for the next person."}}</p>
+<img class="ssoqr" src="{{.SSOQR}}" alt="QR">
+{{template "ssopoll" .}}
+{{end}}
+
+{{define "ssopoll"}}<div id="ssopoll" hx-get="/sso/status?id={{.SSOTokenID}}" hx-trigger="every 2s" hx-swap="outerHTML"></div>{{end}}

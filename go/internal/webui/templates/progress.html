@@ -1,0 +1,32 @@
+{{/* The progress section is split so the two halves refresh independently:
+     the status header polls itself and swaps whole (it is tiny), while the log
+     below it is never re-rendered wholesale — it only grows. jobstatus and
+     logtail are both addressable fragments (/section/jobstatus and /joblog). */}}
+{{define "jobstatus"}}
+<div id="jobstatus"{{if .Job.Running}} hx-get="/section/jobstatus" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
+  {{/* No "done" badge: cron streams in here after the job, so the log is
+       never really finished — only running and failed say anything. */}}
+  <h2>{{t .Lang "Site log"}}
+      {{if .Job.Running}}<span class="spin"></span><span class="badge on">{{t .Lang "running"}}</span>
+      {{else if .Job.Failed}}<span class="badge err">{{t .Lang "failed"}}</span>{{end}}</h2>
+  {{if .Job.Failed}}<p class="error">{{.Job.Error}}</p>{{end}}
+</div>
+{{end}}
+
+{{/* logtail is both the initial log body and every incremental poll response:
+     the batch of lines, then a self-replacing cursor that fetches only what
+     comes after .Job.Next. While the job runs it polls fast and pins the log
+     to the bottom; afterwards it keeps polling slowly (per-minute cron output
+     streams into the same log) without the scroll pin, so reading the log is
+     never yanked away. */}}
+{{define "logtail"}}{{range .Job.Log}}{{.}}
+{{end}}{{if .Job.Running}}<span id="logcursor" hx-get="/joblog?from={{.Job.Next}}" hx-trigger="every 500ms" hx-target="this" hx-swap="outerHTML scroll:#joblog:bottom"></span>{{else if .Job.Kind}}<span id="logcursor" hx-get="/joblog?from={{.Job.Next}}" hx-trigger="every 5s" hx-target="this" hx-swap="outerHTML"></span>{{end}}{{end}}
+
+{{define "progress"}}
+{{if .Job.Kind}}
+<article id="progress">
+  {{template "jobstatus" .}}
+  <pre id="joblog" class="log short">{{template "logtail" .}}</pre>
+</article>
+{{end}}
+{{end}}

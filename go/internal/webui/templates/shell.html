@@ -1,0 +1,53 @@
+{{define "page"}}<!doctype html>
+<html lang="{{.Lang}}">
+{{template "head" .}}
+<header>
+  <div>
+    <h1>{{.ID}} <span>— {{if .Name}}{{.Name}}{{else}}{{t .Lang "Moodle demo console"}}{{end}}</span></h1>
+    <p class="sub">{{.Version}}</p>
+  </div>
+  <div class="row">
+    {{template "topctl" .}}
+    <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="secondary">{{t .Lang "Log out"}}</button></form>
+  </div>
+</header>
+
+{{template "site" .}}
+{{template "users" .}}
+{{template "tools" .}}
+{{template "progress" .}}
+{{template "help" .}}
+{{/* Pico's modal shape: the dialog is the full-screen overlay, the box is a
+     child <article> (which also gives it the card look for free). */}}
+<dialog id="qrdialog" onclick="this.close()"><article><button class="dlgclose" type="button" aria-label="Close">×</button><img alt="QR code for the tunnel URL"></article></dialog>
+{{/* The close button sits outside #ssobody so htmx stage swaps keep it. */}}
+<dialog id="ssodialog" onclick="if(event.target===this)this.close()"><article><button class="dlgclose" type="button" aria-label="Close">×</button><div id="ssobody"></div></article></dialog>
+{{/* Unconditional, unlike the button that opens it (the Accounts card):
+     htmx swaps that card in the moment an install finishes, and a dialog
+     rendered only {{if .Installed}} would not exist yet on a page opened
+     before the install — the button would target null until a reload. */}}
+<dialog id="createdialog" onclick="if(event.target===this)this.close()">
+  <article>
+  <button class="dlgclose" type="button" aria-label="Close">×</button>
+  {{/* The password is never asked for: generated like the admin's, shown
+       masked on the Accounts card — the whole point of console-side users. */}}
+  <form class="stack" method="post" action="/users/create">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label>{{t .Lang "Username"}}
+      <input name="username" required pattern="[a-z0-9._-]+" title="{{t .Lang "lowercase letters, digits, . _ -"}}">
+    </label>
+    <label>{{t .Lang "First name"}} <input name="firstname" required maxlength="100"></label>
+    <label>{{t .Lang "Last name"}} <input name="lastname" required maxlength="100"></label>
+    <label>{{t .Lang "Global role"}}
+      <select name="role">
+        <option value="">{{t .Lang "None (plain user)"}}</option>
+        <option value="manager">{{t .Lang "Manager"}}</option>
+        <option value="admin">{{t .Lang "Administrator"}}</option>
+      </select>
+    </label>
+    <div><button>{{t .Lang "Create user"}}</button></div>
+  </form>
+  </article>
+</dialog>
+{{template "footer" .}}
+</html>{{end}}

@@ -1,0 +1,14 @@
+{{define "debug"}}<!doctype html>
+<html lang="{{.Lang}}">
+{{template "head" .}}
+<header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>{{t .Lang "— diagnostics"}}</span></h1>
+<p class="sub"><a href="/">{{t .Lang "← back"}}</a></p></div>{{template "topctl" .}}</header>
+{{template "services" .}}
+<article>
+  <p class="empty">{{t .Lang "Copy the whole block below into a bug report"}}
+     (<a href="https://github.com/mutms/mdl-demo/issues">github.com/mutms/mdl-demo/issues</a>).
+     {{t .Lang "It contains service states and recent log lines, no passwords."}}</p>
+  <pre class="log cred">{{.DebugReport}}</pre>
+</article>
+{{template "footer" .}}
+</html>{{end}}

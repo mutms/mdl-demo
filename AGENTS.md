@@ -24,8 +24,9 @@ three jobs: PID 1 of the container, management web UI, and CLI.
   `standalone` (pidfile/`state.json`-based) when the CLI runs via `exec`.
   Never call service tooling directly from feature code — go through this.
 - `internal/site` — the install/reset orchestrator (used by CLI and UI).
-- `internal/webui` — stdlib HTTP + `html/template` string constants
-  (`templates.go`) + vendored htmx 2 and Pico CSS 2 (`static/`, see
+- `internal/webui` — stdlib HTTP + `html/template` files (`templates/`,
+  embedded; one file per named template, parsed in `templates.go`)
+  + vendored htmx 2 and Pico CSS 2 (`static/`, see
   `VENDOR.md`; Pico owns the design system, `styleHTML` is theme + custom
   components — deliberately so forks building branded demos restyle via
   Pico's variables instead of untangling custom CSS); sessions,
@@ -112,7 +113,8 @@ https://site.mdl-demo.<vm>.mpd.test (or http://127.0.0.1:6382 on the VM). `dev/R
 builds (build on an Apple silicon Mac — fastest) and release steps.
 
 Typical extension points: new UI feature → handler in
-`webui/server.go` + template in `templates.go` (htmx section pattern);
+`webui/server.go` + a template file in `webui/templates/` (htmx section
+pattern);
 new lifecycle behavior → `internal/site` + the `svc` seam; new run-mode
 service → `initd.Run`'s proc list. When something fails in a container,
 read the web UI's `/debug` page first — it exists for exactly that.

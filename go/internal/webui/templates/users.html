@@ -1,0 +1,31 @@
+{{/* The accounts section sits between the site summary and the log — its own
+     space to grow as teachers and students are seeded, and the home for the
+     per-user login links. Deliberately NOT polled: it holds revealable
+     passwords, and a periodic swap would re-mask one the moment you showed it.
+     A bare wrapper div polls only while a job runs, so the section appears the
+     moment the site is ready, then goes quiet — a revealed password is never
+     re-masked out from under you. The card itself renders only when a site is
+     installed. */}}
+{{define "users"}}
+<div id="users"{{if .Busy}} hx-get="/section/users" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
+{{if .Installed}}
+<article>
+  <h2>{{t .Lang "Accounts"}}</h2>
+  <table>
+    <tr><th>{{t .Lang "User"}}</th><th>{{t .Lang "Password"}}</th><th></th></tr>
+    {{range .Users}}
+    <tr>
+      <td class="name">{{.Username}} <span class="role">{{t $.Lang .Role}}</span></td>
+      <td>{{template "secret" .Password}}</td>
+      <td><button class="secondary" hx-get="/sso/dialog?user={{.Username}}" hx-target="#ssobody"
+          onclick="document.getElementById('ssobody').innerHTML='';document.getElementById('ssodialog').showModal()">{{t $.Lang "Log in"}}</button></td>
+    </tr>
+    {{end}}
+  </table>
+  <div class="row" style="margin:.9rem 0 0">
+    <button class="secondary" onclick="document.getElementById('createdialog').showModal()">{{t .Lang "Create user"}}</button>
+  </div>
+</article>
+{{end}}
+</div>
+{{end}}
