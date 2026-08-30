@@ -78,23 +78,22 @@ func runCLI(logf execx.Logf, secrets []string, rel string, args ...string) error
 // InstallDatabase runs Moodle's CLI installer against the already-written
 // config.php. Flags proven by mpd's install tooling. The admin email is
 // deliberately hardcoded — a demo site never sends mail (noemailever).
-func InstallDatabase(logf execx.Logf, fullname, shortname, adminpass string) error {
+// A non-"en" lang makes the installer download the language pack, set it as
+// the site default and create the admin account in it; on a download failure
+// it warns and continues in English.
+func InstallDatabase(logf execx.Logf, fullname, shortname, adminpass, lang string) error {
+	if lang == "" {
+		lang = "en"
+	}
 	return runCLI(logf, []string{adminpass}, "admin/cli/install_database.php",
 		"--agree-license",
+		"--lang="+lang,
 		"--fullname="+fullname,
 		"--shortname="+shortname,
 		"--summary=mdl-demo site",
 		"--adminpass="+adminpass,
 		"--adminemail=admin@example.com",
 	)
-}
-
-// InstallLanguage downloads a Moodle language pack and makes it the site
-// default, via php/cli/installlang.php (core ships no CLI for langimport).
-// Callers treat failure as a warning: no language pack must not mean no
-// site — it just stays English.
-func InstallLanguage(logf execx.Logf, lang string) error {
-	return RunCLI(logf, "mdl-demo/cli/installlang.php", "--lang="+lang)
 }
 
 // Cron runs Moodle cron (used by moodle-cron.service via `mdl-demo cron`).

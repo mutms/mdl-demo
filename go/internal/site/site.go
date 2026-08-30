@@ -125,15 +125,8 @@ func Install(logf execx.Logf, o Options) error {
 	}
 
 	logf("Installing Moodle database (this also takes a few minutes)")
-	if err := moodle.InstallDatabase(logf, o.Fullname, o.Shortname, o.AdminPass); err != nil {
+	if err := moodle.InstallDatabase(logf, o.Fullname, o.Shortname, o.AdminPass, o.Lang); err != nil {
 		return err
-	}
-
-	if o.Lang != "" && o.Lang != "en" {
-		logf("Installing Moodle language pack " + o.Lang + " and making it the site default")
-		if err := moodle.InstallLanguage(logf, o.Lang); err != nil {
-			logf("warning: language pack " + o.Lang + " failed — the site stays in English: " + err.Error())
-		}
 	}
 
 	logf("Enabling Moodle cron")
