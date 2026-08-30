@@ -17,9 +17,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/mutms/mdl-demo/go/internal/apache"
 	"github.com/mutms/mdl-demo/go/internal/execx"
 	"github.com/mutms/mdl-demo/go/internal/moodle"
 	"github.com/mutms/mdl-demo/go/internal/state"
+	"github.com/mutms/mdl-demo/go/internal/svc"
 )
 
 // target is the site as cloudflared reaches it from inside the container.
@@ -198,9 +200,10 @@ func restore(logf execx.Logf) error {
 	return point(logf, st.Wwwroot)
 }
 
-// point rewrites the site's wwwroot and purges Moodle caches, which hold
-// absolute URLs that would keep steering browsers at the old address. A no-op
-// without an installed site.
+// point rewrites the site's wwwroot in config.php AND the Apache vhost's
+// canonical ServerName (Apache builds its own redirects from it), then purges
+// Moodle caches, which hold absolute URLs that would keep steering browsers
+// at the old address. A no-op without an installed site.
 func point(logf execx.Logf, wwwroot string) error {
 	st, err := state.Load()
 	if err != nil {
@@ -211,6 +214,12 @@ func point(logf execx.Logf, wwwroot string) error {
 	}
 	logf("Pointing the site at " + wwwroot)
 	if err := moodle.WriteConfig(wwwroot); err != nil {
+		return err
+	}
+	if err := apache.WriteVhost(wwwroot, moodle.Docroot(), moodle.HasRouter()); err != nil {
+		return err
+	}
+	if err := svc.Current().ReloadApache(logf); err != nil {
 		return err
 	}
 	return moodle.RunCLI(logf, "admin/cli/purge_caches.php")

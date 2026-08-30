@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Sign-in notifications and logs now show the visitor's real IP address
   instead of 127.0.0.1 (Moodle reads the proxy's X-Forwarded-For header)
+- Apache's own redirects (e.g. adding the trailing slash to /my) no longer
+  leak the internal http://…:8082 address: the vhost carries the site URL as
+  its canonical ServerName, updated when the tunnel starts or stops
+- Site language packs are installed by the Moodle installer itself (--lang),
+  so the admin account is created in the chosen language too
 
 ## [0.2.0] - 2026-08-29
 

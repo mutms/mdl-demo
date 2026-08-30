@@ -117,7 +117,7 @@ func Install(logf execx.Logf, o Options) error {
 
 	docroot := moodle.Docroot()
 	logf("Configuring Apache (docroot " + docroot + ")")
-	if err := apache.WriteVhost(docroot, moodle.HasRouter()); err != nil {
+	if err := apache.WriteVhost(o.Wwwroot, docroot, moodle.HasRouter()); err != nil {
 		return err
 	}
 	if err := apache.EnableDemo(logf); err != nil {
