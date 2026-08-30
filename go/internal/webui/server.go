@@ -242,11 +242,12 @@ type recipeGroup struct {
 	Current, Older []recipes.Recipe
 }
 
-// series is the version's maintenance branch: everything before the last dot
-// ("5.2.2" → "5.2"); a dotless version is its own series.
+// series is the version's maintenance branch: "5.2.2" → "5.2". Only X.Y.Z
+// point releases fold — a two-part version like a dev stream's "5.3" IS the
+// branch, so it is its own series and never hides behind a sibling.
 func series(version string) string {
-	if i := strings.LastIndex(version, "."); i > 0 {
-		return version[:i]
+	if strings.Count(version, ".") >= 2 {
+		return version[:strings.LastIndex(version, ".")]
 	}
 	return version
 }
@@ -354,6 +355,13 @@ func (s *Server) buildView(r *http.Request) view {
 	}
 	for _, s := range svc.Current().Statuses() {
 		v.Services = append(v.Services, serviceRow{Name: s.Name, Status: s.State, Running: s.Running})
+	}
+	// cloudflared is not supervised (the tunnel package runs it on demand),
+	// but diagnostics must not pretend it does not exist.
+	if tunnel.URL() != "" {
+		v.Services = append(v.Services, serviceRow{Name: "cloudflared", Status: "running", Running: true})
+	} else {
+		v.Services = append(v.Services, serviceRow{Name: "cloudflared", Status: "no tunnel"})
 	}
 	return v
 }
@@ -944,6 +952,11 @@ func (s *Server) handleDebug(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(&b, "site: %s (%s), installed %s\n", v.Recipe, v.Wwwroot, v.InstalledAt)
 	} else {
 		b.WriteString("site: none installed\n")
+	}
+	if v.TunnelURL != "" {
+		fmt.Fprintf(&b, "tunnel: %s\n", v.TunnelURL)
+	} else {
+		b.WriteString("tunnel: not running\n")
 	}
 	if v.Job.Kind != "" {
 		fmt.Fprintf(&b, "last operation: %s running=%v failed=%v %s\n",
