@@ -35,14 +35,15 @@ preview (`wsl --update --pre-release`). One command starts a demo:
 wslc run -d --name mdl-demo-8081 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 ghcr.io/mutms/mdl-demo
 ```
 
-Optionally, save
-[mdl-demo.cmd](https://raw.githubusercontent.com/mutms/mdl-demo/main/launcher/mdl-demo.cmd)
-into a folder and open a terminal there — it wraps that and the
-stop/start/delete commands:
+Optionally, the `mdl-demo.cmd` launcher wraps that and the stop/start/delete
+commands — download it into a folder and run it from a terminal there:
 
 ```powershell
+curl.exe -fsSLO https://raw.githubusercontent.com/mutms/mdl-demo/main/launcher/mdl-demo.cmd
 .\mdl-demo.cmd create
 ```
+
+(`curl.exe`, not `curl` — in PowerShell the bare name is an unrelated alias.)
 
 ## Linux
 
