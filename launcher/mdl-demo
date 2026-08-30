@@ -108,8 +108,7 @@ case "$cmd" in
         args+=(-p "127.0.0.1:$port:8081" -p "127.0.0.1:$site:8082" "$IMAGE:$tag")
         container "${args[@]}" >/dev/null
         echo "created $cname${name:+ ($name)}"
-        echo "console:  http://localhost:$port"
-        echo "site:     http://localhost:$site  (once you install one from the console)"
+        echo "set up your demo site in the console: http://localhost:$port"
         [ -n "$password" ] || echo "the console asks you to choose its password on the first visit"
         ;;
     start)

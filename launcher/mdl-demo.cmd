@@ -88,8 +88,7 @@ if defined PASSWORD set "ENVS=%ENVS% -e "MDL_DEMO_PASSWORD=%PASSWORD%""
 wslc run -d --name %CNAME% %ENVS% -p 127.0.0.1:%PORT%:8081 -p 127.0.0.1:%SITE%:8082 %IMAGE%:%TAG% >nul
 if errorlevel 1 exit /b 1
 if defined NAME (echo created %CNAME% ^(%NAME%^)) else (echo created %CNAME%)
-echo console:  http://localhost:%PORT%
-echo site:     http://localhost:%SITE%  (once you install one from the console)
+echo set up your demo site in the console: http://localhost:%PORT%
 if not defined PASSWORD echo the console asks you to choose its password on the first visit
 exit /b 0
 
