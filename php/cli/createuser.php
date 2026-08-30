@@ -11,8 +11,7 @@
 
 define('CLI_SCRIPT', true);
 
-require(file_exists(__DIR__ . '/../../config.php')
-    ? __DIR__ . '/../../config.php' : __DIR__ . '/../../../config.php');
+require(__DIR__ . '/../init.php');
 require_once($CFG->libdir . '/clilib.php');
 require_once($CFG->dirroot . '/user/lib.php');
 
