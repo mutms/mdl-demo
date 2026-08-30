@@ -9,36 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Backup and restore: a new Backups page (Tools card) snapshots the whole demo
-  site — database, uploaded files and the exact code recipe — into one
-  portable .mdb file. Backups survive a site reset, can be downloaded and
-  uploaded, and restore is self-contained (no recipe catalogue needed).
-  A backup can also be restored into a different recipe — back up on one
-  Moodle version, restore into a newer one and the data is upgraded to match.
-  Passwords are never stored in backups; every restore generates fresh ones
-  for all console accounts. Also available as `mdl-demo backup` / `restore`.
-- Backups can be pre-bundled in the image: any .mdb in the repo's backups/
-  directory ships at /srv/backups — how a fork bakes a prepared demo site
-  into its own image, restorable with one click and no installation wait
-- Recipe overlay: vendor/stream/version.yaml files in the repo's recipes/
-  directory are merged into the recipe catalogue at image build, so forks
-  can ship their own site recipes
+- Backup and restore of demo sites as portable, self-contained .mdb files
+- Backups page: create, download, upload and delete backups
+- Restore into a different recipe (e.g. a 4.5 backup into a 5.3 site)
+- Backup files can be pre-bundled in the container image
+- Recipe overlay directory for shipping custom recipes in the image
+- Get-started dashboard: recipe and backup chooser when no site is installed
+- Quick Tunnel status on the diagnostics page
+
+### Changed
+
+- Restore always generates fresh passwords for all known demo accounts
+- Outdated point releases are folded away in the recipe chooser
+- Calmer row actions: links and icons instead of buttons everywhere
+- Site log badge names the running activity instead of a bare "running"
+- Czech and German texts use en-dashes
+- Web UI templates split into individual embedded files
 
 ### Security
 
-- All supervised services (postgresql, php-fpm, apache2, mailpit) and the
-  tunnel now run with no_new_privs: nothing in their process trees can ever
-  gain privileges, so setuid binaries are inert to a compromised web process
+- All services run with no_new_privs, making setuid binaries inert
 
 ### Fixed
 
-- Sign-in notifications and logs now show the visitor's real IP address
-  instead of 127.0.0.1 (Moodle reads the proxy's X-Forwarded-For header)
-- Apache's own redirects (e.g. adding the trailing slash to /my) no longer
-  leak the internal http://…:8082 address: the vhost carries the site URL as
-  its canonical ServerName, updated when the tunnel starts or stops
-- Site language packs are installed by the Moodle installer itself (--lang),
-  so the admin account is created in the chosen language too
+- Logged-in IP addresses show the real visitor, not 127.0.0.1
+- Apache redirects no longer leak the internal http://…:8082 address
+- Site language packs are installed by the Moodle installer itself
 
 ## [0.2.0] - 2026-08-29
 
