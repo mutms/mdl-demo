@@ -107,7 +107,7 @@ func Serve(out io.Writer, version string) error {
 
 	server := &http.Server{
 		Addr:              addr,
-		Handler:           s.guard(mux),
+		Handler:           secureHeaders(s.guard(mux)),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	fmt.Fprintf(out, "mdl-demo web UI listening on %s\n", addr)
@@ -320,6 +320,7 @@ func (s *Server) buildView(r *http.Request) view {
 
 func (s *Server) render(w http.ResponseWriter, name string, v view) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
 	if err := page.ExecuteTemplate(w, name, v); err != nil {
 		fmt.Fprintf(w, "<!-- render error: %v -->", err)
 	}
@@ -737,10 +738,12 @@ func (s *Server) handleSSOStatus(w http.ResponseWriter, r *http.Request) {
 		s.render(w, "ssopoll", v)
 		return
 	}
-	// Claimed (or expired): swap in a script that closes the dialog — htmx
-	// executes scripts in swapped content.
+	// Claimed (or expired): stop the poll and tell the page, which closes
+	// the dialog on the event (app.js). Not a script in the response — the
+	// CSP forbids it, and htmx is configured not to run one anyway.
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprint(w, `<script>document.getElementById('ssodialog').close()</script>`)
+	w.Header().Set("HX-Trigger", "sso-done")
+	fmt.Fprint(w, `<div id="ssopoll"></div>`)
 }
 
 // The tunnel handlers run synchronously: cloudflared announces its URL in a

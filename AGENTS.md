@@ -27,10 +27,13 @@ PID 1 of the container, management web UI, and CLI.
 - `internal/webui` — stdlib HTTP + `html/template` files (`templates/`,
   embedded; one file per named template, parsed in `templates.go`)
   + vendored htmx 2 and Pico CSS 2 (`static/`, see
-  `VENDOR.md`; Pico owns the design system, `styleHTML` is theme + custom
-  components — deliberately so forks building branded demos restyle via
-  Pico's variables instead of untangling custom CSS); `auth.go` holds the
-  CSRF cookie, the Origin check and the Host allow-list (see invariant 10);
+  `VENDOR.md`; Pico owns the design system, `static/app.css` is theme +
+  custom components — deliberately so forks building branded demos restyle
+  via Pico's variables instead of untangling custom CSS; `static/app.js`
+  holds the few delegated handlers, driven by `data-*` attributes). Nothing
+  is inline: `auth.go` sets a Content-Security-Policy that allows only
+  same-origin files, beside the CSRF cookie, the Origin and Fetch Metadata
+  checks and the Host allow-list (see invariant 10);
   single-flight background job in
   `job.go`; en/cs/de UI strings in `lang.go`; diagnostics page at `/debug`.
 - `internal/tunnel` — the optional Cloudflare Quick Tunnel (one `cloudflared`

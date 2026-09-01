@@ -11,7 +11,7 @@
     <div>
       {{if .Installed}}
       <form method="post" action="/backups/create"
-            onsubmit="return confirm('{{t .Lang "Create a backup now? The site is briefly unavailable while it is copied."}}')">
+            data-confirm="{{t .Lang "Create a backup now? The site is briefly unavailable while it is copied."}}">
         <input type="hidden" name="csrf" value="{{.CSRF}}">
         <button>{{t .Lang "Back up data"}}</button>
       </form>
@@ -44,15 +44,15 @@
 {{/* Rendered unconditionally at page level (see shell.html: a dialog inside a
      swapped fragment would vanish mid-use). The opener button fills in the
      file name and resets the recipe choice to the bundled default. */}}
-<dialog id="restoredialog" onclick="if(event.target===this)this.close()">
+<dialog id="restoredialog" data-close="backdrop">
   <article>
   <button class="dlgclose" type="button" aria-label="Close">×</button>
   <p class="empty">{{t .Lang "The site's code is rebuilt from the selected recipe, then the backup's data is loaded and upgraded to match. The bundled recipe restores the exact original site."}}</p>
   <form class="stack" method="post" action="/backups/restore"
-        onsubmit="return confirm('{{t .Lang "Replace the current demo site with this backup? The existing database, code tree and data are deleted."}}')">
+        data-confirm="{{t .Lang "Replace the current demo site with this backup? The existing database, code tree and data are deleted."}}">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
     <input type="hidden" name="file" id="restorefile">
-    <p style="margin:0"><code id="restorename"></code></p>
+    <p class="m0"><code id="restorename"></code></p>
     <label>{{t .Lang "Site recipe"}}
       <select name="recipe">
         {{/* value="" = full restore from the recipe.yaml inside the backup. */}}

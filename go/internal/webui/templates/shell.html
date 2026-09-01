@@ -16,14 +16,14 @@
 {{template "help" .}}
 {{/* Pico's modal shape: the dialog is the full-screen overlay, the box is a
      child <article> (which also gives it the card look for free). */}}
-<dialog id="qrdialog" onclick="this.close()"><article><button class="dlgclose" type="button" aria-label="Close">×</button><img alt="QR code for the tunnel URL"></article></dialog>
+<dialog id="qrdialog" data-close="any"><article><button class="dlgclose" type="button" aria-label="Close">×</button><img alt="QR code for the tunnel URL"></article></dialog>
 {{/* The close button sits outside #ssobody so htmx stage swaps keep it. */}}
-<dialog id="ssodialog" onclick="if(event.target===this)this.close()"><article><button class="dlgclose" type="button" aria-label="Close">×</button><div id="ssobody"></div></article></dialog>
+<dialog id="ssodialog" data-close="backdrop"><article><button class="dlgclose" type="button" aria-label="Close">×</button><div id="ssobody"></div></article></dialog>
 {{/* Unconditional, unlike the button that opens it (the Accounts card):
      htmx swaps that card in the moment an install finishes, and a dialog
      rendered only {{if .Installed}} would not exist yet on a page opened
      before the install — the button would target null until a reload. */}}
-<dialog id="createdialog" onclick="if(event.target===this)this.close()">
+<dialog id="createdialog" data-close="backdrop">
   <article>
   <button class="dlgclose" type="button" aria-label="Close">×</button>
   {{/* The password is never asked for: generated like the admin's, shown

@@ -21,6 +21,10 @@ package webui
 // Reaching the console at all means reaching its port, and every documented
 // run command publishes it on 127.0.0.1 only. That port binding — not
 // anything in this file — is what decides who can talk to it.
+//
+// secureHeaders adds the browser-side layer: a Content-Security-Policy that
+// allows nothing inline and no origin but this one, so an injected script
+// or style could not run even if a template escape were ever wrong.
 
 import (
 	"context"
@@ -62,6 +66,35 @@ func validToken(v string) bool {
 // console does not answer to, and makes sure the browser carries a CSRF
 // token — minting one when it arrives without a usable cookie — for the
 // templates to render into forms and for csrf to check against.
+// csp is the whole policy: every script, style and image is a same-origin
+// file, except the SSO QR code, which is a data: image. form-action is left
+// out on purpose: the SSO login form ends in a redirect to the site's own
+// origin, and Chrome applies form-action to redirects too.
+const csp = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; " +
+	"connect-src 'self'; frame-ancestors 'none'; base-uri 'none'"
+
+// secureHeaders sets the browser hardening headers on every response. The
+// Mailpit proxy under /mail/ is skipped: that is Mailpit's own page, with
+// its own inline scripts, and it sets its own headers.
+func secureHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("Referrer-Policy", "no-referrer")
+		h.Set("X-Frame-Options", "DENY")
+		// Only a secure context honours COOP; elsewhere the browser logs a
+		// warning and ignores it, so send it where it can take effect.
+		if r.TLS != nil || loopbackHost(hostOnly(r.Host)) {
+			h.Set("Cross-Origin-Opener-Policy", "same-origin")
+		}
+		h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+		if !strings.HasPrefix(r.URL.Path, "/mail/") {
+			h.Set("Content-Security-Policy", csp)
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (s *Server) guard(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !hostAllowed(r.Host) {
@@ -134,6 +167,16 @@ func csrfMatches(r *http.Request, sent string) bool {
 // that would let it answer to a name — one would only invite pointing it at
 // something public. A site published under a real hostname is the job of the
 // Moodle vhost on 8082, which this never touches.
+// loopbackHost reports whether host names the browser's own machine, which
+// browsers treat as a secure context even over plain HTTP.
+func loopbackHost(host string) bool {
+	if ip := net.ParseIP(strings.Trim(host, "[]")); ip != nil {
+		return ip.IsLoopback()
+	}
+	h := strings.ToLower(strings.TrimSuffix(host, "."))
+	return h == "localhost" || strings.HasSuffix(h, ".localhost")
+}
+
 func hostAllowed(hostport string) bool {
 	host := hostOnly(hostport)
 	if host == "" {
@@ -150,6 +193,13 @@ func hostAllowed(hostport string) bool {
 // that, Referer) names a different host than the one the request reached —
 // a cheap cross-origin check on top of the CSRF token.
 func sameOriginOK(r *http.Request) bool {
+	// Fetch Metadata: a browser labels every request with where it came
+	// from, and unlike Origin a form post cannot leave it out.
+	switch r.Header.Get("Sec-Fetch-Site") {
+	case "", "same-origin", "none":
+	default:
+		return false
+	}
 	check := func(raw string) bool {
 		u, err := url.Parse(raw)
 		if err != nil {

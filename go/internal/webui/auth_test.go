@@ -127,3 +127,58 @@ func TestCSRF(t *testing.T) {
 		t.Errorf("foreign origin: %d, want 403", got)
 	}
 }
+
+// Fetch Metadata is the second cross-site guard: a browser that labels the
+// request as coming from another site is turned away whatever else it sends.
+func TestFetchMetadata(t *testing.T) {
+	post := func(site string) bool {
+		r := httptest.NewRequest("POST", "http://localhost:8081/reset", nil)
+		if site != "" {
+			r.Header.Set("Sec-Fetch-Site", site)
+		}
+		return sameOriginOK(r)
+	}
+	for _, ok := range []string{"", "same-origin", "none"} {
+		if !post(ok) {
+			t.Errorf("Sec-Fetch-Site %q rejected", ok)
+		}
+	}
+	for _, bad := range []string{"cross-site", "same-site"} {
+		if post(bad) {
+			t.Errorf("Sec-Fetch-Site %q accepted", bad)
+		}
+	}
+}
+
+// Every console response carries the policy; the proxied Mailpit page keeps
+// its own.
+func TestSecureHeaders(t *testing.T) {
+	h := secureHeaders(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	get := func(path string) http.Header {
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, httptest.NewRequest("GET", "http://localhost:8081"+path, nil))
+		return w.Result().Header
+	}
+	own := get("/")
+	if own.Get("Content-Security-Policy") != csp {
+		t.Errorf("CSP = %q", own.Get("Content-Security-Policy"))
+	}
+	if strings.Contains(csp, "unsafe") {
+		t.Errorf("policy allows something unsafe: %s", csp)
+	}
+	for _, k := range []string{"X-Content-Type-Options", "Referrer-Policy", "X-Frame-Options", "Cross-Origin-Opener-Policy"} {
+		if own.Get(k) == "" {
+			t.Errorf("%s missing", k)
+		}
+	}
+	// COOP is meaningful only in a secure context: on the VM address over
+	// plain HTTP the browser would ignore it and log a warning.
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, httptest.NewRequest("GET", "http://10.163.222.1:6381/", nil))
+	if w.Result().Header.Get("Cross-Origin-Opener-Policy") != "" {
+		t.Error("COOP sent to a non-loopback plain-HTTP origin")
+	}
+	if mail := get("/mail/"); mail.Get("Content-Security-Policy") != "" {
+		t.Error("CSP set on the Mailpit proxy")
+	}
+}

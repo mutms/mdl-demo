@@ -18,12 +18,12 @@
       <td class="name">{{.Username}} <span class="role">{{t $.Lang .Role}}</span></td>
       <td>{{template "secret" .Password}}</td>
       <td><button class="act" hx-get="/sso/dialog?user={{.Username}}" hx-target="#ssobody"
-          onclick="document.getElementById('ssobody').innerHTML='';document.getElementById('ssodialog').showModal()">{{t $.Lang "Log in"}}</button></td>
+          data-open="ssodialog" data-clear="ssobody">{{t $.Lang "Log in"}}</button></td>
     </tr>
     {{end}}
   </table>
-  <div class="row" style="margin:.9rem 0 0">
-    <button class="secondary" onclick="document.getElementById('createdialog').showModal()">{{t .Lang "Create user"}}</button>
+  <div class="row actions">
+    <button class="secondary" data-open="createdialog">{{t .Lang "Create user"}}</button>
   </div>
 </article>
 {{end}}

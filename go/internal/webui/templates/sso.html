@@ -6,9 +6,8 @@
 <p class="empty">{{t .Lang "Open the demo site as"}} <code>{{.SSOUser}}</code>
    {{t .Lang "— in a new tab here, or on a phone via a single-use QR code."}}</p>
 <div class="row">
-  {{/* The new tab takes over; onsubmit closes the dialog behind it. */}}
-  <form method="post" action="/sso/login" target="_blank"
-        onsubmit="document.getElementById('ssodialog').close()">
+  {{/* The new tab takes over; the dialog closes behind it (app.js). */}}
+  <form method="post" action="/sso/login" target="_blank" data-close-dialog="ssodialog">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
     <input type="hidden" name="user" value="{{.SSOUser}}">
     <button>{{t .Lang "Log in as"}} {{.SSOUser}}</button>
