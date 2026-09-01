@@ -1,9 +1,7 @@
 #!/usr/bin/env bash
 # Fast local test loop on macOS: pull, rebuild natively (single arch, no
-# push), run as container "mdl-demo-test". Repeat after every change —
-# cached layers make code-only rebuilds take seconds.
-#
-# Optional: export MDL_DEMO_PASSWORD to skip the first-access password form.
+# push), run as container "mdl-demo-test", open its console. Repeat after
+# every change — cached layers make code-only rebuilds take seconds.
 
 set -e
 # Run against the repo root whatever the caller's cwd: the build context
@@ -20,9 +18,6 @@ container build -t mdl-demo-test \
     --build-arg VERSION="$(git describe --tags --always --dirty)" \
     -f container/Containerfile .
 
-container run -d --name mdl-demo-test \
-    ${MDL_DEMO_PASSWORD:+-e MDL_DEMO_PASSWORD="$MDL_DEMO_PASSWORD"} \
-    -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 \
-    mdl-demo-test:latest
+container run -d --name mdl-demo-test -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 mdl-demo-test:latest && open "http://localhost:8081"
 
 echo "web UI: http://localhost:8081"

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `--open` on both launchers waits for the console to come up and opens it in
+  the browser, on `create` and `start`
+
 ### Changed
 
 - The management console has no password: no setup form on a new container,

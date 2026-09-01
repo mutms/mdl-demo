@@ -12,19 +12,24 @@ container and everything is gone.
 ## macOS
 
 Requires [Apple container](https://github.com/apple/container) (macOS 15+ on
-Apple silicon). One command starts a demo:
+Apple silicon). One command starts a demo and opens its console:
 
 ```sh
-container run -d --name mdl-demo-8081 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 ghcr.io/mutms/mdl-demo
+container run -d --name mdl-demo-8081 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 ghcr.io/mutms/mdl-demo && open http://localhost:8081
 ```
+
+(Leave off the `&& open …` to start the demo without opening a browser.)
 
 Optionally, the `mdl-demo` launcher wraps that and the stop/start/delete
 commands:
 
 ```sh
 curl -fsSLO https://raw.githubusercontent.com/mutms/mdl-demo/main/launcher/mdl-demo && chmod +x mdl-demo
-./mdl-demo create
+./mdl-demo create --open
 ```
+
+`--open` waits for the console to come up and then opens it — on `create` and
+on `start`.
 
 ## Windows 11
 
@@ -93,7 +98,8 @@ taken, give each its own number:
 ```
 
 (On Windows: `.\mdl-demo.cmd`.) `--name` becomes the site name and the
-console heading; `--tag` picks a released image version.
+console heading; `--tag` picks a released image version; `--open` opens the
+console once it answers.
 
 Without the launcher: name the container after the number, pass it as
 `MDL_DEMO_PORT`, and map the number and the next one onto the container's

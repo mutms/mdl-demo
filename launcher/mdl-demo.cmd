@@ -2,7 +2,7 @@
 setlocal EnableExtensions
 rem mdl-demo.cmd - run Moodle/MuTMS demo containers on Windows 11 (WSL containers, wslc).
 rem
-rem   mdl-demo create [NNNN] [--name="Fancy demo"] [--tag=v0.1.2]
+rem   mdl-demo create [NNNN] [--name="Fancy demo"] [--tag=v0.1.2] [--open]
 rem   mdl-demo start|stop|delete [NNNN]
 rem   mdl-demo list
 rem
@@ -20,6 +20,7 @@ if defined MDL_DEMO_IMAGE set "IMAGE=%MDL_DEMO_IMAGE%"
 set "PORT=8081"
 set "NAME="
 set "TAG=latest"
+set "OPEN="
 set "POSITIONAL=0"
 
 set "CMD=%~1"
@@ -44,6 +45,7 @@ if "%~1"=="" goto parsed
 set "ARG=%~1"
 if /i "%ARG%"=="--name" ( set "NAME=%~2" & shift & shift & goto parse )
 if /i "%ARG%"=="--tag"  ( set "TAG=%~2" & shift & shift & goto parse )
+if /i "%ARG%"=="--open" ( set "OPEN=1" & shift & goto parse )
 if /i "%ARG%"=="--help" goto usage
 if /i "%ARG%"=="-h"     goto usage
 echo %ARG%| findstr /r "^[0-9][0-9]*$" >nul
@@ -86,6 +88,7 @@ wslc run -d --name %CNAME% %ENVS% -p 127.0.0.1:%PORT%:8081 -p 127.0.0.1:%SITE%:8
 if errorlevel 1 exit /b 1
 if defined NAME (echo created %CNAME% ^(%NAME%^)) else (echo created %CNAME%)
 echo set up your demo site in the console: http://localhost:%PORT%
+if defined OPEN call :openconsole
 exit /b 0
 
 :start
@@ -97,6 +100,7 @@ if errorlevel 1 (
 wslc start %CNAME% >nul
 if errorlevel 1 exit /b 1
 echo started %CNAME% - console: http://localhost:%PORT%
+if defined OPEN call :openconsole
 exit /b 0
 
 :stop
@@ -125,6 +129,26 @@ exit /b 0
 :list
 wslc ps -a | findstr /c:"CONTAINER" /c:"mdl-demo-"
 exit /b 0
+
+rem Waits for the console to answer, then hands it to the default browser.
+rem The container is running before the console is listening: "wslc run"
+rem returns once the init has been started and the init opens the port a
+rem moment later, so a bare "start" can win the race and land on a connection
+rem error. ping is the wait because "timeout" refuses to run whenever the
+rem script's input is redirected.
+:openconsole
+set "URL=http://localhost:%PORT%"
+echo waiting for the console...
+for /l %%i in (1,1,30) do (
+    curl.exe -fs -o NUL "%URL%" >nul 2>&1
+    if not errorlevel 1 (
+        start "" "%URL%"
+        goto :eof
+    )
+    ping -n 2 127.0.0.1 >nul
+)
+echo mdl-demo: the console has not answered yet - open %URL% when it does 1>&2
+goto :eof
 
 :nowslc
 echo mdl-demo: WSL containers ^(wslc^) are not installed. 1>&2
@@ -162,6 +186,9 @@ echo.
 echo Options for create:
 echo   --name="..."    label shown in the console heading, also the Moodle site name
 echo   --tag=...       image version, e.g. --tag=v0.1.2 (default: latest)
+echo.
+echo Options for create and start:
+echo   --open          open the console in your browser once it answers
 echo.
 echo The demo's number NNNN is the port of its console: http://localhost:NNNN.
 echo The Moodle site is on the next port, NNNN+1.
