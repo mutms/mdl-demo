@@ -6,8 +6,8 @@ Linux box with rootful podman, Go (any version — go.mod picks the compiler) an
 1. install [mpd-virt](https://github.com/mutms/mpd-virt) and create an mpd VM
 2. ssh into mpd-NNN-vm and clone mdl-demo into /srv/projects/mdl-demo
 3. `make image` — builds the OCI image with rootful podman
-4. `make run` — starts the test container; mpd publishes it as
-   https://mdl-demo.NNN.mpd.test (console) and https://site.mdl-demo.NNN.mpd.test
+4. `make run` — starts the test container; the site is published by mpd as
+   https://site.mdl-demo.NNN.mpd.test, the console is at http://VM-IP:6381
 
 ## Build & test
 
@@ -50,11 +50,11 @@ launcher/mdl-demo delete 7777
 ```
 
 When something sits in front of the container (mpd's caddy, a
-trycloudflare tunnel), the port-derived URLs are wrong; tell the container
-its public addresses instead:
+trycloudflare tunnel), the port-derived site URL is wrong; tell the container
+the site's public address instead:
 
 ```sh
-sudo podman exec mpd-test-mdl-demo mdl-demo url --console https://x.example --site https://site.x.example
+sudo podman exec mpd-test-mdl-demo mdl-demo url --site https://site.x.example
 sudo podman exec mpd-test-mdl-demo mdl-demo url --clear
 ```
 
@@ -63,6 +63,13 @@ the install form's suggested site URL and the `/debug` report. An https
 wwwroot makes the generated config.php set `$CFG->sslproxy`. Moodle bakes
 wwwroot in at install, so set the URL before installing — an installed site
 needs a reset to move.
+
+Only the site can be moved this way. The console answers to `localhost` and
+to IP addresses and nothing else (`go/internal/webui/auth.go`), so it is
+always reached at `http://<host-or-ip>:<console port>` — put it behind a
+proxy with a hostname and it returns 403. That is deliberate: what decides
+who can reach the console is where its port is published, and a name it
+would answer to is an invitation to publish it somewhere it should not be.
 
 ## Why mdl-demo's own init (no systemd)
 
@@ -104,10 +111,14 @@ mpd has an `mdl-demo` project type: `mpd start mdl-demo` publishes
 fixed VM ports 6381 and 6382. `make run` is the other half of that contract:
 it removes any previous `mpd-test-mdl-demo` container, starts a new one with
 `MDL_DEMO_PORT=6381` bound on the VM's interfaces (the runtime reaches the VM
-at its bridge address; the vmnet is host-only, and the console is
-password-protected), waits for the console, and runs `mdl-demo url` with the
-two mpd addresses. Open the console from the Mac, accept the prefilled
-`site.` URL in the install form, and the site comes up over https.
+at its bridge address; the vmnet is host-only), waits for the console, and
+records the site's mpd address with `mdl-demo url`. Accept the prefilled
+`site.` URL in the install form and the site comes up over https.
+
+The caddy *console* address is the one thing that no longer works: the
+console does not answer to a hostname, so `https://mdl-demo.NNN.mpd.test`
+returns 403. Open it at `http://<vm bridge ip>:6381` from the Mac instead
+(`jq -r .gateway /srv/meta/vm.json` prints the address).
 
 One test demo per VM. Stop it with `sudo podman stop mpd-test-mdl-demo`.
 

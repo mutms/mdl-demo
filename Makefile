@@ -54,17 +54,16 @@ image:
 # and https://site.mdl-demo.<vm>.mpd.test → :6382, reaching this VM at its
 # bridge address — hence no 127.0.0.1 bind (the vmnet is host-only anyway).
 # One test demo per VM: the previous one is removed first. Once the console
-# answers (identity adopted into state), the container is told its public
-# URLs so the install form suggests the caddy address. Export
-# MDL_DEMO_PASSWORD to skip the first-access password form.
+# answers (identity adopted into state), the container is told the site's
+# public URL so the install form suggests the caddy address. The console
+# itself is NOT published that way — it answers to localhost and IP addresses
+# only (go/internal/webui/auth.go), so reach it at http://<vm-ip>:6381.
 TEST_NAME := mpd-test-mdl-demo
 VM_ID     := $(shell jq -r .vmId /srv/meta/vm.json 2>/dev/null || hostname | sed 's/^mpd-//')
 run:
 	sudo podman rm -f --ignore $(TEST_NAME)
 	sudo podman run -d --name $(TEST_NAME) \
 		-e MDL_DEMO_PORT=6381 -e MDL_DEMO_NAME="mpd test" \
-		$(if $(MDL_DEMO_PASSWORD),-e MDL_DEMO_PASSWORD='$(MDL_DEMO_PASSWORD)') \
 		-p 6381:8081 -p 6382:8082 mdl-demo
 	@until curl -fs -o /dev/null http://127.0.0.1:6381/; do sleep 0.2; done
-	sudo podman exec $(TEST_NAME) mdl-demo url \
-		--console https://mdl-demo.$(VM_ID).mpd.test --site https://site.mdl-demo.$(VM_ID).mpd.test
+	sudo podman exec $(TEST_NAME) mdl-demo url --site https://site.mdl-demo.$(VM_ID).mpd.test

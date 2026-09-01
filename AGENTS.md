@@ -10,8 +10,8 @@ on rootful podman, Apple `container` (macOS) and WSL containers (Windows);
 
 ## Architecture
 
-One Go binary (`go/`, module `github.com/mutms/mdl-demo/go`, stdlib so far) with
-three jobs: PID 1 of the container, management web UI, and CLI.
+One Go binary (`go/`, module `github.com/mutms/mdl-demo/go`) with three jobs:
+PID 1 of the container, management web UI, and CLI.
 
 - `cmd/mdl-demo` — subcommand dispatch (`init`, `serve`, `recipes`,
   `install`, `status`, `reset`, `url`, `cron`, `version`).
@@ -29,9 +29,14 @@ three jobs: PID 1 of the container, management web UI, and CLI.
   + vendored htmx 2 and Pico CSS 2 (`static/`, see
   `VENDOR.md`; Pico owns the design system, `styleHTML` is theme + custom
   components — deliberately so forks building branded demos restyle via
-  Pico's variables instead of untangling custom CSS); sessions,
-  CSRF and Origin checks in `auth.go`; single-flight background job in
-  `job.go`; diagnostics page at `/debug`.
+  Pico's variables instead of untangling custom CSS); `auth.go` holds the
+  CSRF cookie, the Origin check and the Host allow-list (see invariant 10);
+  single-flight background job in
+  `job.go`; en/cs/de UI strings in `lang.go`; diagnostics page at `/debug`.
+- `internal/tunnel` — the optional Cloudflare Quick Tunnel (one `cloudflared`
+  child; rewrites the site's wwwroot to the public URL while it runs).
+- `internal/sso` — single-use login tokens behind the console's "Log in…"
+  buttons and QR codes; only `sha256(token)` ever reaches the dataroot.
 - `internal/backup` — the `.mdb` backup file format (validation, safe
   extraction); the backup/restore orchestration is in `internal/site`.
   `backups/*.mdb` in the repo is baked into the image at `/srv/backups`
@@ -41,8 +46,8 @@ three jobs: PID 1 of the container, management web UI, and CLI.
 - `internal/moodle`, `internal/apache`, `internal/pgdb`, `internal/recipes`,
   `internal/state`, `internal/execx` — Moodle tree handling, vhost
   generation, DB provisioning, recipe catalogue scan, `/etc/mdl-demo/state.json`
-  (password hash, demo identity adopted once from `MDL_DEMO_PORT`/`MDL_DEMO_NAME`,
-  URL overrides from `mdl-demo url`, installed site), command runner with
+  (demo identity adopted once from `MDL_DEMO_PORT`/`MDL_DEMO_NAME`, the site
+  URL override from `mdl-demo url`, installed site), command runner with
   line-streamed logs.
 - `php/` — the console's Moodle-side PHP: web endpoints at the top (e.g. the
   single-use login handler), CLI scripts under `php/cli/`. Baked into the
@@ -71,8 +76,9 @@ three jobs: PID 1 of the container, management web UI, and CLI.
    dataroot `/srv/data/demo`, database/user/password `demo`. No multi-site.
    Container-internal ports are fixed too (console 8081, site 8082); the
    outside console port is the demo's identity and the site is always
-   console+1 — never add a second port knob. URLs behind a proxy/tunnel come
-   from `mdl-demo url`, not from guessing at Host headers.
+   console+1 — never add a second port knob. A site URL behind a
+   proxy/tunnel comes from `mdl-demo url --site`, not from guessing at Host
+   headers; the console has no such override on purpose (invariant 10).
 3. **The Moodle code tree stays root-owned; PHP runs as www-data with
    read-only access.** This deliberately disables Moodle's web-based plugin
    installation (plugins come only via recipes/mudev). Never chown the tree
@@ -91,26 +97,46 @@ three jobs: PID 1 of the container, management web UI, and CLI.
    seeded with a pinned, checksummed Go tarball from go.dev — never
    Debian's `golang-go`, never the `golang` image; release builds pass
    `--pull --no-cache` so the base and packages are current.
-   Third-party Go modules are allowed when they earn
-   their place (a QR encoder, say) — keep them few and well known, and
-   commit `go.sum`. The code happens to be stdlib-only today, but that is
-   not a rule here: the stdlib-only discipline comes from mpd's proxy, which
-   runs as root on the developer's Mac and must limit the blast radius of
-   bad code; this console runs inside a throwaway container, so it must be
-   secure but the bar is lower. `mudev` stays a shelled-out binary, not an
-   import (it is shipped and promoted as a tool in its own right).
+   Third-party Go modules are allowed when they earn their place (a QR
+   encoder, say) — keep them few and well known, and commit `go.sum`. Each
+   new one is the maintainer's call, not an implementation detail to slip
+   in: propose the dependency and what it replaces, and wait to be told yes.
+   The bar is deliberately lower than mpd's proxy, which is stdlib-only
+   because it runs as root on the developer's Mac and must limit the blast
+   radius of bad code; this console runs inside a throwaway container, so it
+   must be secure, but a well-reviewed dependency is not that kind of risk.
+   `mudev` stays a shelled-out binary, not an import (it is shipped and
+   promoted as a tool in its own right).
 8. **The web UI footer is a GPL-3.0 §5(d) Appropriate Legal Notice** — keep
    it displayed; forks add their copyright beside it.
 9. **Windows commands in docs are always one line** (PowerShell backtick
    continuations break on copy-paste).
+10. **The console is a local port: it answers only to `localhost` and IP
+    addresses, and what guards it lives in `webui/auth.go`** — a
+    SameSite=Strict CSRF cookie (double submit, no server-side sessions), an
+    Origin check, and a Host allow-list. Do not introduce a credential
+    prompt, and do not give the console a setting that lets it answer to a
+    hostname: the allow-list is what stops DNS rebinding, and where the port
+    is published is what decides who can reach it. The *site* on 8082 is the
+    opposite case — it is meant to be shared (`mdl-demo url --site`, Quick
+    Tunnel).
+
+    The container boundary is the perimeter, and it is the test for whether a
+    proposed defence is worth its complexity. Anything crossing it outward —
+    the wider web reaching the user's machine through a published port, as
+    DNS rebinding does — is worth defending against. Anything staying inside
+    it (the site reaching the console, the console reaching the database) is
+    not: both sides are disposable, and an attacker holding one already holds
+    everything of value in the other.
 
 ## Working on it
 
 ```sh
 make build test vet fmt-check   # native binary + checks
 make image                      # sudo podman build (run from repo root)
-make run                        # mpd-VM test container mpd-test-mdl-demo on 6381/6382,
-                                # published by mpd's caddy as https://mdl-demo.<vm>.mpd.test
+make run                        # mpd-VM test container mpd-test-mdl-demo on 6381/6382;
+                                # console at http://<vm-ip>:6381, site published by
+                                # mpd's caddy as https://site.mdl-demo.<vm>.mpd.test
 ```
 
 End-to-end: `sudo podman exec mpd-test-mdl-demo mdl-demo install --recipe

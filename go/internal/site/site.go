@@ -152,8 +152,8 @@ func Install(logf execx.Logf, o Options) error {
 	return nil
 }
 
-// Reset tears the site down to the just-built image state. The web UI
-// password survives; the site fields are cleared.
+// Reset tears the site down to the just-built image state: the site fields
+// in state are cleared, the demo's identity survives.
 //
 // Reset is the escape hatch, so it must land the container back in a clean,
 // usable "no site" state from ANY starting condition — a healthy site, a
@@ -202,7 +202,7 @@ func Reset(logf execx.Logf) error {
 	return nil
 }
 
-// clearSiteState wipes the recorded site fields, leaving the web UI password
+// clearSiteState wipes the recorded site fields, leaving the demo's identity
 // (and anything else in state) intact.
 func clearSiteState() error {
 	s, err := state.Load()

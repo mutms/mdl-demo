@@ -6,10 +6,7 @@
     <h1>{{.ID}} <span>— {{if .Name}}{{.Name}}{{else}}{{t .Lang "Moodle demo console"}}{{end}}</span></h1>
     <p class="sub">{{.Version}}</p>
   </div>
-  <div class="row">
-    {{template "topctl" .}}
-    <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="secondary">{{t .Lang "Log out"}}</button></form>
-  </div>
+  {{template "topctl" .}}
 </header>
 
 {{template "site" .}}

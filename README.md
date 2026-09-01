@@ -53,6 +53,15 @@ Rootful podman (or any compatible runtime); no launcher on Linux:
 sudo podman run -d --name mdl-demo-8081 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 ghcr.io/mutms/mdl-demo
 ```
 
+## Who can reach it
+
+The commands above publish both ports on `127.0.0.1`, so the console and the
+site are reachable from your own computer only. Anyone who can open those
+ports can do everything the console can — install, reset, read the site's
+mail, sign in as the site administrator. Drop the `127.0.0.1:` prefix, or
+share the site with Quick Tunnel, and the demo is public: put nothing in it
+you would mind strangers reading.
+
 ## Updating
 
 While mdl-demo is in development the image changes often, and your container
@@ -76,7 +85,7 @@ taken, give each its own number:
 
 ```sh
 ./mdl-demo create 7777 --name="Moodle 5.2 workshop"
-./mdl-demo create 7800 --name="MuTMS preview" --password=secret --tag=v0.1.2
+./mdl-demo create 7800 --name="MuTMS preview" --tag=v0.1.2
 ./mdl-demo list
 ./mdl-demo stop 7777
 ./mdl-demo start 7777
@@ -84,13 +93,12 @@ taken, give each its own number:
 ```
 
 (On Windows: `.\mdl-demo.cmd`.) `--name` becomes the site name and the
-console heading; `--password` sets the console password up front (otherwise
-the console asks on the first visit); `--tag` picks a released image version.
+console heading; `--tag` picks a released image version.
 
 Without the launcher: name the container after the number, pass it as
 `MDL_DEMO_PORT`, and map the number and the next one onto the container's
-fixed ports 8081 and 8082 (`MDL_DEMO_NAME`, `MDL_DEMO_PASSWORD` are the
-optional equivalents of `--name`, `--password`):
+fixed ports 8081 and 8082 (`MDL_DEMO_NAME` is the optional equivalent of
+`--name`):
 
 ```sh
 container run -d --name mdl-demo-7777 -e MDL_DEMO_PORT=7777 -e MDL_DEMO_NAME="Moodle 5.2 workshop" -p 127.0.0.1:7777:8081 -p 127.0.0.1:7778:8082 ghcr.io/mutms/mdl-demo

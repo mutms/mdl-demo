@@ -13,8 +13,7 @@
 # Apple `container` and WSL containers:
 #
 #   <runtime> run -d --name mdl-demo-8081 \
-#       -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 \
-#       -e MDL_DEMO_PASSWORD=... mdl-demo
+#       -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 mdl-demo
 #
 # Build from the REPO ROOT (the build stage copies go/):
 #   sudo podman build -t mdl-demo -f container/Containerfile .

@@ -1,166 +1,154 @@
 package webui
 
+// The console is a local port. It is addressed as localhost or by IP
+// address, and three checks keep a web page the user happens to be visiting
+// from driving it:
+//
+//   - a CSRF token in a SameSite=Strict, HttpOnly cookie, echoed by every
+//     state-changing form (double submit — nothing is kept server-side, so a
+//     console restart does not invalidate a page someone has open);
+//   - an Origin/Referer check on those same requests;
+//   - a Host allow-list, which is what stops DNS rebinding — the one attack
+//     the first two cannot see, because it makes a hostile page genuinely
+//     same-origin with this console.
+//
+// Note the division of labour: cookies and SameSite both ignore ports, so
+// several demos on one host share a token and neither of those two checks
+// isolates the console from another service on a neighbouring port. The
+// Origin check is what does that, and it is load-bearing rather than
+// belt-and-braces.
+//
+// Reaching the console at all means reaching its port, and every documented
+// run command publishes it on 127.0.0.1 only. That port binding — not
+// anything in this file — is what decides who can talk to it.
+
 import (
+	"context"
 	"crypto/hmac"
-	"crypto/pbkdf2"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
-	"fmt"
 	"net"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
-	"sync"
-	"time"
 )
 
 const (
-	pbkdf2Iterations = 600_000
-	sessionCookie    = "mdl_demo_session"
-	sessionTTL       = 24 * time.Hour
-	maxLoginFails    = 10
-	failWindow       = 15 * time.Minute
+	csrfCookie = "mdl_demo_csrf"
+	// tokenBytes of entropy; base64 makes that a 43-character cookie.
+	tokenBytes = 32
 )
 
-// hashPassword returns "pbkdf2-sha256:<iter>:<salt-b64>:<key-b64>".
-func hashPassword(password string) (string, error) {
-	salt := make([]byte, 16)
-	if _, err := rand.Read(salt); err != nil {
-		return "", err
-	}
-	key, err := pbkdf2.Key(sha256.New, password, salt, pbkdf2Iterations, 32)
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("pbkdf2-sha256:%d:%s:%s", pbkdf2Iterations,
-		base64.StdEncoding.EncodeToString(salt),
-		base64.StdEncoding.EncodeToString(key)), nil
-}
+type ctxKey int
 
-func verifyPassword(stored, password string) bool {
-	parts := strings.Split(stored, ":")
-	if len(parts) != 4 || parts[0] != "pbkdf2-sha256" {
-		return false
-	}
-	iter, err := strconv.Atoi(parts[1])
-	if err != nil || iter < 1 || iter > 10_000_000 {
-		return false
-	}
-	salt, err1 := base64.StdEncoding.DecodeString(parts[2])
-	want, err2 := base64.StdEncoding.DecodeString(parts[3])
-	if err1 != nil || err2 != nil {
-		return false
-	}
-	got, err := pbkdf2.Key(sha256.New, password, salt, iter, len(want))
-	if err != nil {
-		return false
-	}
-	return hmac.Equal(got, want)
-}
-
-// sessions is an in-memory session + CSRF-token store; a serve restart
-// logs everyone out, which is fine for a single-user localhost UI.
-type sessions struct {
-	mu    sync.Mutex
-	live  map[string]session
-	fails map[string][]time.Time
-}
-
-type session struct {
-	expires time.Time
-	csrf    string
-}
-
-func newSessions() *sessions {
-	return &sessions{live: map[string]session{}, fails: map[string][]time.Time{}}
-}
+const csrfCtxKey ctxKey = iota
 
 func randomToken() string {
-	b := make([]byte, 32)
+	b := make([]byte, tokenBytes)
 	if _, err := rand.Read(b); err != nil {
 		panic(err) // the kernel CSPRNG failing is not recoverable
 	}
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
-func (s *sessions) start(w http.ResponseWriter) {
-	token := randomToken()
-	s.mu.Lock()
-	s.live[token] = session{expires: time.Now().Add(sessionTTL), csrf: randomToken()}
-	s.mu.Unlock()
-	http.SetCookie(w, &http.Cookie{
-		Name:     sessionCookie,
-		Value:    token,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
+// validToken screens a cookie value before it is trusted as this browser's
+// token: only something this console could have minted is echoed into a page.
+func validToken(v string) bool {
+	b, err := base64.RawURLEncoding.DecodeString(v)
+	return err == nil && len(b) == tokenBytes
+}
+
+// guard wraps the whole mux. It turns away requests addressed to a host this
+// console does not answer to, and makes sure the browser carries a CSRF
+// token — minting one when it arrives without a usable cookie — for the
+// templates to render into forms and for csrf to check against.
+func (s *Server) guard(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !hostAllowed(r.Host) {
+			http.Error(w, "this console does not answer to the host "+r.Host+
+				" — reach it at localhost or at an IP address", http.StatusForbidden)
+			return
+		}
+		token := ""
+		if c, err := r.Cookie(csrfCookie); err == nil && validToken(c.Value) {
+			token = c.Value
+		} else {
+			token = randomToken()
+			http.SetCookie(w, &http.Cookie{
+				Name:     csrfCookie,
+				Value:    token,
+				Path:     "/",
+				HttpOnly: true, // nothing in the page reads it; the server renders it in
+				SameSite: http.SameSiteStrictMode,
+			})
+		}
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), csrfCtxKey, token)))
 	})
 }
 
-// get returns the live session for the request, if any.
-func (s *sessions) get(r *http.Request) (session, bool) {
-	c, err := r.Cookie(sessionCookie)
-	if err != nil {
-		return session{}, false
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	sess, ok := s.live[c.Value]
-	if !ok {
-		return session{}, false
-	}
-	if time.Now().After(sess.expires) {
-		delete(s.live, c.Value)
-		return session{}, false
-	}
-	return sess, true
+// csrfToken is the token guard settled on for this request — what the
+// templates put in their hidden csrf field.
+func csrfToken(r *http.Request) string {
+	token, _ := r.Context().Value(csrfCtxKey).(string)
+	return token
 }
 
-func (s *sessions) end(w http.ResponseWriter, r *http.Request) {
-	if c, err := r.Cookie(sessionCookie); err == nil {
-		s.mu.Lock()
-		delete(s.live, c.Value)
-		s.mu.Unlock()
-	}
-	http.SetCookie(w, &http.Cookie{Name: sessionCookie, Value: "", Path: "/", MaxAge: -1})
-}
-
-// throttled reports whether the client IP has burned its login attempts.
-func (s *sessions) throttled(r *http.Request) bool {
-	ip := clientIP(r)
-	now := time.Now()
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	recent := s.fails[ip][:0]
-	for _, t := range s.fails[ip] {
-		if now.Sub(t) < failWindow {
-			recent = append(recent, t)
+// csrf verifies a state-changing request before it runs.
+func (s *Server) csrf(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !sameOriginOK(r) || !csrfMatches(r, r.FormValue("csrf")) {
+			http.Error(w, "cross-site request rejected", http.StatusForbidden)
+			return
 		}
+		next(w, r)
 	}
-	s.fails[ip] = recent
-	return len(recent) >= maxLoginFails
 }
 
-func (s *sessions) recordFail(r *http.Request) {
-	ip := clientIP(r)
-	s.mu.Lock()
-	s.fails[ip] = append(s.fails[ip], time.Now())
-	s.mu.Unlock()
+// csrfMatches reports whether sent is the token in this browser's cookie —
+// which a cross-site request never carries (SameSite=Strict) and can never
+// read (HttpOnly, and the response is unreadable cross-origin anyway). A
+// browser arriving without a valid cookie has nothing to prove it ever loaded
+// a page of ours, so it fails here whatever it sends.
+func csrfMatches(r *http.Request, sent string) bool {
+	c, err := r.Cookie(csrfCookie)
+	if err != nil || !validToken(c.Value) {
+		return false
+	}
+	return hmac.Equal([]byte(sent), []byte(c.Value))
 }
 
-func clientIP(r *http.Request) string {
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
+// hostAllowed reports whether this console answers to the host a request was
+// addressed to. It is the defence against DNS rebinding: a hostile page can
+// point a name it owns at 127.0.0.1, and from then on the browser treats it
+// as same-origin with this console — same-site cookie attached, CSRF token
+// readable straight out of the DOM, Origin matching — but it cannot change
+// the name it wrote into the Host header.
+//
+// Allowed:
+//   - any IP literal: no resolver is involved, so there is nothing to rebind
+//     (this is how the container's own address and a VM address keep working);
+//   - localhost, and *.localhost, which browsers resolve to loopback
+//     themselves without asking DNS.
+//
+// Nothing widens this list. The console is a local port and has no setting
+// that would let it answer to a name — one would only invite pointing it at
+// something public. A site published under a real hostname is the job of the
+// Moodle vhost on 8082, which this never touches.
+func hostAllowed(hostport string) bool {
+	host := hostOnly(hostport)
+	if host == "" {
+		return false
 	}
-	return host
+	if net.ParseIP(strings.Trim(host, "[]")) != nil {
+		return true
+	}
+	h := strings.ToLower(strings.TrimSuffix(host, "."))
+	return h == "localhost" || strings.HasSuffix(h, ".localhost")
 }
 
 // sameOriginOK rejects state-changing requests whose Origin (or, failing
 // that, Referer) names a different host than the one the request reached —
-// a cheap cross-origin check on top of the per-session CSRF token.
+// a cheap cross-origin check on top of the CSRF token.
 func sameOriginOK(r *http.Request) bool {
 	check := func(raw string) bool {
 		u, err := url.Parse(raw)
@@ -177,6 +165,6 @@ func sameOriginOK(r *http.Request) bool {
 	}
 	// Same-origin form posts always carry at least one of the two in every
 	// current browser; a bare request is a non-browser client that already
-	// has the session cookie, so there is nothing left to protect.
+	// holds the cookie, so there is nothing left to protect.
 	return true
 }

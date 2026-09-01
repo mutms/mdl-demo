@@ -42,7 +42,7 @@ Commands:
   reset     wipe the demo site (database, code tree, data)
   backup    back up the site (database, data, code recipe) into /srv/backups
   restore   replace the site with a backup, optionally into another recipe
-  url       show or override the console/site URLs (for proxies and tunnels)
+  url       show the URLs, or override the site's one (for proxies and tunnels)
   cron      run Moodle cron for the installed site (the init's per-minute ticker)
   version   print the mdl-demo version
 
@@ -178,16 +178,19 @@ func cmdCron() error {
 }
 
 // cmdURL shows the URLs the console believes it and the site are reachable
-// at, or records overrides for when something sits in front of the container
-// (a reverse proxy, a tunnel) so the install form suggests the right site
-// URL. Overrides live in state.json: temporary like the container, cleared
-// with --clear. Moodle bakes wwwroot in at install, so changing the site URL
-// afterwards does not move an installed site.
+// at, and records an override for the site when something sits in front of
+// the container (a reverse proxy, a tunnel) so the install form suggests the
+// right URL. The override lives in state.json: temporary like the container,
+// cleared with --clear. Moodle bakes wwwroot in at install, so changing the
+// site URL afterwards does not move an installed site.
+//
+// Only the site can be overridden. The console answers to localhost and IP
+// addresses only (see internal/webui/auth.go) — it is a local port, and a
+// setting that pointed it at a public name would just invite exposing it.
 func cmdURL(args []string) error {
 	fs := flag.NewFlagSet("url", flag.ExitOnError)
-	console := fs.String("console", "", "public console URL, e.g. https://demo.example.test")
 	siteURL := fs.String("site", "", "public Moodle site URL, e.g. https://site.demo.example.test")
-	clear := fs.Bool("clear", false, "drop both overrides (back to the port-derived URLs)")
+	clear := fs.Bool("clear", false, "drop the override (back to the port-derived URL)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -197,13 +200,7 @@ func cmdURL(args []string) error {
 	}
 	changed := false
 	if *clear {
-		s.ConsoleURL, s.SiteURL = "", ""
-		changed = true
-	}
-	if *console != "" {
-		if s.ConsoleURL, err = site.NormalizeURL(*console); err != nil {
-			return fmt.Errorf("--console: %w", err)
-		}
+		s.SiteURL = ""
 		changed = true
 	}
 	if *siteURL != "" {

@@ -37,13 +37,14 @@ func TestIdentityCustom(t *testing.T) {
 	}
 }
 
-func TestURLOverrides(t *testing.T) {
-	s := &State{ConsolePort: 6381, ConsoleURL: "https://mdl-demo.201.mpd.test", SiteURL: "https://site.mdl-demo.201.mpd.test"}
-	if got := s.ConsoleURLFor("localhost"); got != "https://mdl-demo.201.mpd.test" {
-		t.Fatalf("ConsoleURLFor = %q", got)
-	}
+func TestSiteURLOverride(t *testing.T) {
+	s := &State{ConsolePort: 6381, SiteURL: "https://site.mdl-demo.201.mpd.test"}
 	if got := s.SiteURLFor("localhost"); got != "https://site.mdl-demo.201.mpd.test" {
 		t.Fatalf("SiteURLFor = %q", got)
+	}
+	// The console has no override to honour — it stays port-derived.
+	if got := s.ConsoleURLFor("10.0.0.5"); got != "http://10.0.0.5:6381" {
+		t.Fatalf("ConsoleURLFor = %q", got)
 	}
 }
 

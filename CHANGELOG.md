@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- The management console has no password: no setup form on a new container,
+  no login page, no `MDL_DEMO_PASSWORD`, no launcher `--password`
+- `mdl-demo url` overrides the site URL only — the console URL is always
+  derived from its port
+
+### Security
+
+- The console answers only to `localhost` and to IP addresses, so a web page
+  cannot reach it by pointing a name it owns at 127.0.0.1 (DNS rebinding)
+- CSRF protection is now a SameSite=Strict double-submit cookie, so a console
+  restart no longer invalidates a page someone has open
+
+### Fixed
+
+- A backup listing that cannot be read says so instead of showing up empty
+
 ## [0.3.0]
 
 ### Added

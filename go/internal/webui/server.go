@@ -1,7 +1,8 @@
 // Package webui is the management UI on container port 8081 (the outside
 // port is the demo's identity, see state.State.ConsolePort): a small
-// password-protected dashboard (mpd-portal style — htmx fragments over
-// html/template string constants) that installs and resets the demo site.
+// dashboard (mpd-portal style — htmx fragments over html/template files)
+// that installs and resets the demo site. auth.go holds the checks that
+// guard it.
 package webui
 
 import (
@@ -38,69 +39,65 @@ const addr = ":8081"
 var static embed.FS
 
 type Server struct {
-	version  string
-	sessions *sessions
-	job      *job
+	version string
+	job     *job
 }
 
 // Serve runs the UI until the process is stopped; the init supervisor owns
 // the lifecycle. Before the listener opens, the container environment is
-// adopted into state once: MDL_DEMO_PASSWORD (if no password is stored yet),
-// MDL_DEMO_PORT and MDL_DEMO_NAME. Anything exec'd into the container after
-// this point (the CLI, `mdl-demo url`) can rely on the identity being there.
+// adopted into state once: MDL_DEMO_PORT and MDL_DEMO_NAME. Anything exec'd
+// into the container after this point (the CLI, `mdl-demo url`) can rely on
+// the identity being there.
 func Serve(out io.Writer, version string) error {
-	s := &Server{version: version, sessions: newSessions(), job: &job{}}
+	s := &Server{version: version, job: &job{}}
 	logSink.Store(s.job)
 
 	if err := adoptEnv(out); err != nil {
 		return err
 	}
 
+	// No route is behind a login — there is none. s.guard wraps the whole mux
+	// below (host check + CSRF cookie); s.csrf gates the state-changing ones.
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /{$}", s.auth(s.handleHome))
+	mux.HandleFunc("GET /{$}", s.handleHome)
 	for _, name := range []string{"site", "users", "tools", "services", "progress", "jobstatus"} {
 		section := name
-		mux.HandleFunc("GET /section/"+section, s.auth(func(w http.ResponseWriter, r *http.Request) {
+		mux.HandleFunc("GET /section/"+section, func(w http.ResponseWriter, r *http.Request) {
 			s.renderFragment(w, r, section)
-		}))
+		})
 	}
-	mux.HandleFunc("GET /joblog", s.auth(s.handleJobLog))
-	mux.HandleFunc("GET /debug", s.auth(s.handleDebug))
-	mux.HandleFunc("POST /install", s.auth(s.csrf(s.handleInstall)))
-	mux.HandleFunc("POST /reset", s.auth(s.csrf(s.handleReset)))
-	mux.HandleFunc("POST /tunnel/start", s.auth(s.csrf(s.handleTunnelStart)))
-	mux.HandleFunc("POST /tunnel/stop", s.auth(s.csrf(s.handleTunnelStop)))
-	mux.HandleFunc("GET /tunnel/qr.png", s.auth(s.handleTunnelQR))
-	mux.HandleFunc("POST /users/create", s.auth(s.csrf(s.handleUserCreate)))
-	mux.HandleFunc("GET /backups", s.auth(s.handleBackupsPage))
-	mux.HandleFunc("GET /section/backuplist", s.auth(s.handleBackupList))
-	mux.HandleFunc("POST /backups/create", s.auth(s.csrf(s.handleBackupCreate)))
-	mux.HandleFunc("POST /backups/restore", s.auth(s.csrf(s.handleBackupRestore)))
-	mux.HandleFunc("POST /backups/delete", s.auth(s.csrf(s.handleBackupDelete)))
-	mux.HandleFunc("GET /backups/download", s.auth(s.handleBackupDownload))
+	mux.HandleFunc("GET /joblog", s.handleJobLog)
+	mux.HandleFunc("GET /debug", s.handleDebug)
+	mux.HandleFunc("POST /install", s.csrf(s.handleInstall))
+	mux.HandleFunc("POST /reset", s.csrf(s.handleReset))
+	mux.HandleFunc("POST /tunnel/start", s.csrf(s.handleTunnelStart))
+	mux.HandleFunc("POST /tunnel/stop", s.csrf(s.handleTunnelStop))
+	mux.HandleFunc("GET /tunnel/qr.png", s.handleTunnelQR)
+	mux.HandleFunc("POST /users/create", s.csrf(s.handleUserCreate))
+	mux.HandleFunc("GET /backups", s.handleBackupsPage)
+	mux.HandleFunc("GET /section/backuplist", s.handleBackupList)
+	mux.HandleFunc("POST /backups/create", s.csrf(s.handleBackupCreate))
+	mux.HandleFunc("POST /backups/restore", s.csrf(s.handleBackupRestore))
+	mux.HandleFunc("POST /backups/delete", s.csrf(s.handleBackupDelete))
+	mux.HandleFunc("GET /backups/download", s.handleBackupDownload)
 	// Upload is NOT behind s.csrf: its FormValue call would spool the whole
 	// multipart body (gigabytes) to a temp copy before the handler ever runs.
 	// The handler streams instead and checks origin + csrf itself.
-	mux.HandleFunc("POST /backups/upload", s.auth(s.handleBackupUpload))
-	mux.HandleFunc("GET /sso/dialog", s.auth(s.handleSSODialog))
-	mux.HandleFunc("POST /sso/login", s.auth(s.csrf(s.handleSSOLogin)))
-	mux.HandleFunc("POST /sso/qr", s.auth(s.csrf(s.handleSSOQR)))
-	mux.HandleFunc("GET /sso/status", s.auth(s.handleSSOStatus))
-	mux.HandleFunc("POST /logout", s.auth(s.csrf(s.handleLogout)))
-	mux.HandleFunc("GET /login", s.handleLoginForm)
-	mux.HandleFunc("POST /login", s.handleLogin)
-	mux.HandleFunc("GET /setup", s.handleSetupForm)
-	mux.HandleFunc("POST /setup", s.handleSetup)
+	mux.HandleFunc("POST /backups/upload", s.handleBackupUpload)
+	mux.HandleFunc("GET /sso/dialog", s.handleSSODialog)
+	mux.HandleFunc("POST /sso/login", s.csrf(s.handleSSOLogin))
+	mux.HandleFunc("POST /sso/qr", s.csrf(s.handleSSOQR))
+	mux.HandleFunc("GET /sso/status", s.handleSSOStatus)
 	mux.HandleFunc("GET /lang", s.handleLang)
 
-	// Mailpit's UI (all the site's outgoing mail) proxied under /mail, behind
-	// the console session like everything else — it is the presenter's tool.
-	// The proxy passes Mailpit's live-update WebSocket through as-is.
+	// Mailpit's UI (all the site's outgoing mail) proxied under /mail — the
+	// presenter's tool, reachable on the same terms as the rest of the
+	// console. The proxy passes Mailpit's live-update WebSocket through as-is.
 	mailpit := httputil.NewSingleHostReverseProxy(&url.URL{Scheme: "http", Host: "127.0.0.1:8025"})
-	mux.Handle("/mail/", s.auth(mailpit.ServeHTTP))
-	mux.HandleFunc("GET /mail", s.auth(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/mail/", mailpit)
+	mux.HandleFunc("GET /mail", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/mail/", http.StatusMovedPermanently)
-	}))
+	})
 
 	assets, err := fs.Sub(static, "static")
 	if err != nil {
@@ -110,7 +107,7 @@ func Serve(out io.Writer, version string) error {
 
 	server := &http.Server{
 		Addr:              addr,
-		Handler:           mux,
+		Handler:           s.guard(mux),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	fmt.Fprintf(out, "mdl-demo web UI listening on %s\n", addr)
@@ -123,15 +120,6 @@ func adoptEnv(out io.Writer) error {
 		return err
 	}
 	changed := false
-	if pw := state.ContainerEnv("MDL_DEMO_PASSWORD"); pw != "" && st.PasswordHash == "" {
-		hash, err := hashPassword(pw)
-		if err != nil {
-			return err
-		}
-		st.PasswordHash = hash
-		changed = true
-		fmt.Fprintln(out, "adopted management password from MDL_DEMO_PASSWORD")
-	}
 	warn := func(line string) { fmt.Fprintln(out, "warning: "+line) }
 	if st.AdoptIdentity(state.ContainerEnv("MDL_DEMO_PORT"), state.ContainerEnv("MDL_DEMO_NAME"), warn) {
 		changed = true
@@ -143,35 +131,11 @@ func adoptEnv(out io.Writer) error {
 	return nil
 }
 
-// auth gates a handler behind the password: unset password → forced setup,
-// no session → login.
-func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		st, err := state.Load()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if st.PasswordHash == "" {
-			redirect(w, r, "/setup")
-			return
-		}
-		if _, ok := s.sessions.get(r); !ok {
-			redirect(w, r, "/login")
-			return
-		}
-		next(w, r)
-	}
-}
-
-// redirect sends the browser to url. For a background htmx request (a section
-// poll, say) an ordinary 303 is wrong: htmx follows it and swaps the whole
-// target page into the little fragment slot, so the login/setup page ends up
-// nested and repeated. The HX-Redirect header instead makes htmx navigate the
-// whole window — which is what a poll that just discovered "you must log in /
-// set a password" should do. This is exactly the case a container rebuild hits:
-// the fresh container has no password, and the open page's polls must land on
-// the setup page, not paint it inside themselves.
+// redirect sends the browser to url. For an htmx request an ordinary 303 is
+// wrong: htmx follows it and swaps the whole target page into the little
+// fragment slot, leaving a complete page nested inside one card. The
+// HX-Redirect header instead makes htmx navigate the whole window, which is
+// what an action ending in "go look at the dashboard" wants.
 func redirect(w http.ResponseWriter, r *http.Request, url string) {
 	if r.Header.Get("HX-Request") == "true" {
 		w.Header().Set("HX-Redirect", url)
@@ -179,19 +143,6 @@ func redirect(w http.ResponseWriter, r *http.Request, url string) {
 		return
 	}
 	http.Redirect(w, r, url, http.StatusSeeOther)
-}
-
-// csrf verifies the per-session token and the request origin on
-// state-changing requests. Runs inside auth, so a session exists.
-func (s *Server) csrf(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		sess, ok := s.sessions.get(r)
-		if !ok || !sameOriginOK(r) || r.FormValue("csrf") != sess.csrf {
-			http.Error(w, "cross-site request rejected", http.StatusForbidden)
-			return
-		}
-		next(w, r)
-	}
 }
 
 type view struct {
@@ -213,6 +164,9 @@ type view struct {
 	Users       []userRow
 	Job         jobView
 	// Page-specific fields.
+	// Error is a page-level failure message (the backups listing not being
+	// readable, say) — not to be confused with Job.Error, which reports the
+	// background install/restore.
 	Error   string
 	Recipes []recipes.Recipe
 	// Chooser name fields (prefilled defaults for the one-click install).
@@ -327,9 +281,7 @@ func (s *Server) baseView(r *http.Request) view {
 func (s *Server) buildView(r *http.Request) view {
 	v := s.baseView(r)
 	v.Job, v.Busy = s.job.view(), !s.job.idle()
-	if sess, ok := s.sessions.get(r); ok {
-		v.CSRF = sess.csrf
-	}
+	v.CSRF = csrfToken(r)
 	if st, err := state.Load(); err == nil && st.Installed() {
 		v.Installed = true
 		v.Recipe = st.Recipe
@@ -388,84 +340,6 @@ func (s *Server) renderFragment(w http.ResponseWriter, r *http.Request, section 
 func (s *Server) handleJobLog(w http.ResponseWriter, r *http.Request) {
 	from, _ := strconv.Atoi(r.URL.Query().Get("from"))
 	s.render(w, "logtail", view{Job: s.job.logSince(from)})
-}
-
-func (s *Server) handleLoginForm(w http.ResponseWriter, r *http.Request) {
-	s.render(w, "login", s.baseView(r))
-}
-
-// viewError is a bare page view carrying an error message.
-func (s *Server) viewError(r *http.Request, msg string) view {
-	v := s.baseView(r)
-	v.Error = msg
-	return v
-}
-
-func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
-	if !sameOriginOK(r) {
-		http.Error(w, "cross-site request rejected", http.StatusForbidden)
-		return
-	}
-	if s.sessions.throttled(r) {
-		s.render(w, "login", s.viewError(r, "Too many failed attempts — try again later."))
-		return
-	}
-	st, err := state.Load()
-	if err != nil || st.PasswordHash == "" || !verifyPassword(st.PasswordHash, r.FormValue("password")) {
-		s.sessions.recordFail(r)
-		s.render(w, "login", s.viewError(r, "Wrong password."))
-		return
-	}
-	s.sessions.start(w)
-	http.Redirect(w, r, "/", http.StatusSeeOther)
-}
-
-func (s *Server) handleSetupForm(w http.ResponseWriter, r *http.Request) {
-	st, err := state.Load()
-	if err == nil && st.PasswordHash != "" {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
-	}
-	s.render(w, "setup", s.baseView(r))
-}
-
-// handleSetup sets the initial password. Only possible while none is set —
-// changing it later means recreating the container (or exec + state edit).
-func (s *Server) handleSetup(w http.ResponseWriter, r *http.Request) {
-	if !sameOriginOK(r) {
-		http.Error(w, "cross-site request rejected", http.StatusForbidden)
-		return
-	}
-	st, err := state.Load()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if st.PasswordHash != "" {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
-	}
-	pw, pw2 := r.FormValue("password"), r.FormValue("password2")
-	if len(pw) < 8 {
-		s.render(w, "setup", s.viewError(r, "Password must be at least 8 characters."))
-		return
-	}
-	if pw != pw2 {
-		s.render(w, "setup", s.viewError(r, "Passwords do not match."))
-		return
-	}
-	hash, err := hashPassword(pw)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	st.PasswordHash = hash
-	if err := st.Save(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	s.sessions.start(w)
-	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func (s *Server) handleInstall(w http.ResponseWriter, r *http.Request) {
@@ -619,8 +493,7 @@ func (s *Server) handleBackupDownload(w http.ResponseWriter, r *http.Request) {
 // up front and requires the form's csrf field to arrive BEFORE the file part
 // — which the form guarantees by input order.
 func (s *Server) handleBackupUpload(w http.ResponseWriter, r *http.Request) {
-	sess, ok := s.sessions.get(r)
-	if !ok || !sameOriginOK(r) {
+	if !sameOriginOK(r) {
 		http.Error(w, "cross-site request rejected", http.StatusForbidden)
 		return
 	}
@@ -644,7 +517,7 @@ func (s *Server) handleBackupUpload(w http.ResponseWriter, r *http.Request) {
 		switch part.FormName() {
 		case "csrf":
 			val, _ := io.ReadAll(io.LimitReader(part, 1024))
-			csrfOK = string(val) == sess.csrf
+			csrfOK = csrfMatches(r, string(val))
 		case "file":
 			if !csrfOK {
 				http.Error(w, "cross-site request rejected", http.StatusForbidden)
@@ -925,11 +798,6 @@ func (s *Server) handleReset(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
-	s.sessions.end(w, r)
-	http.Redirect(w, r, "/login", http.StatusSeeOther)
-}
-
 // handleDebug renders the diagnostics page: one copy-pasteable report of
 // mode, versions, state and per-service status + log tails, so an end user
 // can paste it whole into a bug report.
@@ -943,7 +811,7 @@ func (s *Server) handleDebug(w http.ResponseWriter, r *http.Request) {
 			st.Title(), st.Port(), st.SitePort(), state.ConsoleListen, state.SiteListen)
 		host := hostOnly(r.Host)
 		fmt.Fprintf(&b, "urls: console %s, site %s", st.ConsoleURLFor(host), st.SiteURLFor(host))
-		if st.ConsoleURL != "" || st.SiteURL != "" {
+		if st.SiteURL != "" {
 			b.WriteString(" (overridden with `mdl-demo url`)")
 		}
 		b.WriteString("\n")

@@ -5,6 +5,7 @@
 {{define "backuplist"}}
 <article id="backuplist"{{if .Busy}} hx-get="/section/backuplist" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
   <h2>{{t .Lang "Backups"}}</h2>
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   {{if .Backups}}
   <table>
     <tr><th>{{t .Lang "File"}}</th><th>{{t .Lang "Created"}}</th><th>{{t .Lang "Size"}}</th><th></th></tr>

@@ -37,15 +37,14 @@ func requestLang(r *http.Request) string {
 }
 
 // handleLang sets the language cookie and bounces back. Deliberately a GET
-// without auth: the login page needs the switcher too, and a display-language
-// cookie is nothing worth forging.
+// with no CSRF token: a display-language cookie is nothing worth forging.
 func (s *Server) handleLang(w http.ResponseWriter, r *http.Request) {
 	set := r.FormValue("set")
 	for _, code := range langCodes {
 		if set == code {
 			http.SetCookie(w, &http.Cookie{
 				Name: langCookie, Value: code, Path: "/",
-				MaxAge: int((365 * 24 * time.Hour).Seconds()), SameSite: http.SameSiteLaxMode,
+				MaxAge: int((365 * 24 * time.Hour).Seconds()), SameSite: http.SameSiteStrictMode,
 			})
 			break
 		}
@@ -70,16 +69,6 @@ func tr(lang, s string) string {
 var messages = map[string]map[string]string{
 	"cs": {
 		"Moodle demo console": "konzole demo Moodlu",
-		"Log out":             "Odhlásit se",
-		"— log in":            "– přihlášení",
-		"— first-time setup":  "– první spuštění",
-		"Management password": "Heslo správy",
-		"Log in":              "Přihlásit se",
-		"Set the management password for this container.":     "Nastavte heslo správy tohoto kontejneru.",
-		"(You can also provide it at container creation with": "(Lze je také zadat při vytvoření kontejneru pomocí",
-		"New password":    "Nové heslo",
-		"Repeat password": "Heslo znovu",
-		"Set password":    "Nastavit heslo",
 
 		"Demo site":  "Demo stránky",
 		"Recipe":     "Recept",
@@ -138,10 +127,6 @@ var messages = map[string]map[string]string{
 
 		"Theme": "Vzhled",
 
-		"Too many failed attempts — try again later.": "Příliš mnoho neúspěšných pokusů – zkuste to později.",
-		"Wrong password.":                                                "Nesprávné heslo.",
-		"Password must be at least 8 characters.":                        "Heslo musí mít alespoň 8 znaků.",
-		"Passwords do not match.":                                        "Hesla se neshodují.",
 		"Copy the whole block below into a bug report":                   "Celý blok níže zkopírujte do hlášení chyby",
 		"It contains service states and recent log lines, no passwords.": "Obsahuje stavy služeb a poslední řádky logů, žádná hesla.",
 		"lowercase letters, digits, . _ -":                               "malá písmena, číslice, . _ -",
@@ -185,16 +170,6 @@ var messages = map[string]map[string]string{
 	},
 	"de": {
 		"Moodle demo console": "Moodle-Demo-Konsole",
-		"Log out":             "Abmelden",
-		"— log in":            "– Anmeldung",
-		"— first-time setup":  "– Ersteinrichtung",
-		"Management password": "Verwaltungspasswort",
-		"Log in":              "Anmelden",
-		"Set the management password for this container.":     "Legen Sie das Verwaltungspasswort für diesen Container fest.",
-		"(You can also provide it at container creation with": "(Es kann auch beim Erstellen des Containers angegeben werden mit",
-		"New password":    "Neues Passwort",
-		"Repeat password": "Passwort wiederholen",
-		"Set password":    "Passwort festlegen",
 
 		"Demo site":  "Demo-Website",
 		"Recipe":     "Rezept",
@@ -253,10 +228,6 @@ var messages = map[string]map[string]string{
 
 		"Theme": "Darstellung",
 
-		"Too many failed attempts — try again later.": "Zu viele Fehlversuche – versuchen Sie es später erneut.",
-		"Wrong password.":                                                "Falsches Passwort.",
-		"Password must be at least 8 characters.":                        "Das Passwort muss mindestens 8 Zeichen haben.",
-		"Passwords do not match.":                                        "Die Passwörter stimmen nicht überein.",
 		"Copy the whole block below into a bug report":                   "Kopieren Sie den gesamten Block unten in eine Fehlermeldung",
 		"It contains service states and recent log lines, no passwords.": "Er enthält Dienststatus und aktuelle Logzeilen, keine Passwörter.",
 		"lowercase letters, digits, . _ -":                               "Kleinbuchstaben, Ziffern, . _ -",

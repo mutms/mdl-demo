@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # mdl-demo — run Moodle/MuTMS demo containers on macOS (Apple container).
 #
-#   mdl-demo create [NNNN] [--name="Fancy demo"] [--password=secret] [--tag=v0.1.2]
+#   mdl-demo create [NNNN] [--name="Fancy demo"] [--tag=v0.1.2]
 #   mdl-demo start|stop|delete [NNNN]
 #   mdl-demo list
 #
@@ -30,7 +30,6 @@ Commands:
 
 Options for create:
   --name="..."    label shown in the console heading, also the Moodle site name
-  --password=...  console password (otherwise the console asks on first visit)
   --tag=...       image version, e.g. --tag=v0.1.2 (default: latest)
 
 The demo's number NNNN is the port of its console: http://localhost:NNNN.
@@ -73,14 +72,13 @@ EOF
 fi
 
 
-port=8081 name="" password="" tag="latest" positional=0
+port=8081 name="" tag="latest" positional=0
 for arg in "$@"; do
     case "$arg" in
-        --name=*)     name="${arg#--name=}" ;;
-        --password=*) password="${arg#--password=}" ;;
-        --tag=*)      tag="${arg#--tag=}" ;;
-        --help|-h)    usage; exit 0 ;;
-        --name|--password|--tag)
+        --name=*)  name="${arg#--name=}" ;;
+        --tag=*)   tag="${arg#--tag=}" ;;
+        --help|-h) usage; exit 0 ;;
+        --name|--tag)
             die "$arg needs a value with '=': $arg=..." ;;
         -*)           die "unknown option '$arg' (see 'mdl-demo help')" ;;
         *)
@@ -104,12 +102,10 @@ case "$cmd" in
         exists && die "$cname already exists — 'mdl-demo start $port' starts it, 'mdl-demo delete $port' removes it"
         args=(run -d --name "$cname" -e "MDL_DEMO_PORT=$port")
         [ -n "$name" ] && args+=(-e "MDL_DEMO_NAME=$name")
-        [ -n "$password" ] && args+=(-e "MDL_DEMO_PASSWORD=$password")
         args+=(-p "127.0.0.1:$port:8081" -p "127.0.0.1:$site:8082" "$IMAGE:$tag")
         container "${args[@]}" >/dev/null
         echo "created $cname${name:+ ($name)}"
         echo "set up your demo site in the console: http://localhost:$port"
-        [ -n "$password" ] || echo "the console asks you to choose its password on the first visit"
         ;;
     start)
         exists || die "$cname does not exist — 'mdl-demo create $port' makes it"
