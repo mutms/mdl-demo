@@ -196,12 +196,13 @@ type recipeGroup struct {
 	Current, Older []recipes.Recipe
 }
 
-// series is the version's maintenance branch: "5.2.2" → "5.2". Only X.Y.Z
-// point releases fold — a two-part version like a dev stream's "5.3" IS the
-// branch, so it is its own series and never hides behind a sibling.
+// series is the version's maintenance branch: "5.2.2" → "5.2", and so is
+// a deeper build like MuTMS's "5.2.2.01". Only point releases fold — a
+// two-part version like a dev stream's "5.3" IS the branch, so it is its
+// own series and never hides behind a sibling.
 func series(version string) string {
-	if strings.Count(version, ".") >= 2 {
-		return version[:strings.LastIndex(version, ".")]
+	if parts := strings.Split(version, "."); len(parts) >= 3 {
+		return parts[0] + "." + parts[1]
 	}
 	return version
 }
