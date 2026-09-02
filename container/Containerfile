@@ -33,7 +33,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Pinned with checksums — bump both together.
-ARG GO_VERSION=1.27.0
+ARG GO_VERSION=1.27.1
 RUN set -eux; \
     arch="$(dpkg --print-architecture)"; \
     case "$arch" in \
