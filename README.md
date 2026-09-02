@@ -28,7 +28,7 @@ Open the Terminal app and paste this command. It starts a demo and opens
 the console in your browser:
 
 ```sh
-container run -d --name mdl-demo-8081 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 ghcr.io/mutms/mdl-demo && open http://localhost:8081
+container run -d --name mdl-demo-8081 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 ghcr.io/mutms/mdl-demo && open http://127.0.0.1:8081
 ```
 
 If you do not want the browser to open, leave out the `&& open …` part.
