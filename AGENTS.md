@@ -114,8 +114,8 @@ PID 1 of the container, management web UI, and CLI.
    it displayed; forks add their copyright beside it.
 9. **Windows commands in docs are always one line** (PowerShell backtick
    continuations break on copy-paste).
-10. **The console is a local port: it answers only to `localhost` and IP
-    addresses, and what guards it lives in `webui/auth.go`** — a
+10. **The console is a local port: it answers only to IP addresses and
+    `localhost`, and what guards it lives in `webui/auth.go`** — a
     SameSite=Strict CSRF cookie (double submit, no server-side sessions), an
     Origin check, and a Host allow-list. Do not introduce a credential
     prompt, and do not give the console a setting that lets it answer to a
@@ -123,6 +123,12 @@ PID 1 of the container, management web UI, and CLI.
     is published is what decides who can reach it. The *site* on 8082 is the
     opposite case — it is meant to be shared (`mdl-demo url --site`, Quick
     Tunnel).
+
+    Every URL mdl-demo builds for itself — the CLI's output, the wwwroot a
+    CLI install bakes in, the docs, the launchers — uses `127.0.0.1`
+    (`state.DefaultHost`), never `localhost`: the ports are published on
+    IPv4 only and `localhost` resolves to `::1` first on some machines. The
+    allow-list keeps accepting the name because people type it.
 
     The container boundary is the perimeter, and it is the test for whether a
     proposed defence is worth its complexity. Anything crossing it outward —

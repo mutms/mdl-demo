@@ -11,9 +11,9 @@ needs.
 Here is how it works:
 
 1. Start the container with the command for your system (see below).
-2. Open <http://localhost:8081> in your browser. This is the console.
+2. Open <http://127.0.0.1:8081> in your browser. This is the console.
 3. Pick a Moodle version and click install.
-4. A few minutes later your site is ready at <http://localhost:8082>.
+4. A few minutes later your site is ready at <http://127.0.0.1:8082>.
 
 Only your computer can see the site. When you want to show it to others,
 one click in the console shares it on a temporary public link. When you
@@ -55,7 +55,7 @@ Open PowerShell and paste this command to start a demo:
 wslc run -d --name mdl-demo-8081 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 ghcr.io/mutms/mdl-demo
 ```
 
-Then open <http://localhost:8081> in your browser.
+Then open <http://127.0.0.1:8081> in your browser.
 
 There is also a small helper script called `mdl-demo.cmd`. Download it into
 a folder, open PowerShell in that folder and run it:
@@ -153,7 +153,7 @@ Stop keeps your site. Delete removes the site and all its data.
 ## Something is not working?
 
 Open the `/debug` page of the console, for example
-<http://localhost:8081/debug>. It shows the state of all services and the
+<http://127.0.0.1:8081/debug>. It shows the state of all services and the
 recent logs in one block. Copy it into a
 [bug report](https://github.com/mutms/mdl-demo/issues) and we will have a
 look.

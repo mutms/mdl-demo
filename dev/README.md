@@ -64,8 +64,8 @@ wwwroot makes the generated config.php set `$CFG->sslproxy`. Moodle bakes
 wwwroot in at install, so set the URL before installing — an installed site
 needs a reset to move.
 
-Only the site can be moved this way. The console answers to `localhost` and
-to IP addresses and nothing else (`go/internal/webui/auth.go`), so it is
+Only the site can be moved this way. The console answers to IP addresses and
+to `localhost` and nothing else (`go/internal/webui/auth.go`), so it is
 always reached at `http://<host-or-ip>:<console port>` — put it behind a
 proxy with a hostname and it returns 403. That is deliberate: what decides
 who can reach the console is where its port is published, and a name it

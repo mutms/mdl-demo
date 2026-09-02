@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Switched to Go 1.27.1
+- Use `127.0.0.1` instead of `localhost`
 
 ## [0.4.0] - 2026-09-01
 

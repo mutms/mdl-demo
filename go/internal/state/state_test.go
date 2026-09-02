@@ -16,8 +16,11 @@ func TestIdentityDefaults(t *testing.T) {
 	if got := s.Title(); got != "mdl-demo-8081" {
 		t.Fatalf("Title() = %q", got)
 	}
-	if got := s.SiteURLFor("localhost"); got != "http://localhost:8082" {
+	if got := s.SiteURLFor(DefaultHost); got != "http://127.0.0.1:8082" {
 		t.Fatalf("SiteURLFor = %q", got)
+	}
+	if got := s.ConsoleURLFor(DefaultHost); got != "http://127.0.0.1:8081" {
+		t.Fatalf("ConsoleURLFor = %q", got)
 	}
 }
 
@@ -39,7 +42,7 @@ func TestIdentityCustom(t *testing.T) {
 
 func TestSiteURLOverride(t *testing.T) {
 	s := &State{ConsolePort: 6381, SiteURL: "https://site.mdl-demo.201.mpd.test"}
-	if got := s.SiteURLFor("localhost"); got != "https://site.mdl-demo.201.mpd.test" {
+	if got := s.SiteURLFor(DefaultHost); got != "https://site.mdl-demo.201.mpd.test" {
 		t.Fatalf("SiteURLFor = %q", got)
 	}
 	// The console has no override to honour — it stays port-derived.

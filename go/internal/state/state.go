@@ -42,7 +42,7 @@ type State struct {
 	// SiteURL overrides the site URL derived from ConsolePort when something
 	// sits in front of the container (a reverse proxy, a tunnel). Set with
 	// `mdl-demo url`; empty means "derive from the port". There is
-	// deliberately no console equivalent: the console answers to localhost
+	// deliberately no console equivalent: the console answers to loopback
 	// and IP addresses only (see webui/auth.go), so a setting that named it
 	// something public would be an invitation to misuse it.
 	SiteURL string `json:"site_url,omitempty"`
@@ -96,6 +96,15 @@ func (s *State) Title() string {
 	}
 	return s.ID()
 }
+
+// DefaultHost is the host to build a URL for when there is no browser to
+// take one from — the CLI's own output, and the wwwroot a CLI install bakes
+// in. It is the literal 127.0.0.1 rather than "localhost" on purpose: every
+// documented run command publishes the ports on 127.0.0.1 only, and
+// "localhost" resolves to ::1 first on plenty of machines, where nothing is
+// listening. The console still answers to "localhost" (webui/auth.go) for
+// people who type it; it just never hands the name out itself.
+const DefaultHost = "127.0.0.1"
 
 // ConsoleURLFor returns the console URL as a browser at host sees it:
 // always http://host:<console port>.

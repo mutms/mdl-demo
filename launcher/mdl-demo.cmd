@@ -7,7 +7,7 @@ rem   mdl-demo start|stop|delete [NNNN]
 rem   mdl-demo list
 rem
 rem NNNN is the demo's number: the port of its management console. The
-rem container is named mdl-demo-NNNN, the console is http://localhost:NNNN and
+rem container is named mdl-demo-NNNN, the console is http://127.0.0.1:NNNN and
 rem the Moodle site is on the next port, NNNN+1. Without a number, 8081 (and
 rem 8082 for the site). Pick another number to run several demos side by side.
 rem
@@ -87,7 +87,7 @@ if defined NAME set "ENVS=%ENVS% -e "MDL_DEMO_NAME=%NAME%""
 wslc run -d --name %CNAME% %ENVS% -p 127.0.0.1:%PORT%:8081 -p 127.0.0.1:%SITE%:8082 %IMAGE%:%TAG% >nul
 if errorlevel 1 exit /b 1
 if defined NAME (echo created %CNAME% ^(%NAME%^)) else (echo created %CNAME%)
-echo set up your demo site in the console: http://localhost:%PORT%
+echo set up your demo site in the console: http://127.0.0.1:%PORT%
 if defined OPEN call :openconsole
 exit /b 0
 
@@ -99,7 +99,7 @@ if errorlevel 1 (
 )
 wslc start %CNAME% >nul
 if errorlevel 1 exit /b 1
-echo started %CNAME% - console: http://localhost:%PORT%
+echo started %CNAME% - console: http://127.0.0.1:%PORT%
 if defined OPEN call :openconsole
 exit /b 0
 
@@ -137,7 +137,7 @@ rem moment later, so a bare "start" can win the race and land on a connection
 rem error. ping is the wait because "timeout" refuses to run whenever the
 rem script's input is redirected.
 :openconsole
-set "URL=http://localhost:%PORT%"
+set "URL=http://127.0.0.1:%PORT%"
 echo waiting for the console...
 for /l %%i in (1,1,30) do (
     curl.exe -fs -o NUL "%URL%" >nul 2>&1
@@ -190,6 +190,6 @@ echo.
 echo Options for create and start:
 echo   --open          open the console in your browser once it answers
 echo.
-echo The demo's number NNNN is the port of its console: http://localhost:NNNN.
+echo The demo's number NNNN is the port of its console: http://127.0.0.1:NNNN.
 echo The Moodle site is on the next port, NNNN+1.
 exit /b 0

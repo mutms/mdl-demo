@@ -114,7 +114,7 @@ func cmdInstall(args []string) error {
 	fs.StringVar(&o.AdminPass, "adminpass", "", "Moodle admin password (required)")
 	fs.StringVar(&o.Fullname, "fullname", "", "site full name (default: the demo name, else the recipe's name)")
 	fs.StringVar(&o.Shortname, "shortname", "", "site short name (default: the demo name, else \"demo\")")
-	fs.StringVar(&o.Wwwroot, "wwwroot", "", "site URL as the browser sees it (default: the site URL from `mdl-demo url` for localhost)")
+	fs.StringVar(&o.Wwwroot, "wwwroot", "", "site URL as the browser sees it (default: the site URL from `mdl-demo url` for 127.0.0.1)")
 	fs.StringVar(&o.Lang, "lang", "", "site default language, e.g. cs or de: installs the language pack (default: English)")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -131,7 +131,7 @@ func cmdRestore(args []string) error {
 	fs := flag.NewFlagSet("restore", flag.ExitOnError)
 	var o site.RestoreOptions
 	fs.StringVar(&o.Recipe, "recipe", "", "restore into this catalogue recipe instead of the backup's own (the upgrade path)")
-	fs.StringVar(&o.Wwwroot, "wwwroot", "", "site URL as the browser sees it (default: the site URL from `mdl-demo url` for localhost)")
+	fs.StringVar(&o.Wwwroot, "wwwroot", "", "site URL as the browser sees it (default: the site URL from `mdl-demo url` for 127.0.0.1)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -148,8 +148,8 @@ func cmdStatus() error {
 		return err
 	}
 	fmt.Printf("demo:       %s\n", s.Title())
-	fmt.Printf("console:    %s\n", s.ConsoleURLFor("localhost"))
-	fmt.Printf("site url:   %s\n", s.SiteURLFor("localhost"))
+	fmt.Printf("console:    %s\n", s.ConsoleURLFor(state.DefaultHost))
+	fmt.Printf("site url:   %s\n", s.SiteURLFor(state.DefaultHost))
 	if !s.Installed() {
 		fmt.Println("no demo site installed")
 		return nil
@@ -184,7 +184,7 @@ func cmdCron() error {
 // cleared with --clear. Moodle bakes wwwroot in at install, so changing the
 // site URL afterwards does not move an installed site.
 //
-// Only the site can be overridden. The console answers to localhost and IP
+// Only the site can be overridden. The console answers to loopback and IP
 // addresses only (see internal/webui/auth.go) — it is a local port, and a
 // setting that pointed it at a public name would just invite exposing it.
 func cmdURL(args []string) error {
@@ -214,9 +214,9 @@ func cmdURL(args []string) error {
 			return err
 		}
 	}
-	fmt.Printf("console:  %s\n", s.ConsoleURLFor("localhost"))
-	fmt.Printf("site:     %s\n", s.SiteURLFor("localhost"))
-	if s.Installed() && s.Wwwroot != s.SiteURLFor("localhost") {
+	fmt.Printf("console:  %s\n", s.ConsoleURLFor(state.DefaultHost))
+	fmt.Printf("site:     %s\n", s.SiteURLFor(state.DefaultHost))
+	if s.Installed() && s.Wwwroot != s.SiteURLFor(state.DefaultHost) {
 		fmt.Printf("note: the installed site keeps wwwroot %s until it is reset and reinstalled\n", s.Wwwroot)
 	}
 	return nil

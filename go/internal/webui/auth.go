@@ -1,8 +1,8 @@
 package webui
 
-// The console is a local port. It is addressed as localhost or by IP
-// address, and three checks keep a web page the user happens to be visiting
-// from driving it:
+// The console is a local port. It is addressed by IP address (127.0.0.1 in
+// every documented command) or as localhost, and three checks keep a web page
+// the user happens to be visiting from driving it:
 //
 //   - a CSRF token in a SameSite=Strict, HttpOnly cookie, echoed by every
 //     state-changing form (double submit — nothing is kept server-side, so a
@@ -99,7 +99,7 @@ func (s *Server) guard(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !hostAllowed(r.Host) {
 			http.Error(w, "this console does not answer to the host "+r.Host+
-				" — reach it at localhost or at an IP address", http.StatusForbidden)
+				" — reach it at 127.0.0.1 or at another IP address", http.StatusForbidden)
 			return
 		}
 		token := ""
@@ -161,7 +161,10 @@ func csrfMatches(r *http.Request, sent string) bool {
 //   - any IP literal: no resolver is involved, so there is nothing to rebind
 //     (this is how the container's own address and a VM address keep working);
 //   - localhost, and *.localhost, which browsers resolve to loopback
-//     themselves without asking DNS.
+//     themselves without asking DNS. Nothing mdl-demo prints uses the name —
+//     URLs it builds itself say 127.0.0.1, because localhost resolves to ::1
+//     first on some machines and the ports are published on IPv4 only — but
+//     people type it, so it is answered.
 //
 // Nothing widens this list. The console is a local port and has no setting
 // that would let it answer to a name — one would only invite pointing it at

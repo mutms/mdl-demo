@@ -158,7 +158,7 @@ $CFG = new stdClass();
 
 $CFG->dbtype    = 'pgsql';
 $CFG->dblibrary = 'native';
-$CFG->dbhost    = 'localhost';
+$CFG->dbhost    = '127.0.0.1';
 $CFG->dbname    = 'demo';
 $CFG->dbuser    = 'demo';
 $CFG->dbpass    = 'demo';

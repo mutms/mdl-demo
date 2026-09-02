@@ -666,7 +666,7 @@ func validDemoUser(name string) bool {
 }
 
 // siteBase is the site URL login links must work under: the tunnel when
-// active (a phone cannot reach localhost), else the override/derived one.
+// active (a phone cannot reach the user's loopback), else the override/derived one.
 func siteBase(r *http.Request) string {
 	if u := tunnel.URL(); u != "" {
 		return u

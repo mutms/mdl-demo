@@ -18,6 +18,6 @@ container build -t mdl-demo-test \
     --build-arg VERSION="$(git describe --tags --always --dirty)" \
     -f container/Containerfile .
 
-container run -d --name mdl-demo-test -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 mdl-demo-test:latest && open "http://localhost:8081"
+container run -d --name mdl-demo-test -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 mdl-demo-test:latest && open "http://127.0.0.1:8081"
 
-echo "web UI: http://localhost:8081"
+echo "web UI: http://127.0.0.1:8081"

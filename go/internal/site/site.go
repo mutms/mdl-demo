@@ -28,7 +28,7 @@ type Options struct {
 	AdminPass string
 	Fullname  string // default: the demo name, else the recipe's name
 	Shortname string // default: the demo name, else "demo"
-	Wwwroot   string // default: the recorded site URL for localhost
+	Wwwroot   string // default: the recorded site URL for 127.0.0.1
 	// Lang is the site's default language ("cs", "de", …): the matching
 	// Moodle language pack is installed and set as default. Empty or "en"
 	// leaves the site English. The web UI passes its own display language —
@@ -47,7 +47,7 @@ func Install(logf execx.Logf, o Options) error {
 		return err
 	}
 	if o.Wwwroot == "" {
-		o.Wwwroot = st.SiteURLFor("localhost")
+		o.Wwwroot = st.SiteURLFor(state.DefaultHost)
 	}
 	recipe, err := recipes.Get(o.Recipe)
 	if err != nil {

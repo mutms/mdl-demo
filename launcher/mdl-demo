@@ -6,7 +6,7 @@
 #   mdl-demo list
 #
 # NNNN is the demo's number: the port of its management console. The
-# container is named mdl-demo-NNNN, the console is http://localhost:NNNN and
+# container is named mdl-demo-NNNN, the console is http://127.0.0.1:NNNN and
 # the Moodle site is on the next port, NNNN+1. Without a number, 8081 (and
 # 8082 for the site). Pick another number to run several demos side by side.
 #
@@ -35,7 +35,7 @@ Options for create:
 Options for create and start:
   --open          open the console in your browser once it answers
 
-The demo's number NNNN is the port of its console: http://localhost:NNNN.
+The demo's number NNNN is the port of its console: http://127.0.0.1:NNNN.
 The Moodle site is on the next port, NNNN+1.
 EOF
 }
@@ -106,7 +106,7 @@ exists() { container inspect "$cname" >/dev/null 2>&1; }
 # returns once the init has been started, and the init opens the port a moment
 # later — so a bare `open` can win the race and land on a connection error.
 open_console() {
-    url="http://localhost:$1"
+    url="http://127.0.0.1:$1"
     printf 'waiting for the console'
     for _ in $(seq 60); do
         if curl -fsS -o /dev/null "$url" 2>/dev/null; then
@@ -129,13 +129,13 @@ case "$cmd" in
         args+=(-p "127.0.0.1:$port:8081" -p "127.0.0.1:$site:8082" "$IMAGE:$tag")
         container "${args[@]}" >/dev/null
         echo "created $cname${name:+ ($name)}"
-        echo "set up your demo site in the console: http://localhost:$port"
+        echo "set up your demo site in the console: http://127.0.0.1:$port"
         if [ "$open" -eq 1 ]; then open_console "$port"; fi
         ;;
     start)
         exists || die "$cname does not exist — 'mdl-demo create $port' makes it"
         container start "$cname" >/dev/null
-        echo "started $cname — console: http://localhost:$port"
+        echo "started $cname — console: http://127.0.0.1:$port"
         if [ "$open" -eq 1 ]; then open_console "$port"; fi
         ;;
     stop)

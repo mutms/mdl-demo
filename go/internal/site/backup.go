@@ -159,7 +159,7 @@ type RestoreOptions struct {
 	// File is the backup's name inside backup.Dir.
 	File string
 	// Wwwroot for the restored site; default: the recorded site URL for
-	// localhost (same rule as Install).
+	// 127.0.0.1 (same rule as Install).
 	Wwwroot string
 	// Recipe switches the restore's code tree: empty rebuilds the exact tree
 	// from the backup's embedded recipe; a catalogue ID assembles that recipe
@@ -202,7 +202,7 @@ func Restore(logf execx.Logf, o RestoreOptions) error {
 		return err
 	}
 	if o.Wwwroot == "" {
-		o.Wwwroot = st.SiteURLFor("localhost")
+		o.Wwwroot = st.SiteURLFor(state.DefaultHost)
 	}
 	staging, err := os.MkdirTemp(backup.Dir, ".staging-")
 	if err != nil {

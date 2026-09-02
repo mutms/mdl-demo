@@ -2,7 +2,7 @@
 // the image's local cluster, via `runuser -u postgres -- psql` (peer auth).
 //
 // Convention (same dev-only choice mpd documents): dbname = dbuser =
-// dbpassword = "demo". The cluster only listens on localhost inside the
+// dbpassword = "demo". The cluster only listens on loopback inside the
 // container.
 package pgdb
 
