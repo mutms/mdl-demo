@@ -37,8 +37,8 @@ ARG GO_VERSION=1.27.1
 RUN set -eux; \
     arch="$(dpkg --print-architecture)"; \
     case "$arch" in \
-        amd64) sha256=675c26c449cbb18fc24b74650de1eabbae6e16f64326fd85a283fb3b58280685 ;; \
-        arm64) sha256=51798d2c42d0e1c6ed7fd9f48728b4193abac9e8aad6dbac2fe96a81f5909bda ;; \
+        amd64) sha256=63d339f0da5ab53635a56f2490a7984dfe12dfcff22ad749f63edaf590168445 ;; \
+        arm64) sha256=3450b45a3f9ee8568792736a5c5e70a1f2e9b36c35a8f74958c03e51d7d92bec ;; \
         *) echo "unsupported build architecture: $arch" >&2; exit 1 ;; \
     esac; \
     wget -qO /tmp/go.tgz "https://go.dev/dl/go${GO_VERSION}.linux-${arch}.tar.gz"; \
