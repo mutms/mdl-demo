@@ -22,7 +22,7 @@ are done, delete the container and everything is gone.
 ## macOS
 
 You need [Apple container](https://github.com/apple/container). It works
-on macOS 15 or newer with Apple silicon.
+on macOS 26 or newer with Apple silicon.
 
 Open the Terminal app and paste this command. It starts a demo and opens
 the console in your browser:
