@@ -162,6 +162,7 @@ type view struct {
 	Installed   bool
 	Busy        bool
 	Recipe      string
+	SiteName    string
 	Wwwroot     string
 	TunnelURL   string
 	InstalledAt string
@@ -360,6 +361,7 @@ func (s *Server) buildView(r *http.Request) view {
 	if st, err := state.Load(); err == nil && st.Installed() {
 		v.Installed = true
 		v.Recipe = st.Recipe
+		v.SiteName = st.Fullname
 		v.Wwwroot = st.Wwwroot
 		v.InstalledAt = st.InstalledAt.Format("2006-01-02 15:04 MST")
 		v.Users = demoUsers(st)

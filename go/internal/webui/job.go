@@ -14,6 +14,7 @@ import (
 type job struct {
 	mu      sync.Mutex
 	kind    string // "install" | "reset"
+	recipe  string // the recipe being installed, so the busy card can name it
 	lines   []string
 	dropped int // lines evicted from the front of lines, so an absolute line number stays a stable cursor
 	running bool
@@ -56,14 +57,15 @@ func SiteLog(line string) {
 	j.logf(line)
 }
 
-// start launches fn in a goroutine unless a job is already running.
-func (j *job) start(kind string, fn func(execx.Logf) error) bool {
+// start launches fn in a goroutine unless a job is already running. recipe is
+// the recipe id for an install (so the busy card can name it), "" otherwise.
+func (j *job) start(kind, recipe string, fn func(execx.Logf) error) bool {
 	j.mu.Lock()
 	if j.running {
 		j.mu.Unlock()
 		return false
 	}
-	j.kind, j.running, j.err = kind, true, nil
+	j.kind, j.recipe, j.running, j.err = kind, recipe, true, nil
 	j.lines, j.dropped = nil, 0
 	j.mu.Unlock()
 
@@ -82,6 +84,7 @@ type jobView struct {
 	// Label is what the running badge says — the activity, not a bare
 	// "running": installing, resetting, backing up, restoring.
 	Label  string
+	Recipe string // the recipe being installed, for the busy card
 	Failed bool
 	Error  string
 	// Log is the batch of log lines to render — the recent tail on a full
@@ -108,7 +111,7 @@ const logTailLimit = 400
 func (j *job) view() jobView {
 	j.mu.Lock()
 	defer j.mu.Unlock()
-	v := jobView{Kind: j.kind, Running: j.running, Label: jobLabels[j.kind]}
+	v := jobView{Kind: j.kind, Running: j.running, Label: jobLabels[j.kind], Recipe: j.recipe}
 	if j.err != nil {
 		v.Failed = true
 		v.Error = j.err.Error()
@@ -145,24 +148,24 @@ func (j *job) logSince(from int) jobView {
 }
 
 func (j *job) startInstall(o site.Options) bool {
-	return j.start("install", func(logf execx.Logf) error {
+	return j.start("install", o.Recipe, func(logf execx.Logf) error {
 		return site.Install(logf, o)
 	})
 }
 
 func (j *job) startReset() bool {
-	return j.start("reset", site.Reset)
+	return j.start("reset", "", site.Reset)
 }
 
 func (j *job) startBackup(version string) bool {
-	return j.start("backup", func(logf execx.Logf) error {
+	return j.start("backup", "", func(logf execx.Logf) error {
 		_, err := site.Backup(logf, version)
 		return err
 	})
 }
 
 func (j *job) startRestore(o site.RestoreOptions) bool {
-	return j.start("restore", func(logf execx.Logf) error {
+	return j.start("restore", o.Recipe, func(logf execx.Logf) error {
 		return site.Restore(logf, o)
 	})
 }

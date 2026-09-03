@@ -11,7 +11,8 @@
   {{/* One site per container, so its details are a description list, not a
        one-row table. */}}
   <dl class="site">
-    <dt>{{t .Lang "Recipe"}}</dt><dd class="name">{{.Recipe}}</dd>
+    <dt>{{t .Lang "Site name"}}</dt><dd class="name">{{.SiteName}}</dd>
+    <dt>{{t .Lang "Recipe"}}</dt><dd>{{.Recipe}}</dd>
     {{/* New tab on purpose: landing inside Moodle in the same tab loses
          people — they forget the management UI's address to get back. */}}
     {{/* While the tunnel runs, the tunnel URL IS the site's URL (wwwroot is
@@ -37,6 +38,13 @@
 {{else if .Busy}}
 <article>
   <h2>{{t .Lang "Demo site"}}</h2>
+  {{/* During install/restore the recipe is already known (from the job), even
+       though the site is not recorded yet — show it so the card is not blank. */}}
+  {{if .Job.Recipe}}
+  <dl class="site">
+    <dt>{{t .Lang "Recipe"}}</dt><dd>{{.Job.Recipe}}</dd>
+  </dl>
+  {{end}}
   <p class="empty"><span class="spin"></span>{{t .Lang "Working — see progress below."}}</p>
 </article>
 {{end}}
