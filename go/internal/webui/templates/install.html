@@ -46,18 +46,9 @@
       {{end}}
     </div>
     <div class="installbar">
-      {{/* Optional and quiet: defaults come from the demo name / recipe. */}}
-      <details class="nameopt">
-        <summary>{{t .Lang "Name the site (optional)"}}</summary>
-        <div class="row names">
-          <label class="grow">{{t .Lang "Site name"}}
-            <input name="fullname" value="{{.Fullname}}" placeholder="{{t .Lang "the recipe's name"}}" maxlength="254">
-          </label>
-          <label class="grow">{{t .Lang "Short name (shown in the navigation)"}}
-            <input name="shortname" value="{{.Shortname}}" maxlength="100">
-          </label>
-        </div>
-      </details>
+      {{/* Optional: left blank it defaults to the demo/recipe name; the short
+           name derives from it server-side. */}}
+      <input name="fullname" class="inline" value="{{.Fullname}}" placeholder="{{t .Lang "Type your site name"}}" maxlength="254" aria-label="{{t .Lang "Site name"}}">
       <button type="submit" class="install">{{t .Lang "Install"}}</button>
     </div>
   </form>

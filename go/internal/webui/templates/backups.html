@@ -22,8 +22,6 @@
   </div>
 </article>
 
-{{template "progress" .}}
-
 {{template "backuplist" .}}
 
 <article>
@@ -40,6 +38,10 @@
     </form>
   </div>
 </article>
+
+{{/* The job log lives at the bottom: it is a running commentary, not a control,
+     so it sits below the actions that feed it. */}}
+{{template "progress" .}}
 
 {{/* Rendered unconditionally at page level (see shell.html: a dialog inside a
      swapped fragment would vanish mid-use). The opener button fills in the

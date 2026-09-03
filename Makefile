@@ -49,7 +49,7 @@ BRIDGE_IP := 10.163.$(VM_ID).1
 run:
 	sudo podman rm -f --ignore $(TEST_NAME)
 	sudo podman run -d --name $(TEST_NAME) \
-		-e MDL_DEMO_PORT=6381 -e MDL_DEMO_NAME="mpd test" \
+		-e MDL_DEMO_PORT=6381 \
 		-p $(BRIDGE_IP):6381:8081 -p $(BRIDGE_IP):6382:8082 mdl-demo
 	@until curl -fs -o /dev/null http://$(BRIDGE_IP):6381/; do sleep 0.2; done
 	sudo podman exec $(TEST_NAME) mdl-demo url --site https://site.mdl-demo.$(VM_ID).mpd.test

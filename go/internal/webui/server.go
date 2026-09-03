@@ -212,10 +212,9 @@ type recipeGroup struct {
 	Current, Older []recipes.Recipe
 }
 
-// vendorLabels/streamCopy carry the chooser's display text. English strings are
-// translation keys (see lang.go); an unlisted vendor/stream shows its slug.
-var vendorLabels = map[string]string{"moodle": "Moodle", "mutms": "MuTMS"}
-
+// streamCopy carries the chooser's stream display text (vendor labels come from
+// recipes.VendorLabel). English strings are translation keys (see lang.go); an
+// unlisted vendor/stream shows its slug.
 type streamText struct{ Label, Desc string }
 
 var streamCopy = map[string]streamText{
@@ -286,13 +285,9 @@ func groupRecipes(list []recipes.Recipe) []vendorTab {
 	for _, g := range groups {
 		i, ok := idx[g.Vendor]
 		if !ok {
-			label := vendorLabels[g.Vendor]
-			if label == "" {
-				label = g.Vendor
-			}
 			i = len(tabs)
 			idx[g.Vendor] = i
-			tabs = append(tabs, vendorTab{Vendor: g.Vendor, Label: label})
+			tabs = append(tabs, vendorTab{Vendor: g.Vendor, Label: recipes.VendorLabel(g.Vendor)})
 		}
 		tabs[i].Streams = append(tabs[i].Streams, g)
 	}

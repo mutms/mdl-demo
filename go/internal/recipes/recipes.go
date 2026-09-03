@@ -59,6 +59,19 @@ func List() ([]Recipe, error) {
 	return out, nil
 }
 
+// vendorLabels maps a catalogue vendor slug to its display name; an unlisted
+// vendor shows its slug as-is.
+var vendorLabels = map[string]string{"moodle": "Moodle", "mutms": "MuTMS"}
+
+// VendorLabel is the human name for a vendor slug ("moodle" → "Moodle"), used
+// for the chooser's tabs and the default site name ("<Vendor> Demo").
+func VendorLabel(vendor string) string {
+	if l, ok := vendorLabels[vendor]; ok {
+		return l
+	}
+	return vendor
+}
+
 // Get returns the recipe with the given identifier.
 func Get(id string) (Recipe, error) {
 	all, err := List()

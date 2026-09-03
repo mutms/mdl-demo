@@ -53,20 +53,14 @@ func Install(logf execx.Logf, o Options) error {
 	if err != nil {
 		return err
 	}
+	// Blank name → "<Vendor> Demo" (e.g. "Moodle Demo", "MuTMS Demo").
 	if o.Fullname == "" {
-		o.Fullname = st.Name
-		if o.Fullname == "" {
-			o.Fullname = recipe.Name
-		}
-		if o.Fullname == "" {
-			o.Fullname = recipe.ID
-		}
+		o.Fullname = recipes.VendorLabel(recipe.Vendor) + " Demo"
 	}
+	// A demo needs only one name: the short name just follows the full name
+	// (the console no longer asks for it separately).
 	if o.Shortname == "" {
-		o.Shortname = st.Name
-		if o.Shortname == "" {
-			o.Shortname = "demo"
-		}
+		o.Shortname = o.Fullname
 	}
 
 	entries, err := os.ReadDir(moodle.Root)
