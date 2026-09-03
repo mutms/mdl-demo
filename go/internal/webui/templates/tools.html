@@ -24,6 +24,8 @@
       </form>
       {{end}}
     </div>
+    <p class="empty">{{t .Lang "Inspect the additional plugins on the demo site."}}</p>
+    <div><a href="/plugins"><button class="secondary">{{t .Lang "Plugins"}}</button></a></div>
     {{end}}
     <p class="empty">{{t .Lang "The mail catcher holds every mail the site sends — password resets, forum digests — and no mail ever leaves the container."}}</p>
     <div><a href="/mail/" target="_blank" rel="noopener"><button class="secondary">{{t .Lang "Show emails"}}</button></a></div>

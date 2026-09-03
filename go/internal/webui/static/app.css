@@ -29,6 +29,7 @@ td.meta { color: var(--dim); font-family: ui-monospace, SFMono-Regular, monospac
           font-size: .82rem; }
 .name { font-weight: 600; }
 .role { color: var(--dim); font-weight: 400; font-size: .82rem; }
+.ext { color: var(--dim); font-size: .78rem; }
 .badge { display: inline-block; font-size: .72rem; padding: .05rem .5rem;
          border-radius: 999px; background: var(--idlebg); color: var(--idle); }
 .badge.on { background: var(--okbg); color: var(--ok); }

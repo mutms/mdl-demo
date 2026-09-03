@@ -1,0 +1,37 @@
+{{/* The Plugins page: the additional (non-core) plugins the demo site carries.
+     Stage (a) lists them; the "add from a git repository" form and catalogue
+     browse land here later (see the placeholder below). */}}
+{{define "plugins"}}<!doctype html>
+<html lang="{{.Lang}}">
+{{template "head" .}}
+<header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>{{t .Lang "— plugins"}}</span></h1>
+<p class="sub"><a href="/">{{t .Lang "← back"}}</a></p></div>{{template "topctl" .}}</header>
+
+<article>
+  <h2>{{t .Lang "Additional plugins"}}</h2>
+  <p class="empty">{{t .Lang "The plugins this demo site carries on top of the ones Moodle ships with."}}</p>
+  {{if .Installed}}
+  {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+  {{if .Plugins}}
+  <table>
+    <tr><th>{{t .Lang "Plugin"}}</th><th>{{t .Lang "Component"}}</th><th>{{t .Lang "Version"}}</th></tr>
+    {{range .Plugins}}
+    <tr>
+      <td class="name">
+        {{if .SourceURL}}<a href="{{.SourceURL}}" target="_blank" rel="noopener">{{.DisplayName}} <span class="ext" aria-hidden="true">↗</span></a>{{else}}{{.DisplayName}}{{end}}
+        <br><span class="role">{{.Relpath}}</span></td>
+      <td class="meta">{{.Component}}</td>
+      <td class="meta">{{if .Release}}{{.Release}}<br><span class="role">{{.Version}}</span>{{else}}{{.Version}}{{end}}</td>
+    </tr>
+    {{end}}
+  </table>
+  {{else}}
+  <p class="empty">{{t .Lang "This site carries no additional plugins — only the ones Moodle ships with."}}</p>
+  {{end}}
+  {{else}}
+  <p class="empty">{{t .Lang "No demo site installed yet."}}</p>
+  {{end}}
+</article>
+
+{{template "footer" .}}
+</html>{{end}}

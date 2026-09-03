@@ -10,6 +10,7 @@
 package moodle
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -227,6 +228,115 @@ func CreateUser(logf execx.Logf, username, password, firstname, lastname, role s
 		args = append(args, "--role="+role)
 	}
 	return runCLI(logf, []string{password}, "mdl-demo/cli/createuser.php", args...)
+}
+
+// Plugin is one additional (non-core) plugin as reported by
+// mdl-demo/cli/export_plugins.php. Versions come through as json.Number so a
+// missing (null) versiondb stays distinguishable from 0.
+type Plugin struct {
+	Component   string      `json:"component"`
+	Type        string      `json:"type"`
+	Name        string      `json:"name"`
+	DisplayName string      `json:"displayname"`
+	Relpath     string      `json:"relpath"`
+	VersionDisk json.Number `json:"versiondisk"`
+	VersionDB   json.Number `json:"versiondb"`
+	Release     string      `json:"release"`
+	Status      string      `json:"status"`
+}
+
+// ExportPlugins lists the site's additional plugins by running the read-only
+// export_plugins.php as www-data and parsing its JSON. Returns nil on an empty
+// site; an error only when the script cannot run or its output is not JSON.
+func ExportPlugins() ([]Plugin, error) {
+	const rel = "mdl-demo/cli/export_plugins.php"
+	dir, err := resolveDir(rel)
+	if err != nil {
+		return nil, err
+	}
+	out, err := execx.Output(dir, "runuser", "-u", "www-data", "--", "php", rel)
+	if err != nil {
+		return nil, err
+	}
+	var plugins []Plugin
+	if err := json.Unmarshal([]byte(out), &plugins); err != nil {
+		return nil, fmt.Errorf("parsing plugin list: %w", err)
+	}
+	return plugins, nil
+}
+
+// PluginSource is one checkout as recorded in the tree's live recipe
+// (.mudev.json): where it sits and the browsable URL of its origin repo.
+// Relpath is normalized tree-relative to the Moodle root — the leading public/
+// of the 5.1 split is stripped so it lines up with a plugin's rootdir-relative
+// path from ExportPlugins.
+type PluginSource struct {
+	Relpath string
+	URL     string
+}
+
+// PluginSources reads the tree's .mudev.json and returns one entry per recorded
+// checkout with a resolvable git origin. Returns nil (no error) when the file is
+// absent — a site assembled another way simply has no source links.
+func PluginSources() ([]PluginSource, error) {
+	data, err := os.ReadFile(filepath.Join(Root, ".mudev.json"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var recipe struct {
+		Plugins []struct {
+			Relpath string `json:"relpath"`
+			Source  struct {
+				Git struct {
+					Remotes map[string]string `json:"remotes"`
+				} `json:"git"`
+			} `json:"source"`
+		} `json:"plugins"`
+	}
+	if err := json.Unmarshal(data, &recipe); err != nil {
+		return nil, fmt.Errorf("parsing .mudev.json: %w", err)
+	}
+	var out []PluginSource
+	for _, p := range recipe.Plugins {
+		url := browseURL(p.Source.Git.Remotes["origin"])
+		if url == "" {
+			continue
+		}
+		out = append(out, PluginSource{
+			Relpath: strings.TrimPrefix(p.Relpath, "public/"),
+			URL:     url,
+		})
+	}
+	return out, nil
+}
+
+// browseURL turns a git remote into a browsable https URL for the common
+// GitHub/GitLab hosts, covering https and scp-style (git@host:owner/repo)
+// remotes. It returns "" for anything it does not recognize rather than emit a
+// link that might not resolve.
+func browseURL(remote string) string {
+	remote = strings.TrimSpace(remote)
+	if remote == "" {
+		return ""
+	}
+	remote = strings.TrimSuffix(remote, ".git")
+	// scp-style: git@github.com:owner/repo → github.com/owner/repo
+	if strings.HasPrefix(remote, "git@") {
+		if _, hostpath, ok := strings.Cut(remote, "@"); ok {
+			remote = "https://" + strings.Replace(hostpath, ":", "/", 1)
+		}
+	}
+	remote = strings.TrimPrefix(remote, "https://")
+	remote = strings.TrimPrefix(remote, "http://")
+	for _, host := range []string{"github.com/", "gitlab.com/"} {
+		if strings.HasPrefix(remote, host) {
+			return "https://" + remote
+		}
+	}
+	return ""
 }
 
 func exists(path string) bool {

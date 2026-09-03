@@ -8,6 +8,7 @@ package webui
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"golang.org/x/text/language"
@@ -49,8 +50,11 @@ func (s *Server) handleLang(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-	back := r.Referer()
-	if back == "" {
+	// The console sends no Referer (Referrer-Policy: no-referrer in auth.go), so
+	// the page to return to is passed explicitly. Accept only a local absolute
+	// path — never a protocol-relative "//host" that would be an open redirect.
+	back := r.FormValue("to")
+	if !strings.HasPrefix(back, "/") || strings.HasPrefix(back, "//") {
 		back = "/"
 	}
 	http.Redirect(w, r, back, http.StatusSeeOther)
@@ -134,6 +138,15 @@ var messages = map[string]map[string]string{
 
 		"Tools":       "Nástroje",
 		"Show emails": "Zobrazit e-maily",
+		"Plugins":     "Pluginy",
+		"Inspect the additional plugins on the demo site.": "Prohlédněte si doplňkové pluginy na demo stránkách.",
+		"— plugins":          "– pluginy",
+		"Additional plugins": "Doplňkové pluginy",
+		"The plugins this demo site carries on top of the ones Moodle ships with.": "Pluginy, které tyto demo stránky mají navíc oproti těm, které jsou součástí Moodlu.",
+		"Plugin":    "Plugin",
+		"Component": "Komponenta",
+		"Version":   "Verze",
+		"This site carries no additional plugins — only the ones Moodle ships with.":                                                 "Tyto stránky nemají žádné doplňkové pluginy – jen ty, které jsou součástí Moodlu.",
 		"Quick Tunnel shares the demo site on a public trycloudflare.com URL, so the audience can open it on their own devices.":     "Quick Tunnel zpřístupní demo stránky na veřejné adrese trycloudflare.com, takže si je posluchači mohou otevřít na vlastních zařízeních.",
 		"The mail catcher holds every mail the site sends — password resets, forum digests — and no mail ever leaves the container.": "Zachycená pošta obsahuje všechny e-maily, které stránky odesílají – obnovy hesel, souhrny z fór – a žádný e-mail nikdy neopustí kontejner.",
 
@@ -236,6 +249,15 @@ var messages = map[string]map[string]string{
 
 		"Tools":       "Werkzeuge",
 		"Show emails": "E-Mails anzeigen",
+		"Plugins":     "Plugins",
+		"Inspect the additional plugins on the demo site.": "Die zusätzlichen Plugins der Demo-Website ansehen.",
+		"— plugins":          "– Plugins",
+		"Additional plugins": "Zusätzliche Plugins",
+		"The plugins this demo site carries on top of the ones Moodle ships with.": "Die Plugins, die diese Demo-Website zusätzlich zu den mit Moodle gelieferten enthält.",
+		"Plugin":    "Plugin",
+		"Component": "Komponente",
+		"Version":   "Version",
+		"This site carries no additional plugins — only the ones Moodle ships with.":                                                 "Diese Website hat keine zusätzlichen Plugins – nur die mit Moodle gelieferten.",
 		"Quick Tunnel shares the demo site on a public trycloudflare.com URL, so the audience can open it on their own devices.":     "Quick Tunnel macht die Demo-Website unter einer öffentlichen trycloudflare.com-Adresse erreichbar, sodass das Publikum sie auf eigenen Geräten öffnen kann.",
 		"The mail catcher holds every mail the site sends — password resets, forum digests — and no mail ever leaves the container.": "Der Postfang enthält alle E-Mails, die die Website versendet – Passwort-Resets, Forenzusammenfassungen – und keine E-Mail verlässt jemals den Container.",
 

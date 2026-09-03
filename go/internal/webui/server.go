@@ -18,6 +18,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -74,6 +75,7 @@ func Serve(out io.Writer, version string) error {
 	mux.HandleFunc("POST /tunnel/stop", s.csrf(s.handleTunnelStop))
 	mux.HandleFunc("GET /tunnel/qr.png", s.handleTunnelQR)
 	mux.HandleFunc("POST /users/create", s.csrf(s.handleUserCreate))
+	mux.HandleFunc("GET /plugins", s.handlePluginsPage)
 	mux.HandleFunc("GET /backups", s.handleBackupsPage)
 	mux.HandleFunc("GET /section/backuplist", s.handleBackupList)
 	mux.HandleFunc("POST /backups/create", s.csrf(s.handleBackupCreate))
@@ -149,10 +151,13 @@ type view struct {
 	Version string
 	// ID, Name and Title identify this demo (see state.State): every page
 	// shows them so several consoles open side by side stay apart.
-	ID          string
-	Name        string
-	Title       string
-	Lang        string
+	ID    string
+	Name  string
+	Title string
+	Lang  string
+	// Path is the current request path, so the language switcher can return
+	// here (the console sends no Referer).
+	Path        string
 	CSRF        string
 	Installed   bool
 	Busy        bool
@@ -180,6 +185,8 @@ type view struct {
 	SSOQR      template.URL
 	// Backups page.
 	Backups []backupRow
+	// Plugins page.
+	Plugins []pluginRow
 	// The empty dashboard's recipe chooser, grouped for collapsible cards.
 	RecipeGroups []recipeGroup
 }
@@ -258,6 +265,20 @@ type serviceRow struct {
 	Running bool
 }
 
+// pluginRow is one additional plugin on the Plugins page: its frankenstyle
+// component, the localized name, where it sits in the tree, and its version.
+type pluginRow struct {
+	Component   string
+	DisplayName string
+	Relpath     string
+	// Version is Moodle's numeric version (the YYYYMMDDXX code date, always
+	// present); Release is the human tag like "5.0.9.01" (often missing).
+	Version string
+	Release string
+	// SourceURL is the plugin's repository on GitHub/GitLab, "" when unknown.
+	SourceURL string
+}
+
 // userRow is one Moodle account shown in the accounts section — its plaintext
 // password comes straight from state (the container owns it for a throwaway
 // site). Only admin exists today; seeded teachers/students will join the list.
@@ -270,7 +291,7 @@ type userRow struct {
 // baseView is the view every page starts from, logged in or not: version,
 // the demo identity, and the display language.
 func (s *Server) baseView(r *http.Request) view {
-	v := view{Version: s.version, Lang: requestLang(r)}
+	v := view{Version: s.version, Lang: requestLang(r), Path: r.URL.Path}
 	st, err := state.Load()
 	if err != nil {
 		st = &state.State{}
@@ -416,6 +437,65 @@ func (s *Server) handleBackupsPage(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleBackupList(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "backuplist", s.backupsView(r))
+}
+
+// pluginRows lists the site's additional plugins for the Plugins page.
+func pluginRows() ([]pluginRow, error) {
+	plugins, err := moodle.ExportPlugins()
+	if err != nil {
+		return nil, err
+	}
+	// Source repos come from the tree's live recipe; a plugin (or subplugin)
+	// links to the checkout whose relpath is the longest prefix of its own.
+	sources, _ := moodle.PluginSources()
+	rows := make([]pluginRow, 0, len(plugins))
+	for _, p := range plugins {
+		rows = append(rows, pluginRow{
+			Component:   p.Component,
+			DisplayName: p.DisplayName,
+			Relpath:     p.Relpath,
+			Version:     p.VersionDisk.String(),
+			Release:     p.Release,
+			SourceURL:   sourceURLFor(p.Relpath, sources),
+		})
+	}
+	// core_plugin_manager's order is the upgrade sequence, not anything a reader
+	// cares about; sort by tree path so related plugins (and subplugins) sit
+	// together predictably.
+	slices.SortFunc(rows, func(a, b pluginRow) int {
+		return strings.Compare(a.Relpath, b.Relpath)
+	})
+	return rows, nil
+}
+
+// sourceURLFor returns the URL of the checkout whose relpath is the longest
+// prefix of the plugin's relpath — so a subplugin nested inside a repo (e.g.
+// certificateelement_* under tool_certificate) links to that repo.
+func sourceURLFor(relpath string, sources []moodle.PluginSource) string {
+	best := ""
+	bestLen := -1
+	for _, s := range sources {
+		if (relpath == s.Relpath || strings.HasPrefix(relpath, s.Relpath+"/")) && len(s.Relpath) > bestLen {
+			best, bestLen = s.URL, len(s.Relpath)
+		}
+	}
+	return best
+}
+
+func (s *Server) pluginsView(r *http.Request) view {
+	v := s.buildView(r)
+	if v.Installed {
+		rows, err := pluginRows()
+		if err != nil {
+			v.Error = err.Error()
+		}
+		v.Plugins = rows
+	}
+	return v
+}
+
+func (s *Server) handlePluginsPage(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "plugins", s.pluginsView(r))
 }
 
 func (s *Server) handleBackupCreate(w http.ResponseWriter, r *http.Request) {
