@@ -159,18 +159,19 @@ type view struct {
 	Lang  string
 	// Path is the current request path, so the language switcher can return
 	// here (the console sends no Referer).
-	Path        string
-	CSRF        string
-	Installed   bool
-	Busy        bool
-	Recipe      string
-	SiteName    string
-	Wwwroot     string
-	TunnelURL   string
-	InstalledAt string
-	Services    []serviceRow
-	Users       []userRow
-	Job         jobView
+	Path           string
+	CSRF           string
+	Installed      bool
+	Busy           bool
+	Recipe         string
+	SiteName       string
+	Wwwroot        string
+	TunnelURL      string
+	TunnelStarting bool
+	InstalledAt    string
+	Services       []serviceRow
+	Users          []userRow
+	Job            jobView
 	// Page-specific fields.
 	// Error is a page-level failure message (the backups listing not being
 	// readable, say) — not to be confused with Job.Error, which reports the
@@ -369,6 +370,7 @@ func (s *Server) buildView(r *http.Request) view {
 		v.InstalledAt = st.InstalledAt.Format("2006-01-02 15:04 MST")
 		v.Users = demoUsers(st)
 		v.TunnelURL = tunnel.URL()
+		v.TunnelStarting = tunnel.Starting()
 	} else {
 		// The empty dashboard IS the chooser: an uninstalled demo has exactly
 		// two useful actions — install a recipe or restore a backup — so the

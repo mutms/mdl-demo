@@ -54,6 +54,15 @@ func URL() string {
 	return cur.url
 }
 
+// Starting reports whether a tunnel is in the middle of coming up (cloudflared
+// launched, URL not announced yet) — so the console can show a starting state
+// and disable the switch instead of offering a second, racing start.
+func Starting() bool {
+	mu.Lock()
+	defer mu.Unlock()
+	return starting
+}
+
 // Start launches cloudflared, waits for its public URL, points the Moodle
 // site at it and returns it. A second Start while one is active returns the
 // existing URL.
