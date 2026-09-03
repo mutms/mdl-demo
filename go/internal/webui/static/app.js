@@ -53,6 +53,8 @@ document.addEventListener('click', function (e) {
   b.textContent = next === 'auto' ? '◐' : next === 'light' ? '☀' : '☾';
 });
 document.addEventListener('DOMContentLoaded', function () {
+  // Enable tab hiding only now that JS runs (see .tabs.js in the stylesheet).
+  document.querySelectorAll('.tabs').forEach(function (t) { t.classList.add('js'); });
   var b = document.getElementById('themebtn');
   if (!b) return;
   var t = document.documentElement.dataset.theme || 'auto';
@@ -106,6 +108,21 @@ document.addEventListener('click', function (e) {
   r.title = shown ? 'Hide' : 'Reveal';
 });
 
+// data-tab: switch the active vendor tab in the install chooser. The chooser
+// never polls, so the chosen tab sticks; with JS off every panel just shows.
+document.addEventListener('click', function (e) {
+  var t = e.target.closest('[data-tab]');
+  if (!t) return;
+  var box = t.closest('.tabs');
+  if (!box) return;
+  var v = t.dataset.tab;
+  box.querySelectorAll('[data-tab]').forEach(function (b) {
+    b.classList.toggle('on', b.dataset.tab === v);
+  });
+  box.querySelectorAll('[data-tabpanel]').forEach(function (p) {
+    p.classList.toggle('on', p.dataset.tabpanel === v);
+  });
+});
 // data-confirm: ask before a destructive form submits.
 // data-close-dialog: close that dialog once the form goes off (a new tab).
 document.addEventListener('submit', function (e) {

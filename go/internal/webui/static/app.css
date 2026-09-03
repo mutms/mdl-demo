@@ -120,6 +120,24 @@ button.ibtn:hover, a.ibtn:hover { color: var(--fg); }
 details summary .badge { margin-left: .35rem; }
 details table { margin: .4rem 0 .2rem; }
 details table tr:last-child td { border-bottom: 0; }
+/* Install chooser: vendor tabs of version streams. Panels hide only once JS
+   marks the box .js (progressive enhancement — no JS shows every panel). */
+.tabbar { display: flex; gap: .4rem; border-bottom: 1px solid var(--line);
+  margin: 0 0 1rem; }
+.tab { background: none; border: 0; border-bottom: 2px solid transparent;
+  border-radius: 0; color: var(--dim); font-size: .92rem; font-weight: 600;
+  cursor: pointer; padding: .35rem .35rem .5rem; margin-bottom: -1px; }
+.tab:hover { color: var(--fg); }
+.tab.on { color: var(--fg); border-bottom-color: var(--accent); }
+.tabs.js .tabpanel { display: none; }
+.tabs.js .tabpanel.on { display: block; }
+.stream { margin: 0 0 1.2rem; }
+.stream:last-child { margin-bottom: 0; }
+.stream-h { margin: 0; font-size: .9rem; }
+.stream-t { font-weight: 600; color: var(--fg); }
+.stream-d { color: var(--dim); font-weight: 400; }
+.stream table { margin: .15rem 0 .1rem; }
+details.older { margin-top: .2rem; }
 /* Quiet row-level action: a link-looking button, so the repeated verbs in
      tables (Log in, Restore) stop competing with the cards' real buttons. */
 button.act, a.act { background: none; border: 0; color: var(--accent);

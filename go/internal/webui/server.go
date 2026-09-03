@@ -187,20 +187,58 @@ type view struct {
 	Backups []backupRow
 	// Plugins page.
 	Plugins []pluginRow
-	// The empty dashboard's recipe chooser, grouped for collapsible cards.
-	RecipeGroups []recipeGroup
+	// The empty dashboard's recipe chooser: vendor tabs of version streams.
+	VendorTabs []vendorTab
 }
 
-// recipeGroup is one vendor/stream accordion on the chooser. Current holds
-// the newest version of each series (5.2.x, 5.1.x, …) — outdated point
-// releases are derived, never curated: they fold into Older automatically the
-// moment a newer one lands in the catalogue. Open marks the card that starts
-// expanded; Total is the badge count.
+// vendorTab is one tab of the install chooser — all of a vendor's streams.
+// Active marks the tab shown first.
+type vendorTab struct {
+	Vendor  string
+	Label   string
+	Active  bool
+	Streams []recipeGroup
+}
+
+// recipeGroup is one vendor/stream group inside a tab. Current holds the newest
+// version of each series (5.2.x, 5.1.x, …) — outdated point releases are
+// derived, never curated: they fold into Older automatically the moment a newer
+// one lands in the catalogue. Label/Desc are the (translatable) stream copy;
+// Total is the badge count.
 type recipeGroup struct {
 	Vendor, Stream string
-	Open           bool
+	Label, Desc    string
 	Total          int
 	Current, Older []recipes.Recipe
+}
+
+// vendorLabels/streamCopy carry the chooser's display text. English strings are
+// translation keys (see lang.go); an unlisted vendor/stream shows its slug.
+var vendorLabels = map[string]string{"moodle": "Moodle", "mutms": "MuTMS"}
+
+type streamText struct{ Label, Desc string }
+
+var streamCopy = map[string]streamText{
+	"moodle/release": {"Release", "Unmodified Moodle, latest point releases — plain core, no plugins."},
+	"moodle/dev":     {"Development", "Unreleased Moodle from the active branches — a look at what's coming."},
+	"mutms/release":  {"Full suite", "Patched Moodle core with multi-tenancy and every MuTMS plugin."},
+	"mutms/moodle":   {"On stock Moodle", "All MuTMS plugins on unmodified Moodle core — no multi-tenancy."},
+	"mutms/dev":      {"Development", "The full MuTMS suite tracking the latest Moodle branches."},
+}
+
+// streamRank orders streams within a tab: release first, then the plugins-only
+// stream, then development, then anything else.
+func streamRank(stream string) int {
+	switch stream {
+	case "release":
+		return 0
+	case "moodle":
+		return 1
+	case "dev":
+		return 2
+	default:
+		return 3
+	}
 }
 
 // series is the version's maintenance branch: "5.2.2" → "5.2", and so is
@@ -214,16 +252,21 @@ func series(version string) string {
 	return version
 }
 
-// groupRecipes folds the sorted catalogue list into vendor/stream groups,
-// splits each into current-per-series vs older versions, and starts the most
-// likely target expanded: the first vendor's "release" stream, else the
-// first group.
-func groupRecipes(list []recipes.Recipe) []recipeGroup {
+// groupRecipes folds the sorted catalogue list into vendor tabs, each holding
+// its streams (release first), each stream split into current-per-series vs
+// older versions. The first vendor's tab starts active.
+func groupRecipes(list []recipes.Recipe) []vendorTab {
+	// One recipeGroup per vendor/stream, in catalogue (vendor,stream asc) order.
 	var groups []recipeGroup
 	seen := map[string]bool{}
 	for _, rec := range list {
 		if n := len(groups); n == 0 || groups[n-1].Vendor != rec.Vendor || groups[n-1].Stream != rec.Stream {
-			groups = append(groups, recipeGroup{Vendor: rec.Vendor, Stream: rec.Stream})
+			c := streamCopy[rec.Vendor+"/"+rec.Stream]
+			label := c.Label
+			if label == "" {
+				label = rec.Stream
+			}
+			groups = append(groups, recipeGroup{Vendor: rec.Vendor, Stream: rec.Stream, Label: label, Desc: c.Desc})
 			clear(seen)
 		}
 		g := &groups[len(groups)-1]
@@ -237,16 +280,31 @@ func groupRecipes(list []recipes.Recipe) []recipeGroup {
 			g.Older = append(g.Older, rec)
 		}
 	}
-	for i := range groups {
-		if groups[i].Vendor == groups[0].Vendor && groups[i].Stream == "release" {
-			groups[i].Open = true
-			return groups
+	// Fold streams into vendor tabs, preserving vendor order of first sighting.
+	var tabs []vendorTab
+	idx := map[string]int{}
+	for _, g := range groups {
+		i, ok := idx[g.Vendor]
+		if !ok {
+			label := vendorLabels[g.Vendor]
+			if label == "" {
+				label = g.Vendor
+			}
+			i = len(tabs)
+			idx[g.Vendor] = i
+			tabs = append(tabs, vendorTab{Vendor: g.Vendor, Label: label})
 		}
+		tabs[i].Streams = append(tabs[i].Streams, g)
 	}
-	if len(groups) > 0 {
-		groups[0].Open = true
+	for i := range tabs {
+		slices.SortStableFunc(tabs[i].Streams, func(a, b recipeGroup) int {
+			return streamRank(a.Stream) - streamRank(b.Stream)
+		})
 	}
-	return groups
+	if len(tabs) > 0 {
+		tabs[0].Active = true
+	}
+	return tabs
 }
 
 type backupRow struct {
@@ -317,7 +375,7 @@ func (s *Server) buildView(r *http.Request) view {
 		// site card lists both. Cheap enough for the 5s section poll (recipe
 		// header scan + first-tar-entry meta reads).
 		list, _ := recipes.List()
-		v.RecipeGroups = groupRecipes(list)
+		v.VendorTabs = groupRecipes(list)
 		v.Backups, _ = backupRows()
 		if err == nil {
 			v.Fullname = st.Name

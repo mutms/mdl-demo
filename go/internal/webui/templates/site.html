@@ -52,52 +52,61 @@
     </label>
   </div>
   <h2 class="mt-lg">{{t .Lang "Install a fresh site"}}</h2>
-  {{/* One collapsible card per vendor/stream, versions newest-first inside;
-       the most likely target (first vendor's release stream) starts open.
-       Native details/summary — Pico styles it, and it needs no JS to survive
-       the section's 5s htmx poll. */}}
-  {{range $g := .RecipeGroups}}
-  <details{{if $g.Open}} open{{end}}>
-    <summary><span class="name">{{$g.Vendor}}/{{$g.Stream}}</span> <span class="badge">{{$g.Total}}</span></summary>
-    <table>
-      {{range $g.Current}}
-      <tr>
-        <td class="name">{{.Version}}{{if .Name}}<br><span class="role">{{.Name}}{{if .Description}} — {{.Description}}{{end}}</span>{{end}}</td>
-        <td class="tr">
-          <form method="post" action="/install"
-                data-confirm="{{t $.Lang "Install this recipe now? Expect several minutes."}}">
-            <input type="hidden" name="csrf" value="{{$.CSRF}}">
-            <input type="hidden" name="recipe" value="{{.ID}}">
-            <button class="act">{{t $.Lang "Install"}}</button>
-          </form>
-        </td>
-      </tr>
-      {{end}}
-    </table>
-    {{/* Superseded point releases (a newer one of the same series exists);
-         still installable — upgrade demos need them — just out of the way. */}}
-    {{if $g.Older}}
-    <details>
-      <summary><span class="role">{{t $.Lang "older versions"}}</span> <span class="badge">{{len $g.Older}}</span></summary>
-      <table>
-        {{range $g.Older}}
-        <tr>
-          <td class="name">{{.Version}}{{if .Name}}<br><span class="role">{{.Name}}{{if .Description}} — {{.Description}}{{end}}</span>{{end}}</td>
-          <td class="tr">
-            <form method="post" action="/install"
-                  data-confirm="{{t $.Lang "Install this recipe now? Expect several minutes."}}">
-              <input type="hidden" name="csrf" value="{{$.CSRF}}">
-              <input type="hidden" name="recipe" value="{{.ID}}">
-              <button class="act">{{t $.Lang "Install"}}</button>
-            </form>
-          </td>
-        </tr>
+  {{/* Vendor tabs (Moodle / MuTMS …), each a stack of version streams with one
+       description apiece. Tabs toggle via a delegated data-tab handler (app.js);
+       the chooser never polls, so the active tab survives. With JS off every
+       panel shows — harmless. */}}
+  <div class="tabs">
+    <div class="tabbar" role="tablist">
+      {{range .VendorTabs}}<button type="button" class="tab{{if .Active}} on{{end}}" data-tab="{{.Vendor}}">{{.Label}}</button>{{end}}
+    </div>
+    {{range .VendorTabs}}
+    <div class="tabpanel{{if .Active}} on{{end}}" data-tabpanel="{{.Vendor}}">
+      {{range $g := .Streams}}
+      <div class="stream">
+        <p class="stream-h"><span class="stream-t">{{t $.Lang $g.Label}}</span>{{if $g.Desc}} <span class="stream-d">— {{t $.Lang $g.Desc}}</span>{{end}}</p>
+        <table>
+          {{range $g.Current}}
+          <tr>
+            <td class="name">{{.Version}}</td>
+            <td class="tr">
+              <form method="post" action="/install"
+                    data-confirm="{{t $.Lang "Install this recipe now? Expect several minutes."}}">
+                <input type="hidden" name="csrf" value="{{$.CSRF}}">
+                <input type="hidden" name="recipe" value="{{.ID}}">
+                <button class="act">{{t $.Lang "Install"}}</button>
+              </form>
+            </td>
+          </tr>
+          {{end}}
+        </table>
+        {{/* Superseded point releases (a newer one of the same series exists);
+             still installable — upgrade demos need them — just out of the way. */}}
+        {{if $g.Older}}
+        <details class="older">
+          <summary><span class="role">{{t $.Lang "older versions"}}</span> <span class="badge">{{len $g.Older}}</span></summary>
+          <table>
+            {{range $g.Older}}
+            <tr>
+              <td class="name">{{.Version}}</td>
+              <td class="tr">
+                <form method="post" action="/install"
+                      data-confirm="{{t $.Lang "Install this recipe now? Expect several minutes."}}">
+                  <input type="hidden" name="csrf" value="{{$.CSRF}}">
+                  <input type="hidden" name="recipe" value="{{.ID}}">
+                  <button class="act">{{t $.Lang "Install"}}</button>
+                </form>
+              </td>
+            </tr>
+            {{end}}
+          </table>
+        </details>
         {{end}}
-      </table>
-    </details>
+      </div>
+      {{end}}
+    </div>
     {{end}}
-  </details>
-  {{end}}
+  </div>
   {{if .Backups}}
   <h2 class="mt-lg">{{t .Lang "Restore a backup"}}</h2>
   <table>
