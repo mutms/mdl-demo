@@ -1,36 +1,59 @@
-{{/* The tools card is the presenter's utility belt: the Quick Tunnel switch
-     (its status — URL, badge, QR — lives on the site card, since it IS the
-     site's URL while active) and the Mailpit catcher (proxied under /mail).
-     Polled like the site card so the tunnel button follows state changes made
-     in another tab. */}}
+{{/* The tools card is the presenter's utility belt, laid out as a grid of
+     tool cards. Two kinds, told apart by their affordance: a navigation card
+     is one big link (→ goes to a console page, ↗ opens a new tab); the Quick
+     Tunnel card carries an on/off switch instead — it flips state, it does not
+     navigate. Its live status (URL, QR, badge) stays on the site card, since
+     the tunnel IS the site's URL while it runs. Polled like the site card so
+     the switch follows state changes made in another tab. */}}
 {{define "tools"}}
 <article id="tools" hx-get="/section/tools" hx-trigger="every 5s" hx-swap="outerHTML">
   <h2>{{t .Lang "Tools"}}</h2>
-  <div class="tools">
+  <div class="toolgrid">
     {{if .Installed}}
-    <p class="empty">{{t .Lang "Quick Tunnel shares the demo site on a public trycloudflare.com URL, so the audience can open it on their own devices."}}</p>
-    <div>
-      {{if .TunnelURL}}
-      {{/* Primary on purpose: an active tunnel means the site is public —
-           the way back deserves the loudest button on the card. */}}
-      <form method="post" action="/tunnel/stop">
-        <input type="hidden" name="csrf" value="{{.CSRF}}">
-        <button>{{t .Lang "Stop tunnel"}}</button>
-      </form>
-      {{else}}
-      <form method="post" action="/tunnel/start">
-        <input type="hidden" name="csrf" value="{{.CSRF}}">
-        <button class="secondary">{{t .Lang "Quick Tunnel"}}</button>
-      </form>
-      {{end}}
+    {{/* Quick Tunnel: a switch, on = the site is public. The form posts to
+         start or stop depending on where the switch currently sits. */}}
+    <div class="tool">
+      <div class="tool-h">
+        <svg class="tool-i" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"/></svg>
+        <span class="tool-t">{{t .Lang "Quick Tunnel"}}</span>
+        <span class="tool-x">
+          <span class="tstate{{if .TunnelURL}} on{{end}}">{{if .TunnelURL}}{{t .Lang "Public"}}{{else}}{{t .Lang "Off"}}{{end}}</span>
+          <form method="post" action="/tunnel/{{if .TunnelURL}}stop{{else}}start{{end}}">
+            <input type="hidden" name="csrf" value="{{.CSRF}}">
+            <button type="submit" class="toggle" role="switch" aria-checked="{{if .TunnelURL}}true{{else}}false{{end}}" aria-label="{{t .Lang "Quick Tunnel"}}"></button>
+          </form>
+        </span>
+      </div>
+      <p class="tool-d">{{t .Lang "Share the demo site on a public trycloudflare.com URL, so the audience can open it on their own devices."}}</p>
     </div>
-    <p class="empty">{{t .Lang "Inspect the additional plugins on the demo site."}}</p>
-    <div><a href="/plugins"><button class="secondary">{{t .Lang "Plugins"}}</button></a></div>
+
+    <a class="tool" href="/plugins">
+      <div class="tool-h">
+        <svg class="tool-i" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v2.5a1.5 1.5 0 0 0 3 0V3h4v4h1.5a1.5 1.5 0 0 1 0 3H16v4h-4v-1.5a1.5 1.5 0 0 0-3 0V17H5v-4H3.5a1.5 1.5 0 0 1 0-3H5V3z"/></svg>
+        <span class="tool-t">{{t .Lang "Plugins"}}</span>
+        <span class="tool-x arrow">&rarr;</span>
+      </div>
+      <p class="tool-d">{{t .Lang "The extra plugins this site carries on top of core Moodle."}}</p>
+    </a>
     {{end}}
-    <p class="empty">{{t .Lang "The mail catcher holds every mail the site sends — password resets, forum digests — and no mail ever leaves the container."}}</p>
-    <div><a href="/mail/" target="_blank" rel="noopener"><button class="secondary">{{t .Lang "Show emails"}}</button></a></div>
-    <p class="empty">{{t .Lang "Back up the demo site into a portable file, or restore a saved backup — including into a newer Moodle version."}}</p>
-    <div><a href="/backups"><button class="secondary">{{t .Lang "Backups"}}</button></a></div>
+
+    <a class="tool" href="/mail/" target="_blank" rel="noopener">
+      <div class="tool-h">
+        <svg class="tool-i" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+        <span class="tool-t">{{t .Lang "Redirected emails"}}</span>
+        <span class="tool-x arrow">&#8599;</span>
+      </div>
+      <p class="tool-d">{{t .Lang "Every mail the site sends is caught here — nothing ever leaves the container."}}</p>
+    </a>
+
+    <a class="tool" href="/backups">
+      <div class="tool-h">
+        <svg class="tool-i" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"/><rect x="3" y="7" width="18" height="13" rx="1.5"/><path d="M9 11h6"/></svg>
+        <span class="tool-t">{{t .Lang "Backups"}}</span>
+        <span class="tool-x arrow">&rarr;</span>
+      </div>
+      <p class="tool-d">{{t .Lang "Save the site to a portable file, or restore one — even into a newer Moodle."}}</p>
+    </a>
   </div>
 </article>
 {{end}}

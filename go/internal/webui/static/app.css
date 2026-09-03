@@ -25,6 +25,14 @@ h1 span { color: var(--dim); font-weight: 400; }
 .sub { color: var(--dim); margin: .2rem 0 0; font-size: .85rem; }
 h2 { font-size: .78rem; text-transform: uppercase; letter-spacing: .07em;
      color: var(--dim); margin: 0 0 .75rem; font-weight: 600; }
+/* A card's own title (its first h2) is the page's main landmark, so it reads
+   loud and clear — larger, full-strength, with a hairline under it. Inner
+   h2s (the chooser's sub-headings) keep the quiet uppercase style above. */
+body > article > h2:first-child,
+body > article > #jobstatus > h2 { /* the log's title lives in its poll wrapper */
+  font-size: 1.05rem; text-transform: none; letter-spacing: -.01em;
+  color: var(--fg); font-weight: 700; margin: 0 0 .7rem; }
+body > article { margin-bottom: 1.3rem; }
 td.meta { color: var(--dim); font-family: ui-monospace, SFMono-Regular, monospace;
           font-size: .82rem; }
 .name { font-weight: 600; }
@@ -55,11 +63,36 @@ pre.log { font: .78rem/1.45 ui-monospace, SFMono-Regular, monospace;
   max-height: 22rem; }
 pre.log.short { max-height: 5cm; }
 .row { display: flex; gap: .6rem; align-items: center; }
-.tools { display: grid; grid-template-columns: 1fr auto; gap: .55rem .9rem;
-  align-items: center; }
-.tools p { margin: 0; padding: 0; }
-.tools > div { justify-self: end; }
-.tools button { white-space: nowrap; }
+/* Tools are cards in a responsive grid: navigation cards (whole card is a
+   link) sit beside the Quick Tunnel switch card. */
+.toolgrid { display: grid; gap: .7rem;
+  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); }
+.tool { display: flex; flex-direction: column; gap: .35rem;
+  padding: .8rem .9rem; border: 1px solid var(--line);
+  border-radius: var(--pico-border-radius); background: var(--card); }
+a.tool { text-decoration: none; color: inherit;
+  transition: border-color .12s, background .12s; }
+a.tool:hover { border-color: var(--accent); background: var(--idlebg); }
+.tool-h { display: flex; align-items: center; gap: .5rem; }
+.tool-i { color: var(--dim); flex: none; }
+.tool-t { font-weight: 600; font-size: .95rem; color: var(--fg); }
+.tool-x { margin-left: auto; display: inline-flex; align-items: center; gap: .5rem; }
+.tool-x .arrow { color: var(--dim); font-size: 1rem; line-height: 1; }
+a.tool:hover .arrow { color: var(--accent); }
+.tool-d { margin: 0; color: var(--dim); font-size: .8rem; line-height: 1.4; }
+.tool form { margin: 0; }
+/* The tunnel switch: a track + sliding knob, green when the site is public. */
+.tstate { font-size: .72rem; color: var(--dim); text-transform: uppercase;
+  letter-spacing: .04em; }
+.tstate.on { color: var(--ok); font-weight: 600; }
+button.toggle { width: 2.5rem; height: 1.4rem; padding: 0; border: 0; margin: 0;
+  border-radius: 999px; background: var(--idlebg); position: relative;
+  cursor: pointer; transition: background .15s; }
+button.toggle::after { content: ""; position: absolute; top: 3px; left: 3px;
+  width: calc(1.4rem - 6px); height: calc(1.4rem - 6px); border-radius: 50%;
+  background: #fff; transition: left .15s; box-shadow: 0 1px 2px #0003; }
+button.toggle[aria-checked="true"] { background: var(--ok); }
+button.toggle[aria-checked="true"]::after { left: calc(100% - 1.4rem + 3px); }
 /* Pico styles bare <nav>; pin the header controls' own metrics so the
      lang links and the theme glyph sit on one center line. */
 header > .row, .topctl { align-items: center; }
