@@ -3,7 +3,7 @@
 // buttons and QR codes. Tokens are minted by the console (internal/sso) into
 // <dataroot>/mdldemo-sso/ and consumed here on first use.
 
-require(__DIR__ . '/init.php');
+require(__DIR__ . '/../config.php');
 
 $token = optional_param('token', '', PARAM_ALPHANUMEXT);
 $dir = $CFG->dataroot . '/mdldemo-sso';
