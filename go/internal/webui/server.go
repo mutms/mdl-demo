@@ -440,6 +440,12 @@ func (s *Server) handleInstall(w http.ResponseWriter, r *http.Request) {
 		Shortname: strings.TrimSpace(r.FormValue("shortname")),
 		Lang:      requestLang(r),
 	}
+	// Resolve the "<Vendor> Demo" default now (not inside site.Install) so the
+	// busy card can show the site's name while it installs. site.Install still
+	// defaults a blank name too, for the CLI path.
+	if o.Fullname == "" && o.Recipe != "" {
+		o.Fullname = site.DefaultFullname(strings.SplitN(o.Recipe, "/", 2)[0])
+	}
 	if !s.job.startInstall(o) {
 		http.Error(w, "another operation is already running", http.StatusConflict)
 		return

@@ -36,6 +36,13 @@ type Options struct {
 	Lang string
 }
 
+// DefaultFullname is the site name used when the user gives none: "<Vendor>
+// Demo" (e.g. "Moodle Demo", "MuTMS Demo"). Exposed so the console can resolve
+// it before the install starts, to name the site on the busy card.
+func DefaultFullname(vendor string) string {
+	return recipes.VendorLabel(vendor) + " Demo"
+}
+
 // Install provisions the whole site: database, code tree, config, Apache,
 // Moodle installer, cron timer. Fails fast if a site is already present.
 func Install(logf execx.Logf, o Options) error {
@@ -55,7 +62,7 @@ func Install(logf execx.Logf, o Options) error {
 	}
 	// Blank name → "<Vendor> Demo" (e.g. "Moodle Demo", "MuTMS Demo").
 	if o.Fullname == "" {
-		o.Fullname = recipes.VendorLabel(recipe.Vendor) + " Demo"
+		o.Fullname = DefaultFullname(recipe.Vendor)
 	}
 	// A demo needs only one name: the short name just follows the full name
 	// (the console no longer asks for it separately).

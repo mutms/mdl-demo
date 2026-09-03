@@ -52,9 +52,8 @@ dl.site { display: grid; grid-template-columns: max-content 1fr;
           gap: .45rem .9rem; margin: 0; align-items: baseline; }
 dl.site dt { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em;
              color: var(--dim); font-weight: 600; }
-dl.site dd { margin: 0; font-family: ui-monospace, SFMono-Regular, monospace;
-             font-size: .82rem; color: var(--dim); overflow-wrap: anywhere; }
-dl.site dd.name { font-family: inherit; font-size: inherit; font-weight: 600; color: var(--fg); }
+dl.site dd { margin: 0; font-size: .85rem; color: var(--dim); overflow-wrap: anywhere; }
+dl.site dd.name { font-weight: 600; color: var(--fg); }
 form.stack { max-width: 26rem; }
 /* Pico makes buttons full-width form blocks with generous padding; this
      console uses them inline in rows, tables and headers, and quieter. */
@@ -176,6 +175,8 @@ button.act, a.act { background: none; border: 0; color: var(--accent);
   padding: .2rem .3rem; margin: 0; font-size: .88rem; line-height: 1.2;
   cursor: pointer; text-decoration: none; white-space: nowrap; }
 button.act:hover, a.act:hover { text-decoration: underline; color: var(--accent); }
+/* The accounts row's login action, set a little off the name it belongs to. */
+button.act.login { margin-left: .5rem; }
 dialog > article { width: min(30rem, 92vw); min-height: 8rem;
   position: relative; /* anchors .dlgclose */ }
 dialog#qrdialog article { background: #fff; width: auto; min-height: 0; }

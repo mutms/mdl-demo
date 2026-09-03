@@ -12,13 +12,14 @@ import (
 // a time, with its log kept for the progress section. Single-flight: a demo
 // container has exactly one site, so there is never a queue.
 type job struct {
-	mu      sync.Mutex
-	kind    string // "install" | "reset"
-	recipe  string // the recipe being installed, so the busy card can name it
-	lines   []string
-	dropped int // lines evicted from the front of lines, so an absolute line number stays a stable cursor
-	running bool
-	err     error
+	mu       sync.Mutex
+	kind     string // "install" | "reset"
+	recipe   string // the recipe being installed, so the busy card can name it
+	siteName string // the site's name, for the busy card during install
+	lines    []string
+	dropped  int // lines evicted from the front of lines, so an absolute line number stays a stable cursor
+	running  bool
+	err      error
 }
 
 func (j *job) logf(line string) {
@@ -57,15 +58,15 @@ func SiteLog(line string) {
 	j.logf(line)
 }
 
-// start launches fn in a goroutine unless a job is already running. recipe is
-// the recipe id for an install (so the busy card can name it), "" otherwise.
-func (j *job) start(kind, recipe string, fn func(execx.Logf) error) bool {
+// start launches fn in a goroutine unless a job is already running. recipe and
+// name identify an install (so the busy card can name it), "" otherwise.
+func (j *job) start(kind, recipe, name string, fn func(execx.Logf) error) bool {
 	j.mu.Lock()
 	if j.running {
 		j.mu.Unlock()
 		return false
 	}
-	j.kind, j.recipe, j.running, j.err = kind, recipe, true, nil
+	j.kind, j.recipe, j.siteName, j.running, j.err = kind, recipe, name, true, nil
 	j.lines, j.dropped = nil, 0
 	j.mu.Unlock()
 
@@ -83,10 +84,11 @@ type jobView struct {
 	Running bool
 	// Label is what the running badge says — the activity, not a bare
 	// "running": installing, resetting, backing up, restoring.
-	Label  string
-	Recipe string // the recipe being installed, for the busy card
-	Failed bool
-	Error  string
+	Label    string
+	Recipe   string // the recipe being installed, for the busy card
+	SiteName string // the site's name, for the busy card
+	Failed   bool
+	Error    string
 	// Log is the batch of log lines to render — the recent tail on a full
 	// section render, or just the new lines on an incremental /joblog poll.
 	Log []string
@@ -111,7 +113,7 @@ const logTailLimit = 400
 func (j *job) view() jobView {
 	j.mu.Lock()
 	defer j.mu.Unlock()
-	v := jobView{Kind: j.kind, Running: j.running, Label: jobLabels[j.kind], Recipe: j.recipe}
+	v := jobView{Kind: j.kind, Running: j.running, Label: jobLabels[j.kind], Recipe: j.recipe, SiteName: j.siteName}
 	if j.err != nil {
 		v.Failed = true
 		v.Error = j.err.Error()
@@ -148,24 +150,24 @@ func (j *job) logSince(from int) jobView {
 }
 
 func (j *job) startInstall(o site.Options) bool {
-	return j.start("install", o.Recipe, func(logf execx.Logf) error {
+	return j.start("install", o.Recipe, o.Fullname, func(logf execx.Logf) error {
 		return site.Install(logf, o)
 	})
 }
 
 func (j *job) startReset() bool {
-	return j.start("reset", "", site.Reset)
+	return j.start("reset", "", "", site.Reset)
 }
 
 func (j *job) startBackup(version string) bool {
-	return j.start("backup", "", func(logf execx.Logf) error {
+	return j.start("backup", "", "", func(logf execx.Logf) error {
 		_, err := site.Backup(logf, version)
 		return err
 	})
 }
 
 func (j *job) startRestore(o site.RestoreOptions) bool {
-	return j.start("restore", o.Recipe, func(logf execx.Logf) error {
+	return j.start("restore", o.Recipe, "", func(logf execx.Logf) error {
 		return site.Restore(logf, o)
 	})
 }

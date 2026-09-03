@@ -11,7 +11,7 @@
   {{/* One site per container, so its details are a description list, not a
        one-row table. */}}
   <dl class="site">
-    <dt>{{t .Lang "Site name"}}</dt><dd class="name">{{.SiteName}}</dd>
+    <dt>{{t .Lang "Site name"}}</dt><dd>{{.SiteName}}</dd>
     <dt>{{t .Lang "Recipe"}}</dt><dd>{{.Recipe}}</dd>
     {{/* New tab on purpose: landing inside Moodle in the same tab loses
          people — they forget the management UI's address to get back. */}}
@@ -42,6 +42,7 @@
        though the site is not recorded yet — show it so the card is not blank. */}}
   {{if .Job.Recipe}}
   <dl class="site">
+    {{if .Job.SiteName}}<dt>{{t .Lang "Site name"}}</dt><dd>{{.Job.SiteName}}</dd>{{end}}
     <dt>{{t .Lang "Recipe"}}</dt><dd>{{.Job.Recipe}}</dd>
   </dl>
   {{end}}

@@ -12,13 +12,15 @@
 <article>
   <h2>{{t .Lang "Accounts"}}</h2>
   <table>
-    <tr><th>{{t .Lang "User"}}</th><th>{{t .Lang "Password"}}</th><th></th></tr>
+    <tr><th>{{t .Lang "User"}}</th><th>{{t .Lang "Password"}}</th></tr>
     {{range .Users}}
     <tr>
-      <td class="name">{{.Username}} <span class="role">{{t $.Lang .Role}}</span></td>
-      <td>{{template "secret" .Password}}</td>
-      <td><button class="act" hx-get="/sso/dialog?user={{.Username}}" hx-target="#ssobody"
+      {{/* The login action sits with the account it opens, not in a distant
+           column: name, role, then the button that logs the site in as them. */}}
+      <td class="name">{{.Username}} <span class="role">{{t $.Lang .Role}}</span>
+          <button class="act login" hx-get="/sso/dialog?user={{.Username}}" hx-target="#ssobody"
           data-open="ssodialog" data-clear="ssobody">{{t $.Lang "Log in"}}</button></td>
+      <td>{{template "secret" .Password}}</td>
     </tr>
     {{end}}
   </table>

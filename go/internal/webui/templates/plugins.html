@@ -9,10 +9,10 @@
 
 <article>
   <h2>{{t .Lang "Additional plugins"}}</h2>
-  <p class="empty">{{t .Lang "The plugins this demo site carries on top of the ones Moodle ships with."}}</p>
   {{if .Installed}}
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   {{if .Plugins}}
+  <p class="empty">{{t .Lang "The plugins this demo site carries on top of the ones Moodle ships with."}}</p>
   <table>
     <tr><th>{{t .Lang "Plugin"}}</th><th>{{t .Lang "Component"}}</th><th>{{t .Lang "Version"}}</th></tr>
     {{range .Plugins}}
@@ -26,7 +26,7 @@
     {{end}}
   </table>
   {{else}}
-  <p class="empty">{{t .Lang "This site carries no additional plugins — only the ones Moodle ships with."}}</p>
+  <p class="empty">{{t .Lang "No additional plugins installed yet."}}</p>
   {{end}}
   {{else}}
   <p class="empty">{{t .Lang "No demo site installed yet."}}</p>
