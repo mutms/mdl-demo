@@ -20,12 +20,15 @@
       </div>
       {{range .VendorTabs}}
       <div class="tabpanel{{if .Active}} on{{end}}" data-tabpanel="{{.Vendor}}">
+        {{/* data-pick names the choice ("MuTMS 5.2.2.01") for the Install
+             button — it stays unambiguous even after switching tabs. */}}
+        {{$vendor := .Label}}
         {{range $g := .Streams}}
         <div class="stream">
           <p class="stream-h"><span class="stream-t">{{t $.Lang $g.Label}}</span>{{if $g.Desc}} <span class="stream-d">— {{t $.Lang $g.Desc}}</span>{{end}}</p>
           <div class="pkgs">
             {{range $g.Current}}
-            <label class="pkg"><input type="radio" name="recipe" value="{{.ID}}"><span>{{.Version}}</span></label>
+            <label class="pkg"><input type="radio" name="recipe" value="{{.ID}}" data-pick="{{$vendor}} {{.Version}}"><span>{{.Version}}</span></label>
             {{end}}
           </div>
           {{/* Superseded point releases (a newer one of the same series exists);
@@ -35,7 +38,7 @@
             <summary><span class="role">{{t $.Lang "older versions"}}</span> <span class="badge">{{len $g.Older}}</span></summary>
             <div class="pkgs">
               {{range $g.Older}}
-              <label class="pkg"><input type="radio" name="recipe" value="{{.ID}}"><span>{{.Version}}</span></label>
+              <label class="pkg"><input type="radio" name="recipe" value="{{.ID}}" data-pick="{{$vendor}} {{.Version}}"><span>{{.Version}}</span></label>
               {{end}}
             </div>
           </details>

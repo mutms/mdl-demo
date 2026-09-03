@@ -18,9 +18,14 @@
         <span class="tool-t">{{t .Lang "Quick Tunnel"}}</span>
         <span class="tool-x">
           <span class="tstate{{if .TunnelURL}} on{{end}}">{{if .TunnelURL}}{{t .Lang "Public"}}{{else}}{{t .Lang "Off"}}{{end}}</span>
-          <form method="post" action="/tunnel/{{if .TunnelURL}}stop{{else}}start{{end}}">
+          {{/* Starting the tunnel takes a few seconds (cloudflared handshake);
+               the submit handler (app.js) shows the spinner and disables the
+               switch so the wait does not look frozen, then the redirect
+               reloads with the tunnel live. */}}
+          <form method="post" action="/tunnel/{{if .TunnelURL}}stop{{else}}start{{end}}" class="tunnelform">
             <input type="hidden" name="csrf" value="{{.CSRF}}">
             <button type="submit" class="toggle" role="switch" aria-checked="{{if .TunnelURL}}true{{else}}false{{end}}" aria-label="{{t .Lang "Quick Tunnel"}}"></button>
+            <span class="tunspin" aria-hidden="true"></span>
           </form>
         </span>
       </div>

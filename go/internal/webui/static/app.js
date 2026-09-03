@@ -63,6 +63,7 @@ function initChooser() {
   // Same idea for the Install button: disable it until a package is picked
   // only when JS can re-enable it (the change handler above).
   document.querySelectorAll('.installform button.install').forEach(function (b) {
+    if (!b.dataset.base) b.dataset.base = b.textContent.trim(); // the plain "Install" verb
     b.disabled = !b.closest('.installform').querySelector('input[name="recipe"]:checked');
   });
 }
@@ -91,7 +92,11 @@ document.addEventListener('change', function (e) {
   if (!r) return;
   var f = r.closest('.installform');
   var btn = f && f.querySelector('button.install');
-  if (btn) btn.disabled = false;
+  if (!btn) return;
+  btn.disabled = false;
+  // Name the choice on the button ("Install MuTMS 5.2.2.01"), so it is clear
+  // what is selected even after switching to another vendor's tab.
+  if (btn.dataset.base && r.dataset.pick) btn.textContent = btn.dataset.base + ' ' + r.dataset.pick;
 });
 // Backups page: "Restore" fills the dialog with the row's file name and
 // resets the recipe choice to the bundled default. Delegated, so it survives
@@ -130,6 +135,19 @@ document.addEventListener('click', function (e) {
   box.querySelectorAll('[data-tabpanel]').forEach(function (p) {
     p.classList.toggle('on', p.dataset.tabpanel === v);
   });
+});
+// Tunnel switch: starting cloudflared takes a few seconds and the request is a
+// full navigation, so show the spinner and disable the switch immediately —
+// otherwise the wait looks frozen. Also stop the tools card's poll so it can't
+// swap the spinner away mid-wait; the redirect reloads the page regardless.
+document.addEventListener('submit', function (e) {
+  var f = e.target;
+  if (!f.classList || !f.classList.contains('tunnelform')) return;
+  f.classList.add('busy');
+  var b = f.querySelector('button');
+  if (b) b.disabled = true;
+  var card = f.closest('#tools');
+  if (card) card.removeAttribute('hx-trigger');
 });
 // data-confirm: ask before a destructive form submits.
 // data-close-dialog: close that dialog once the form goes off (a new tab).

@@ -96,6 +96,13 @@ button.toggle::after { content: ""; position: absolute; top: 3px; left: 3px;
   background: #fff; transition: left .15s; box-shadow: 0 1px 2px #0003; }
 button.toggle[aria-checked="true"] { background: var(--ok); }
 button.toggle[aria-checked="true"]::after { left: calc(100% - 1.4rem + 3px); }
+.tunnelform { display: inline-flex; align-items: center; }
+/* Spinner while the tunnel comes up (app.js adds .busy on submit). */
+.tunspin { display: none; width: .95em; height: .95em; margin-left: .4rem;
+  border: 2px solid var(--line); border-top-color: var(--accent);
+  border-radius: 50%; animation: spin 1s linear infinite; }
+.tunnelform.busy .toggle { opacity: .5; }
+.tunnelform.busy .tunspin { display: inline-block; }
 /* Pico styles bare <nav>; pin the header controls' own metrics so the
      lang links and the theme glyph sit on one center line. */
 header > .row, .topctl { align-items: center; }
