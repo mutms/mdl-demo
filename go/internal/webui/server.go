@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/mutms/mdl-demo/go/internal/backup"
+	"github.com/mutms/mdl-demo/go/internal/execx"
 	"github.com/mutms/mdl-demo/go/internal/moodle"
 	"github.com/mutms/mdl-demo/go/internal/recipes"
 	"github.com/mutms/mdl-demo/go/internal/site"
@@ -943,6 +944,38 @@ func (s *Server) handleReset(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+// toolVersions reports the assembly toolchain for the debug report: mudev's
+// version and the git revisions of the recipe and plugin catalogues (the camp
+// registry will join them here). Each line degrades to "unknown" on error so
+// the report always renders.
+func toolVersions() string {
+	var b strings.Builder
+	mudevVer := "unknown"
+	if out, err := execx.Output("", "mudev", "--version"); err == nil {
+		mudevVer = strings.TrimSpace(out)
+	}
+	fmt.Fprintf(&b, "mudev: %s\n", mudevVer)
+	// mudev's default catalogue paths (see Containerfile); recipes.Dir is the
+	// recipe one.
+	for _, c := range []struct{ name, dir string }{
+		{"mdl-recipes", recipes.Dir},
+		{"mdl-plugins", "/srv/extra/mdl-plugins"},
+	} {
+		fmt.Fprintf(&b, "%s: %s\n", c.name, gitRev(c.dir))
+	}
+	return b.String()
+}
+
+// gitRev is the short HEAD revision of a git checkout, "unknown" if it cannot
+// be read.
+func gitRev(dir string) string {
+	out, err := execx.Output(dir, "git", "rev-parse", "--short", "HEAD")
+	if err != nil {
+		return "unknown"
+	}
+	return strings.TrimSpace(out)
+}
+
 // handleDebug renders the diagnostics page: one copy-pasteable report of
 // mode, versions, state and per-service status + log tails, so an end user
 // can paste it whole into a bug report.
@@ -951,6 +984,7 @@ func (s *Server) handleDebug(w http.ResponseWriter, r *http.Request) {
 	var b strings.Builder
 	fmt.Fprintf(&b, "mdl-demo %s\nmode: %s\ntime: %s\n",
 		s.version, svc.Current().Mode(), time.Now().UTC().Format(time.RFC3339))
+	b.WriteString(toolVersions())
 	if st, err := state.Load(); err == nil {
 		fmt.Fprintf(&b, "demo: %s (console port %d, site port %d; inside %d/%d)\n",
 			st.Title(), st.Port(), st.SitePort(), state.ConsoleListen, state.SiteListen)
@@ -965,6 +999,17 @@ func (s *Server) handleDebug(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(&b, "site: %s (%s), installed %s\n", v.Recipe, v.Wwwroot, v.InstalledAt)
 	} else {
 		b.WriteString("site: none installed\n")
+	}
+	// The live recipe: exactly what the tree is assembled from (every plugin and
+	// its ref, catalogue-independent) — the single most useful thing in a build
+	// bug report. Only meaningful once a tree exists.
+	if v.Installed {
+		b.WriteString("\n== recipe (mudev recipe export) ==\n")
+		if out, err := execx.Output(moodle.Root, "mudev", "recipe", "export", "--sort"); err == nil {
+			b.WriteString(out + "\n")
+		} else {
+			fmt.Fprintf(&b, "unavailable: %v\n", err)
+		}
 	}
 	if v.TunnelURL != "" {
 		fmt.Fprintf(&b, "tunnel: %s\n", v.TunnelURL)
