@@ -161,6 +161,12 @@ document.addEventListener('submit', function (e) {
     var d = document.getElementById(f.dataset.closeDialog);
     if (d) d.close();
   }
+  // A confirmed action (reset, backup, restore, delete) navigates and then the
+  // page reloads busy — disable its button meanwhile so it can't fire twice.
+  if (f.dataset.confirm) {
+    var btn = f.querySelector('button[type="submit"], button:not([type])');
+    if (btn) btn.disabled = true;
+  }
 });
 // data-open: open that dialog; data-clear empties an element first (the SSO
 // dialog body, so a stale stage never shows while htmx fetches the new one).

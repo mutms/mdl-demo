@@ -38,15 +38,16 @@
 {{else if .Busy}}
 <article>
   <h2>{{t .Lang "Demo site"}}</h2>
-  {{/* During install/restore the recipe is already known (from the job), even
-       though the site is not recorded yet — show it so the card is not blank. */}}
-  {{if .Job.Recipe}}
+  {{/* During install/restore the recipe/name are already known (from the job),
+       even though the site is not recorded yet. The status sits in the list as
+       its own row (spinner + activity) so the card reads like the ready one,
+       not a broken half-card. The URL slot fills in once it is live. */}}
   <dl class="site">
     {{if .Job.SiteName}}<dt>{{t .Lang "Site name"}}</dt><dd>{{.Job.SiteName}}</dd>{{end}}
-    <dt>{{t .Lang "Recipe"}}</dt><dd>{{.Job.Recipe}}</dd>
+    {{if .Job.Recipe}}<dt>{{t .Lang "Recipe"}}</dt><dd>{{.Job.Recipe}}</dd>{{end}}
+    <dt>{{if .Job.Recipe}}{{t .Lang "URL"}}{{else}}{{t .Lang "Status"}}{{end}}</dt>
+    <dd><span class="spin"></span>{{t .Lang .Job.Label}}</dd>
   </dl>
-  {{end}}
-  <p class="empty"><span class="spin"></span>{{t .Lang "Working — see progress below."}}</p>
 </article>
 {{end}}
 </div>
