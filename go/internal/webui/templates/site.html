@@ -48,8 +48,10 @@
   <dl class="site">
     {{if .Job.SiteName}}<dt>{{t .Lang "Site name"}}</dt><dd>{{.Job.SiteName}}</dd>{{end}}
     {{if .Job.Recipe}}<dt>{{t .Lang "Recipe"}}</dt><dd>{{.Job.Recipe}}</dd>{{end}}
-    <dt>{{if .Job.Recipe}}{{t .Lang "URL"}}{{else}}{{t .Lang "Status"}}{{end}}</dt>
-    <dd><span class="spin"></span>{{t .Lang .Job.Label}}</dd>
+    {{/* The one place the activity is named (green); the Site log carries the
+         spinner. */}}
+    <dt>{{t .Lang "Status"}}</dt>
+    <dd><span class="badge on">{{t .Lang .Job.Label}}</span></dd>
   </dl>
 </article>
 {{end}}

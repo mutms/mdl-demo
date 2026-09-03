@@ -6,8 +6,10 @@
 <div id="jobstatus"{{if .Job.Running}} hx-get="/section/jobstatus" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
   {{/* No "done" badge: cron streams in here after the job, so the log is
        never really finished — only running and failed say anything. */}}
+  {{/* Just the spinner while running (the Demo-site card names the activity);
+       a red badge only when it failed. */}}
   <h2>{{t .Lang "Site log"}}
-      {{if .Job.Running}}<span class="spin"></span><span class="badge on">{{t .Lang .Job.Label}}</span>
+      {{if .Job.Running}}<span class="spin"></span>
       {{else if .Job.Failed}}<span class="badge err">{{t .Lang "failed"}}</span>{{end}}</h2>
   {{if .Job.Failed}}<p class="error">{{.Job.Error}}</p>{{end}}
 </div>
