@@ -132,8 +132,8 @@ var messages = map[string]map[string]string{
 		"It contains service states and recent log lines, no passwords.": "Obsahuje stavy služeb a poslední řádky logů, žádná hesla.",
 		"lowercase letters, digits, . _ -":                               "malá písmena, číslice, . _ -",
 
-		"Tools":                 "Nástroje",
-		"Open the mail catcher": "Otevřít zachycenou poštu",
+		"Tools":       "Nástroje",
+		"Show emails": "Zobrazit e-maily",
 		"Quick Tunnel shares the demo site on a public trycloudflare.com URL, so the audience can open it on their own devices.":     "Quick Tunnel zpřístupní demo stránky na veřejné adrese trycloudflare.com, takže si je posluchači mohou otevřít na vlastních zařízeních.",
 		"The mail catcher holds every mail the site sends — password resets, forum digests — and no mail ever leaves the container.": "Zachycená pošta obsahuje všechny e-maily, které stránky odesílají – obnovy hesel, souhrny z fór – a žádný e-mail nikdy neopustí kontejner.",
 
@@ -234,8 +234,8 @@ var messages = map[string]map[string]string{
 		"It contains service states and recent log lines, no passwords.": "Er enthält Dienststatus und aktuelle Logzeilen, keine Passwörter.",
 		"lowercase letters, digits, . _ -":                               "Kleinbuchstaben, Ziffern, . _ -",
 
-		"Tools":                 "Werkzeuge",
-		"Open the mail catcher": "Postfang öffnen",
+		"Tools":       "Werkzeuge",
+		"Show emails": "E-Mails anzeigen",
 		"Quick Tunnel shares the demo site on a public trycloudflare.com URL, so the audience can open it on their own devices.":     "Quick Tunnel macht die Demo-Website unter einer öffentlichen trycloudflare.com-Adresse erreichbar, sodass das Publikum sie auf eigenen Geräten öffnen kann.",
 		"The mail catcher holds every mail the site sends — password resets, forum digests — and no mail ever leaves the container.": "Der Postfang enthält alle E-Mails, die die Website versendet – Passwort-Resets, Forenzusammenfassungen – und keine E-Mail verlässt jemals den Container.",
 
