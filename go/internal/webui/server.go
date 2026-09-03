@@ -18,6 +18,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -964,7 +965,48 @@ func toolVersions() string {
 	} {
 		fmt.Fprintf(&b, "%s: %s\n", c.name, gitRev(c.dir))
 	}
+	// The supervised services, each self-reported (first line of --version).
+	for _, s := range []struct {
+		name string
+		argv []string
+	}{
+		{"postgresql", []string{"psql", "--version"}},
+		{"php", []string{"php", "--version"}},
+		{"apache", []string{"apache2ctl", "-v"}},
+		{"mailpit", []string{"mailpit", "version"}},
+		{"cloudflared", []string{"cloudflared", "--version"}},
+	} {
+		fmt.Fprintf(&b, "%s: %s\n", s.name, cmdVersion(s.argv[0], s.argv[1:]...))
+	}
 	return b.String()
+}
+
+// osInfo reports the container OS for the bug report: distro (from
+// /etc/os-release), kernel, and the binary's architecture.
+func osInfo() string {
+	distro := "unknown"
+	if data, err := os.ReadFile("/etc/os-release"); err == nil {
+		for _, line := range strings.Split(string(data), "\n") {
+			if v, ok := strings.CutPrefix(line, "PRETTY_NAME="); ok {
+				distro = strings.Trim(v, `"`)
+				break
+			}
+		}
+	}
+	return fmt.Sprintf("os: %s (kernel %s, %s)\n", distro, cmdVersion("uname", "-r"), runtime.GOARCH)
+}
+
+// cmdVersion runs a tool's version command and returns its first output line,
+// "unknown" on error — best-effort detail for the bug report.
+func cmdVersion(name string, args ...string) string {
+	out, err := execx.Output("", name, args...)
+	if err != nil {
+		return "unknown"
+	}
+	if i := strings.IndexByte(out, '\n'); i >= 0 {
+		out = out[:i]
+	}
+	return strings.TrimSpace(out)
 }
 
 // gitRev is the short HEAD revision of a git checkout, "unknown" if it cannot
@@ -985,6 +1027,7 @@ func (s *Server) handleDebug(w http.ResponseWriter, r *http.Request) {
 	var b strings.Builder
 	fmt.Fprintf(&b, "mdl-demo %s\nmode: %s\ntime: %s\n",
 		s.version, svc.Current().Mode(), time.Now().UTC().Format(time.RFC3339))
+	b.WriteString(osInfo())
 	b.WriteString(toolVersions())
 	if st, err := state.Load(); err == nil {
 		fmt.Fprintf(&b, "demo: %s (console port %d, site port %d; inside %d/%d)\n",
