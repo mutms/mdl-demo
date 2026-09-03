@@ -223,7 +223,7 @@ var streamCopy = map[string]streamText{
 	"moodle/dev":     {"Development", "Plain Moodle, still in development — a look at what's coming."},
 	"mutms/release":  {"Full suite", "Patched Moodle core with multi-tenancy and every MuTMS plugin."},
 	"mutms/moodle":   {"On plain Moodle", "All MuTMS plugins on plain Moodle core — no multi-tenancy."},
-	"mutms/dev":      {"Development", "The full MuTMS suite tracking the latest Moodle branches."},
+	"mutms/dev":      {"Development", "The full MuTMS suite in active development, on the latest stable Moodle."},
 }
 
 // streamRank orders streams within a tab: release first, then the plugins-only
