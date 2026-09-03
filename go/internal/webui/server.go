@@ -219,10 +219,10 @@ type recipeGroup struct {
 type streamText struct{ Label, Desc string }
 
 var streamCopy = map[string]streamText{
-	"moodle/release": {"Release", "Unmodified Moodle, latest point releases — plain core, no plugins."},
-	"moodle/dev":     {"Development", "Unreleased Moodle from the active branches — a look at what's coming."},
+	"moodle/release": {"Release", "Plain Moodle — core only, no plugins."},
+	"moodle/dev":     {"Development", "Plain Moodle, still in development — a look at what's coming."},
 	"mutms/release":  {"Full suite", "Patched Moodle core with multi-tenancy and every MuTMS plugin."},
-	"mutms/moodle":   {"On stock Moodle", "All MuTMS plugins on unmodified Moodle core — no multi-tenancy."},
+	"mutms/moodle":   {"On plain Moodle", "All MuTMS plugins on plain Moodle core — no multi-tenancy."},
 	"mutms/dev":      {"Development", "The full MuTMS suite tracking the latest Moodle branches."},
 }
 
