@@ -10,5 +10,14 @@
      {{t .Lang "It contains service states and recent log lines, no passwords."}}</p>
   <pre class="log cred">{{.DebugReport}}</pre>
 </article>
+{{if .RecipeExport}}
+<article>
+  <details>
+    <summary>{{t .Lang "Site recipe"}}</summary>
+    <p class="empty">{{t .Lang "The exact code tree — plugins and their git sources. Share it only if your problem is about the code itself."}}</p>
+    <pre class="log cred">{{.RecipeExport}}</pre>
+  </details>
+</article>
+{{end}}
 {{template "footer" .}}
 </html>{{end}}

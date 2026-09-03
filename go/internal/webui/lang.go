@@ -131,9 +131,10 @@ var messages = map[string]map[string]string{
 
 		"Theme": "Vzhled",
 
-		"Copy the whole block below into a bug report":                   "Celý blok níže zkopírujte do hlášení chyby",
-		"It contains service states and recent log lines, no passwords.": "Obsahuje stavy služeb a poslední řádky logů, žádná hesla.",
-		"lowercase letters, digits, . _ -":                               "malá písmena, číslice, . _ -",
+		"Copy the whole block below into a bug report":                                                                 "Celý blok níže zkopírujte do hlášení chyby",
+		"It contains service states and recent log lines, no passwords.":                                               "Obsahuje stavy služeb a poslední řádky logů, žádná hesla.",
+		"The exact code tree — plugins and their git sources. Share it only if your problem is about the code itself.": "Přesný strom kódu – pluginy a jejich zdroje v gitu. Sdílejte jej jen tehdy, když se problém týká samotného kódu.",
+		"lowercase letters, digits, . _ -":                                                                             "malá písmena, číslice, . _ -",
 
 		"Tools":             "Nástroje",
 		"Redirected emails": "Přesměrované e-maily",
@@ -249,9 +250,10 @@ var messages = map[string]map[string]string{
 
 		"Theme": "Darstellung",
 
-		"Copy the whole block below into a bug report":                   "Kopieren Sie den gesamten Block unten in eine Fehlermeldung",
-		"It contains service states and recent log lines, no passwords.": "Er enthält Dienststatus und aktuelle Logzeilen, keine Passwörter.",
-		"lowercase letters, digits, . _ -":                               "Kleinbuchstaben, Ziffern, . _ -",
+		"Copy the whole block below into a bug report":                                                                 "Kopieren Sie den gesamten Block unten in eine Fehlermeldung",
+		"It contains service states and recent log lines, no passwords.":                                               "Er enthält Dienststatus und aktuelle Logzeilen, keine Passwörter.",
+		"The exact code tree — plugins and their git sources. Share it only if your problem is about the code itself.": "Der genaue Code-Baum – Plugins und ihre Git-Quellen. Teilen Sie ihn nur, wenn Ihr Problem den Code selbst betrifft.",
+		"lowercase letters, digits, . _ -":                                                                             "Kleinbuchstaben, Ziffern, . _ -",
 
 		"Tools":             "Werkzeuge",
 		"Redirected emails": "Umgeleitete E-Mails",

@@ -177,9 +177,10 @@ type view struct {
 	Error   string
 	Recipes []recipes.Recipe
 	// Chooser name fields (prefilled defaults for the one-click install).
-	Fullname    string
-	Shortname   string
-	DebugReport string
+	Fullname     string
+	Shortname    string
+	DebugReport  string
+	RecipeExport string
 	// SSO dialog fields (the single-use "Log in…" flow). SSOQR is a data:
 	// image URL — template.URL so html/template's URL sanitizer keeps it.
 	SSOUser    string
@@ -1000,15 +1001,12 @@ func (s *Server) handleDebug(w http.ResponseWriter, r *http.Request) {
 	} else {
 		b.WriteString("site: none installed\n")
 	}
-	// The live recipe: exactly what the tree is assembled from (every plugin and
-	// its ref, catalogue-independent) — the single most useful thing in a build
-	// bug report. Only meaningful once a tree exists.
+	// The live recipe is kept OUT of the main report (its own box on the page):
+	// it is long, and it lists plugin git sources a reporter may not want to
+	// paste into a public issue — so sharing it is a separate, deliberate act.
 	if v.Installed {
-		b.WriteString("\n== recipe (mudev recipe export) ==\n")
 		if out, err := execx.Output(moodle.Root, "mudev", "recipe", "export", "--sort"); err == nil {
-			b.WriteString(out + "\n")
-		} else {
-			fmt.Fprintf(&b, "unavailable: %v\n", err)
+			v.RecipeExport = out
 		}
 	}
 	if v.TunnelURL != "" {

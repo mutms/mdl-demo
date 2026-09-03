@@ -31,7 +31,10 @@
     <form method="post" action="/reset"
           data-confirm="{{t .Lang "Wipe the demo site? The database, code tree and all data are deleted."}}">
       <input type="hidden" name="csrf" value="{{.CSRF}}">
-      <button class="secondary">{{t .Lang "Reset site"}}</button>
+      {{/* Disabled while any job runs: during a reset the site still reads as
+           installed (state is wiped only when the job finishes), so without this
+           the 5s poll keeps re-rendering a live Reset button until then. */}}
+      <button class="secondary"{{if .Busy}} disabled{{end}}>{{t .Lang "Reset site"}}</button>
     </form>
   </div>
 </article>

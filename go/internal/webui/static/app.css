@@ -199,6 +199,7 @@ button.reveal.on { color: var(--accent); }
 .secret code[data-copy] { cursor: pointer; }
 .secret-val { user-select: all; }
 footer { margin-top: 2rem; font-size: .78rem; color: var(--dim); }
+footer .tm { margin: .5rem 0 0; font-size: .72rem; opacity: .85; }
 /* Layout helpers; the CSP allows no style attributes in the markup. */
 .m0 { margin: 0; }
 .mt { margin-top: .9rem; }

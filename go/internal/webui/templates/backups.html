@@ -13,7 +13,8 @@
       <form method="post" action="/backups/create"
             data-confirm="{{t .Lang "Create a backup now? The site is briefly unavailable while it is copied."}}">
         <input type="hidden" name="csrf" value="{{.CSRF}}">
-        <button>{{t .Lang "Back up data"}}</button>
+        {{/* Disabled while a job runs (see the Reset button's note). */}}
+        <button{{if .Busy}} disabled{{end}}>{{t .Lang "Back up data"}}</button>
       </form>
       {{else}}
       <button disabled title="{{t .Lang "No demo site installed yet."}}">{{t .Lang "Back up data"}}</button>
