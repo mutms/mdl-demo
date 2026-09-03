@@ -26,8 +26,8 @@ import (
 type Options struct {
 	Recipe    string
 	AdminPass string
-	Fullname  string // default: the demo name, else the recipe's name
-	Shortname string // default: the demo name, else "demo"
+	Fullname  string // default: "<Vendor> Demo" (see DefaultFullname)
+	Shortname string // default: follows Fullname
 	Wwwroot   string // default: the recorded site URL for 127.0.0.1
 	// Lang is the site's default language ("cs", "de", …): the matching
 	// Moodle language pack is installed and set as default. Empty or "en"

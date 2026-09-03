@@ -112,8 +112,8 @@ func cmdInstall(args []string) error {
 	var o site.Options
 	fs.StringVar(&o.Recipe, "recipe", "", "recipe identifier, e.g. mutms/release/5.2.2.01 (see `mdl-demo recipes`)")
 	fs.StringVar(&o.AdminPass, "adminpass", "", "Moodle admin password (required)")
-	fs.StringVar(&o.Fullname, "fullname", "", "site full name (default: the demo name, else the recipe's name)")
-	fs.StringVar(&o.Shortname, "shortname", "", "site short name (default: the demo name, else \"demo\")")
+	fs.StringVar(&o.Fullname, "fullname", "", "site full name (default: \"<Vendor> Demo\", e.g. \"MuTMS Demo\")")
+	fs.StringVar(&o.Shortname, "shortname", "", "site short name (default: follows --fullname)")
 	fs.StringVar(&o.Wwwroot, "wwwroot", "", "site URL as the browser sees it (default: the site URL from `mdl-demo url` for 127.0.0.1)")
 	fs.StringVar(&o.Lang, "lang", "", "site default language, e.g. cs or de: installs the language pack (default: English)")
 	if err := fs.Parse(args); err != nil {
