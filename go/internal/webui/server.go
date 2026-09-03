@@ -67,7 +67,7 @@ func Serve(out io.Writer, version string) error {
 	// below (host check + CSRF cookie); s.csrf gates the state-changing ones.
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", s.handleHome)
-	for _, name := range []string{"site", "install", "users", "tools", "services", "progress", "jobstatus"} {
+	for _, name := range []string{"site", "install", "users", "tools", "progress", "jobstatus"} {
 		section := name
 		mux.HandleFunc("GET /section/"+section, func(w http.ResponseWriter, r *http.Request) {
 			s.renderFragment(w, r, section)
@@ -166,6 +166,9 @@ type view struct {
 	// instance + installed/busy/recipe). The page's watcher reloads when it
 	// changes — a reset (web or CLI), an install finishing, a rebuilt container.
 	StateSig string
+	// Snapshot marks a point-in-time page (the diagnostics report) that must
+	// hold still — it opts out of the live-reload watcher.
+	Snapshot bool
 	// Path is the current request path, so the language switcher can return
 	// here (the console sends no Referer).
 	Path           string
@@ -178,9 +181,12 @@ type view struct {
 	TunnelURL      string
 	TunnelStarting bool
 	InstalledAt    string
-	Services       []serviceRow
-	Users          []userRow
-	Job            jobView
+	// ServiceProblems is the supervised services that are NOT running — shown
+	// (only when non-empty) so the diag page flags trouble instead of listing
+	// everything that is fine. cloudflared's normal "no tunnel" is not a problem.
+	ServiceProblems []serviceRow
+	Users           []userRow
+	Job             jobView
 	// Page-specific fields.
 	// Error is a page-level failure message (the backups listing not being
 	// readable, say) — not to be confused with Job.Error, which reports the
@@ -396,15 +402,13 @@ func (s *Server) buildView(r *http.Request) view {
 			v.Shortname = "demo"
 		}
 	}
+	// Flag only the supervised services that are down; a healthy one needs no
+	// mention, and cloudflared is on-demand (its status is the report's tunnel
+	// line), not a fault.
 	for _, s := range svc.Current().Statuses() {
-		v.Services = append(v.Services, serviceRow{Name: s.Name, Status: s.State, Running: s.Running})
-	}
-	// cloudflared is not supervised (the tunnel package runs it on demand),
-	// but diagnostics must not pretend it does not exist.
-	if tunnel.URL() != "" {
-		v.Services = append(v.Services, serviceRow{Name: "cloudflared", Status: "running", Running: true})
-	} else {
-		v.Services = append(v.Services, serviceRow{Name: "cloudflared", Status: "no tunnel"})
+		if !s.Running {
+			v.ServiceProblems = append(v.ServiceProblems, serviceRow{Name: s.Name, Status: s.State})
+		}
 	}
 	v.StateSig = sigString(s.epoch, v.Installed, v.Busy, v.Recipe)
 	return v
@@ -1066,6 +1070,7 @@ func gitRev(dir string) string {
 // can paste it whole into a bug report.
 func (s *Server) handleDebug(w http.ResponseWriter, r *http.Request) {
 	v := s.buildView(r)
+	v.Snapshot = true // a diagnostics report is a snapshot; don't reload it mid-read
 	var b strings.Builder
 	fmt.Fprintf(&b, "mdl-demo %s\nmode: %s\ntime: %s\n",
 		s.version, svc.Current().Mode(), time.Now().UTC().Format(time.RFC3339))

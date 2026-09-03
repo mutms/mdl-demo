@@ -11,12 +11,13 @@
   <a href="https://github.com/mutms/mdl-demo">mdl-demo</a>, part of the
   <a href="https://github.com/mutms">MuTMS</a> project —
   <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL-3.0 or later</a>
-  · <a href="/debug">{{t .Lang "Report problems"}}</a>
+  · <a href="/debug">{{t .Lang "Report a problem"}}</a>
   <p class="tm">Moodle™ is a registered trademark of Moodle Pty Ltd. MuTMS is an
      independent project not affiliated with or endorsed by Moodle Pty Ltd.</p>
 </footer>
 {{/* Liveness watcher: reloads the page when the coarse state changes under it
      (a reset, an install finishing, a rebuilt/restarted container), so an open
-     tab never shows stale state. */}}
-<div hx-get="/alive?s={{.StateSig}}" hx-trigger="every 5s" hx-swap="none" aria-hidden="true"></div>
+     tab never shows stale state. Skipped on snapshot pages (the diagnostics
+     report) so it holds still while you read or copy it. */}}
+{{if not .Snapshot}}<div hx-get="/alive?s={{.StateSig}}" hx-trigger="every 5s" hx-swap="none" aria-hidden="true"></div>{{end}}
 {{end}}

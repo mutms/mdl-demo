@@ -3,7 +3,13 @@
 {{template "head" .}}
 <header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>{{t .Lang "— diagnostics"}}</span></h1>
 <p class="sub"><a href="/">{{t .Lang "← back"}}</a></p></div>{{template "topctl" .}}</header>
-{{template "services" .}}
+{{if .ServiceProblems}}
+<article>
+  <h2>{{t .Lang "Service problems"}}</h2>
+  <p class="error">{{t .Lang "These services are not running:"}}
+     {{range $i, $s := .ServiceProblems}}{{if $i}}, {{end}}{{$s.Name}}{{end}}</p>
+</article>
+{{end}}
 <article>
   <p class="empty">{{t .Lang "Copy the whole block below into a bug report"}}
      (<a href="https://github.com/mutms/mdl-demo/issues">github.com/mutms/mdl-demo/issues</a>).
