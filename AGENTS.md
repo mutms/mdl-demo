@@ -146,12 +146,37 @@ make image                      # sudo podman build (run from repo root)
 make run                        # mpd-VM test container mpd-test-mdl-demo on 6381/6382;
                                 # console at http://<vm-ip>:6381, site published by
                                 # mpd's caddy as https://site.mdl-demo.<vm>.mpd.test
+make hotpatch                   # rebuild the Go binary, swap it into the running
+                                # test container and restart — seconds, no image rebuild
 ```
 
-End-to-end: `sudo podman exec mpd-test-mdl-demo mdl-demo install --recipe
-moodle/release/<version> --adminpass 'Test1234!'`, then browse
-https://site.mdl-demo.<vm>.mpd.test (or http://127.0.0.1:6382 on the VM). `dev/README.md` has the full verification flow, multi-arch
-builds (build on an Apple silicon Mac — fastest) and release steps.
+**Agents: get your own container, don't share.** `make run`/`hotpatch` take a
+`PORT` override so several test containers coexist — always work on your own so
+you never disturb a human's `mpd-test-mdl-demo` (which may be mid-install).
+`PORT=6381` (the default) keeps the bare name; any other port suffixes it:
+
+```sh
+make run PORT=6391        # → mpd-test-mdl-demo-6391 on 6391/6392 (uses current image)
+make hotpatch PORT=6391   # rebuild + inject + restart THAT container
+```
+
+`hotpatch` covers Go/template/CSS/JS (all embedded in the binary); it does NOT
+update `php/` — rebuild the image (`make image`) for PHP changes. The site, DB
+and dataroot survive the restart, and the console's epoch bumps so open browser
+tabs reload themselves. Requires the image to exist (`make image`) and an amd64
+mpd VM (the target the cp'd binary is built for).
+
+Driving the console from an agent: `curl` via `podman exec` for GET pages
+(console binds :8081 inside; the Host allow-list accepts 127.0.0.1), and the
+`mdl-demo` CLI for state changes (`install`/`reset`) — cleaner than forging the
+console's CSRF+Origin checks. A text browser adds nothing (no JS); leave the
+interactive/visual checks (htmx swaps, spinners, the epoch reload) to a human.
+
+End-to-end: `sudo podman exec mpd-test-mdl-demo-<port> mdl-demo install --recipe
+moodle/release/<version> --adminpass 'Test1234!'`, then browse the site
+(https://site-<port>.mdl-demo.<vm>.mpd.test, or http://127.0.0.1:<port+1> on the
+VM). `dev/README.md` has the full verification flow, multi-arch builds (build on
+an Apple silicon Mac — fastest) and release steps.
 
 Typical extension points: new UI feature → handler in
 `webui/server.go` + a template file in `webui/templates/` (htmx section
