@@ -162,10 +162,14 @@ document.addEventListener('submit', function (e) {
     if (d) d.close();
   }
   // A confirmed action (reset, backup, restore, delete) navigates and then the
-  // page reloads busy — disable its button meanwhile so it can't fire twice.
+  // page reloads busy — disable its button meanwhile so it can't fire twice,
+  // and stop the enclosing card's poll so a swap can't re-enable it (flicker)
+  // before the navigation lands.
   if (f.dataset.confirm) {
     var btn = f.querySelector('button[type="submit"], button:not([type])');
     if (btn) btn.disabled = true;
+    var poller = f.closest('[hx-trigger]');
+    if (poller) poller.removeAttribute('hx-trigger');
   }
 });
 // data-open: open that dialog; data-clear empties an element first (the SSO
