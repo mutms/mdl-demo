@@ -40,73 +40,58 @@
        here, one click each. Defaults do the rest (generated admin password,
        site name from the demo name / recipe). */}}
   <p class="empty">{{t .Lang "No demo site installed yet — install a fresh site from a recipe, or restore a backup."}}</p>
-  {{/* One pair of name fields for whichever recipe gets installed — a
-       delegated submit handler (head.html) copies them into the row's form.
-       Outside any form on purpose: an input cannot belong to many forms. */}}
-  <div class="row names">
-    <label class="grow">{{t .Lang "Site name"}}
-      <input id="fullname" value="{{.Fullname}}" placeholder="{{t .Lang "the recipe's name"}}" maxlength="254">
-    </label>
-    <label class="grow">{{t .Lang "Short name (shown in the navigation)"}}
-      <input id="shortname" value="{{.Shortname}}" maxlength="100">
-    </label>
-  </div>
   <h2 class="mt-lg">{{t .Lang "Install a fresh site"}}</h2>
-  {{/* Vendor tabs (Moodle / MuTMS …), each a stack of version streams with one
-       description apiece. Tabs toggle via a delegated data-tab handler (app.js);
-       the chooser never polls, so the active tab survives. With JS off every
-       panel shows — harmless. */}}
-  <div class="tabs">
-    <div class="tabbar" role="tablist">
-      {{range .VendorTabs}}<button type="button" class="tab{{if .Active}} on{{end}}" data-tab="{{.Vendor}}">{{.Label}}</button>{{end}}
+  {{/* The whole chooser is ONE install form: pick a version package (a radio),
+       optionally name the site, then the single Install button at the bottom
+       submits — the selection is the confirmation, so no dialog. Vendor tabs
+       toggle via a delegated data-tab handler (app.js); the chooser never
+       polls, so the choice survives. With JS off every panel shows and the
+       button is enabled — harmless. */}}
+  <form method="post" action="/install" class="installform">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <div class="row names">
+      <label class="grow">{{t .Lang "Site name"}}
+        <input name="fullname" value="{{.Fullname}}" placeholder="{{t .Lang "the recipe's name"}}" maxlength="254">
+      </label>
+      <label class="grow">{{t .Lang "Short name (shown in the navigation)"}}
+        <input name="shortname" value="{{.Shortname}}" maxlength="100">
+      </label>
     </div>
-    {{range .VendorTabs}}
-    <div class="tabpanel{{if .Active}} on{{end}}" data-tabpanel="{{.Vendor}}">
-      {{range $g := .Streams}}
-      <div class="stream">
-        <p class="stream-h"><span class="stream-t">{{t $.Lang $g.Label}}</span>{{if $g.Desc}} <span class="stream-d">— {{t $.Lang $g.Desc}}</span>{{end}}</p>
-        <table>
-          {{range $g.Current}}
-          <tr>
-            <td class="name">{{.Version}}</td>
-            <td class="tr">
-              <form method="post" action="/install"
-                    data-confirm="{{t $.Lang "Install this recipe now? Expect several minutes."}}">
-                <input type="hidden" name="csrf" value="{{$.CSRF}}">
-                <input type="hidden" name="recipe" value="{{.ID}}">
-                <button class="act">{{t $.Lang "Install"}}</button>
-              </form>
-            </td>
-          </tr>
-          {{end}}
-        </table>
-        {{/* Superseded point releases (a newer one of the same series exists);
-             still installable — upgrade demos need them — just out of the way. */}}
-        {{if $g.Older}}
-        <details class="older">
-          <summary><span class="role">{{t $.Lang "older versions"}}</span> <span class="badge">{{len $g.Older}}</span></summary>
-          <table>
-            {{range $g.Older}}
-            <tr>
-              <td class="name">{{.Version}}</td>
-              <td class="tr">
-                <form method="post" action="/install"
-                      data-confirm="{{t $.Lang "Install this recipe now? Expect several minutes."}}">
-                  <input type="hidden" name="csrf" value="{{$.CSRF}}">
-                  <input type="hidden" name="recipe" value="{{.ID}}">
-                  <button class="act">{{t $.Lang "Install"}}</button>
-                </form>
-              </td>
-            </tr>
+    <div class="tabs">
+      <div class="tabbar" role="tablist">
+        {{range .VendorTabs}}<button type="button" class="tab{{if .Active}} on{{end}}" data-tab="{{.Vendor}}">{{.Label}}</button>{{end}}
+      </div>
+      {{range .VendorTabs}}
+      <div class="tabpanel{{if .Active}} on{{end}}" data-tabpanel="{{.Vendor}}">
+        {{range $g := .Streams}}
+        <div class="stream">
+          <p class="stream-h"><span class="stream-t">{{t $.Lang $g.Label}}</span>{{if $g.Desc}} <span class="stream-d">— {{t $.Lang $g.Desc}}</span>{{end}}</p>
+          <div class="pkgs">
+            {{range $g.Current}}
+            <label class="pkg"><input type="radio" name="recipe" value="{{.ID}}"><span>{{.Version}}</span></label>
             {{end}}
-          </table>
-        </details>
+          </div>
+          {{/* Superseded point releases (a newer one of the same series exists);
+               still installable — upgrade demos need them — just out of the way. */}}
+          {{if $g.Older}}
+          <details class="older">
+            <summary><span class="role">{{t $.Lang "older versions"}}</span> <span class="badge">{{len $g.Older}}</span></summary>
+            <div class="pkgs">
+              {{range $g.Older}}
+              <label class="pkg"><input type="radio" name="recipe" value="{{.ID}}"><span>{{.Version}}</span></label>
+              {{end}}
+            </div>
+          </details>
+          {{end}}
+        </div>
         {{end}}
       </div>
       {{end}}
     </div>
-    {{end}}
-  </div>
+    <div class="installbar">
+      <button type="submit" class="install">{{t .Lang "Install"}}</button>
+    </div>
+  </form>
   {{if .Backups}}
   <h2 class="mt-lg">{{t .Lang "Restore a backup"}}</h2>
   <table>

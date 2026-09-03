@@ -55,6 +55,11 @@ document.addEventListener('click', function (e) {
 document.addEventListener('DOMContentLoaded', function () {
   // Enable tab hiding only now that JS runs (see .tabs.js in the stylesheet).
   document.querySelectorAll('.tabs').forEach(function (t) { t.classList.add('js'); });
+  // Same idea for the Install button: disable it until a package is picked
+  // only when JS can re-enable it (the change handler above).
+  document.querySelectorAll('.installform button.install').forEach(function (b) {
+    if (!b.closest('.installform').querySelector('input[name="recipe"]:checked')) b.disabled = true;
+  });
   var b = document.getElementById('themebtn');
   if (!b) return;
   var t = document.documentElement.dataset.theme || 'auto';
@@ -70,20 +75,14 @@ document.addEventListener('click', function (e) {
   d.querySelector('img').src = '/tunnel/qr.png?' + Date.now();
   d.showModal();
 });
-// Chooser: the shared name fields apply to whichever recipe gets installed —
-// copied into the submitting row's form. Delegated; runs whether or not the
-// confirm passes (harmless hidden inputs on a cancelled submit).
-document.addEventListener('submit', function (e) {
-  var f = e.target;
-  if (f.getAttribute('action') !== '/install') return;
-  ['fullname', 'shortname'].forEach(function (n) {
-    var src = document.getElementById(n);
-    if (!src) return;
-    f.querySelectorAll('input[name="' + n + '"]').forEach(function (o) { o.remove(); });
-    var h = document.createElement('input');
-    h.type = 'hidden'; h.name = n; h.value = src.value;
-    f.appendChild(h);
-  });
+// Install chooser: the button stays disabled until a version package is
+// picked, so "pick one, then Install" needs no confirm dialog.
+document.addEventListener('change', function (e) {
+  var r = e.target.closest('.installform input[name="recipe"]');
+  if (!r) return;
+  var f = r.closest('.installform');
+  var btn = f && f.querySelector('button.install');
+  if (btn) btn.disabled = false;
 });
 // Backups page: "Restore" fills the dialog with the row's file name and
 // resets the recipe choice to the bundled default. Delegated, so it survives
