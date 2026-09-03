@@ -107,6 +107,7 @@ var messages = map[string]map[string]string{
 		"The diagnostics page":                         "Diagnostická stránka",
 		"has a report you can copy into a bug report.": "obsahuje výpis, který můžete vložit do hlášení chyby.",
 		"— diagnostics":                                "– diagnostika",
+		"Report problems":                              "Nahlásit problém",
 		"← back":                                       "← zpět",
 
 		"Site recipe": "Recept stránek",
@@ -224,6 +225,7 @@ var messages = map[string]map[string]string{
 		"The diagnostics page":                         "Die Diagnoseseite",
 		"has a report you can copy into a bug report.": "enthält einen Bericht zum Kopieren in eine Fehlermeldung.",
 		"— diagnostics":                                "– Diagnose",
+		"Report problems":                              "Probleme melden",
 		"← back":                                       "← zurück",
 
 		"Site recipe": "Website-Rezept",
