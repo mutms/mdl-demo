@@ -1,0 +1,88 @@
+{{define "install"}}
+{{/* The Install card: the empty dashboard's chooser — pick a version package,
+     then the one Install button submits (selection = confirmation, no dialog),
+     or restore a backup. The stable #install wrapper is always in the DOM so
+     htmx can swap it; it polls only while a job runs, so the card reappears the
+     moment a reset finishes. It renders the chooser only when no site is
+     installed and nothing is running — the mirror image of the Demo-site card.
+     Vendor tabs toggle via a delegated data-tab handler (app.js); the chooser
+     itself never polls, so the choice survives. With JS off every panel shows
+     and the button is enabled — harmless. */}}
+<div id="install"{{if .Busy}} hx-get="/section/install" hx-trigger="every 5s" hx-swap="outerHTML"{{end}}>
+{{if and (not .Installed) (not .Busy)}}
+<article>
+  <h2>{{t .Lang "Pick a version to install a demo"}}</h2>
+  <form method="post" action="/install" class="installform">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <div class="tabs">
+      <div class="tabbar" role="tablist">
+        {{range .VendorTabs}}<button type="button" class="tab{{if .Active}} on{{end}}" data-tab="{{.Vendor}}">{{.Label}}</button>{{end}}
+      </div>
+      {{range .VendorTabs}}
+      <div class="tabpanel{{if .Active}} on{{end}}" data-tabpanel="{{.Vendor}}">
+        {{range $g := .Streams}}
+        <div class="stream">
+          <p class="stream-h"><span class="stream-t">{{t $.Lang $g.Label}}</span>{{if $g.Desc}} <span class="stream-d">— {{t $.Lang $g.Desc}}</span>{{end}}</p>
+          <div class="pkgs">
+            {{range $g.Current}}
+            <label class="pkg"><input type="radio" name="recipe" value="{{.ID}}"><span>{{.Version}}</span></label>
+            {{end}}
+          </div>
+          {{/* Superseded point releases (a newer one of the same series exists);
+               still installable — upgrade demos need them — just out of the way. */}}
+          {{if $g.Older}}
+          <details class="older">
+            <summary><span class="role">{{t $.Lang "older versions"}}</span> <span class="badge">{{len $g.Older}}</span></summary>
+            <div class="pkgs">
+              {{range $g.Older}}
+              <label class="pkg"><input type="radio" name="recipe" value="{{.ID}}"><span>{{.Version}}</span></label>
+              {{end}}
+            </div>
+          </details>
+          {{end}}
+        </div>
+        {{end}}
+      </div>
+      {{end}}
+    </div>
+    <div class="installbar">
+      {{/* Optional and quiet: defaults come from the demo name / recipe. */}}
+      <details class="nameopt">
+        <summary>{{t .Lang "Name the site (optional)"}}</summary>
+        <div class="row names">
+          <label class="grow">{{t .Lang "Site name"}}
+            <input name="fullname" value="{{.Fullname}}" placeholder="{{t .Lang "the recipe's name"}}" maxlength="254">
+          </label>
+          <label class="grow">{{t .Lang "Short name (shown in the navigation)"}}
+            <input name="shortname" value="{{.Shortname}}" maxlength="100">
+          </label>
+        </div>
+      </details>
+      <button type="submit" class="install">{{t .Lang "Install"}}</button>
+    </div>
+  </form>
+  {{if .Backups}}
+  <h2 class="mt-lg">{{t .Lang "Restore a backup"}}</h2>
+  <table>
+    {{range .Backups}}{{if .Restorable}}
+    <tr>
+      <td class="name">{{.Name}}{{if .Recipe}}<br><span class="role">{{.Recipe}}</span>{{end}}</td>
+      <td class="meta">{{.Created}}</td>
+      <td class="tr">
+        <form method="post" action="/backups/restore"
+              data-confirm="{{t $.Lang "Restore this backup now? Expect a few minutes."}}">
+          <input type="hidden" name="csrf" value="{{$.CSRF}}">
+          <input type="hidden" name="file" value="{{.Name}}">
+          <input type="hidden" name="back" value="/">
+          <button class="act">{{t $.Lang "Restore"}}</button>
+        </form>
+      </td>
+    </tr>
+    {{end}}{{end}}
+  </table>
+  {{end}}
+  <p class="empty mt">{{t .Lang "A strong Moodle admin password is generated automatically and shown in the Accounts section once the site is ready. Installation clones several git repositories and runs the Moodle installer — expect several minutes."}}</p>
+</article>
+{{end}}
+</div>
+{{end}}

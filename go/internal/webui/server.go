@@ -61,7 +61,7 @@ func Serve(out io.Writer, version string) error {
 	// below (host check + CSRF cookie); s.csrf gates the state-changing ones.
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", s.handleHome)
-	for _, name := range []string{"site", "users", "tools", "services", "progress", "jobstatus"} {
+	for _, name := range []string{"site", "install", "users", "tools", "services", "progress", "jobstatus"} {
 		section := name
 		mux.HandleFunc("GET /section/"+section, func(w http.ResponseWriter, r *http.Request) {
 			s.renderFragment(w, r, section)

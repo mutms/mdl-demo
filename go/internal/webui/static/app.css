@@ -28,11 +28,15 @@ h2 { font-size: .78rem; text-transform: uppercase; letter-spacing: .07em;
 /* A card's own title (its first h2) is the page's main landmark, so it reads
    loud and clear — larger, full-strength, with a hairline under it. Inner
    h2s (the chooser's sub-headings) keep the quiet uppercase style above. */
-body > article > h2:first-child,
-body > article > #jobstatus > h2 { /* the log's title lives in its poll wrapper */
+/* A card's own title (its first h2) is the page's main landmark. The extra
+   selectors reach titles that sit inside a card's htmx poll-wrapper (#jobstatus)
+   or whose whole card is wrapped for polling (#users > article). */
+article > h2:first-child,
+article > #jobstatus > h2 { /* the log's title lives in its poll wrapper */
   font-size: 1.05rem; text-transform: none; letter-spacing: -.01em;
   color: var(--fg); font-weight: 700; margin: 0 0 .7rem; }
-body > article { margin-bottom: 1.3rem; }
+body > article, #site > article, #install > article, #users > article {
+  margin-bottom: 1.3rem; }
 td.meta { color: var(--dim); font-family: ui-monospace, SFMono-Regular, monospace;
           font-size: .82rem; }
 .name { font-weight: 600; }
@@ -149,8 +153,20 @@ details.older { margin-top: .35rem; }
 .pkg input:checked + span { border-color: var(--accent); color: var(--accent);
   font-weight: 700; box-shadow: inset 0 0 0 1px var(--accent); }
 .pkg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Naming the site is optional: a quiet, collapsed toggle by the Install
+   button, so the version picker stays the clear first action. */
+.nameopt { margin: 0 0 .9rem; }
+.nameopt summary { color: var(--dim); font-size: .82rem; cursor: pointer; }
+.nameopt summary:hover { color: var(--fg); }
 .installbar { margin-top: 1.2rem; }
 button.install[disabled] { opacity: .5; cursor: not-allowed; }
+/* When a package is picked the Install button pops once to carry the eye to
+   the next step. Driven by :has(), so no JS state is needed. */
+.installform:has(input[name="recipe"]:checked) button.install { animation: ctapop .45s ease-out 1; }
+@keyframes ctapop { 0% { transform: scale(1); } 35% { transform: scale(1.06); }
+                    100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .installform:has(input[name="recipe"]:checked) button.install { animation: none; } }
 /* Quiet row-level action: a link-looking button, so the repeated verbs in
      tables (Log in, Restore) stop competing with the cards' real buttons. */
 button.act, a.act { background: none; border: 0; color: var(--accent);

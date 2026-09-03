@@ -52,14 +52,23 @@ document.addEventListener('click', function (e) {
   else document.documentElement.dataset.theme = next;
   b.textContent = next === 'auto' ? '◐' : next === 'light' ? '☀' : '☾';
 });
-document.addEventListener('DOMContentLoaded', function () {
+// Progressive enhancement for the install chooser. Runs on first load AND
+// after every htmx swap: the empty-state chooser reappears via the site card's
+// poll when a reset/restore job ends, without a full page load — so this must
+// re-init the swapped-in markup, or the tabs and Install button stay inert
+// until a manual reload. Idempotent, so re-running over old nodes is harmless.
+function initChooser() {
   // Enable tab hiding only now that JS runs (see .tabs.js in the stylesheet).
   document.querySelectorAll('.tabs').forEach(function (t) { t.classList.add('js'); });
   // Same idea for the Install button: disable it until a package is picked
   // only when JS can re-enable it (the change handler above).
   document.querySelectorAll('.installform button.install').forEach(function (b) {
-    if (!b.closest('.installform').querySelector('input[name="recipe"]:checked')) b.disabled = true;
+    b.disabled = !b.closest('.installform').querySelector('input[name="recipe"]:checked');
   });
+}
+document.addEventListener('DOMContentLoaded', initChooser);
+document.addEventListener('htmx:afterSwap', initChooser); // htmx events bubble to document
+document.addEventListener('DOMContentLoaded', function () {
   var b = document.getElementById('themebtn');
   if (!b) return;
   var t = document.documentElement.dataset.theme || 'auto';
