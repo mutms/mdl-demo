@@ -112,6 +112,7 @@ var messages = map[string]map[string]string{
 
 		"Open the demo site as": "Otevřít demo stránky jako",
 		"— in a new tab here, or on a phone via a single-use QR code.": "– v nové záložce zde, nebo na telefonu přes jednorázový QR kód.",
+		"in a new tab here.": "v nové záložce zde.",
 		"Log in as":         "Přihlásit jako",
 		"QR code":           "QR kód",
 		"Scan to log in as": "Naskenujte pro přihlášení jako",
@@ -213,6 +214,7 @@ var messages = map[string]map[string]string{
 
 		"Open the demo site as": "Demo-Website öffnen als",
 		"— in a new tab here, or on a phone via a single-use QR code.": "– hier in einem neuen Tab oder am Telefon über einen Einmal-QR-Code.",
+		"in a new tab here.": "hier in einem neuen Tab.",
 		"Log in as":         "Anmelden als",
 		"QR code":           "QR-Code",
 		"Scan to log in as": "Scannen zur Anmeldung als",
