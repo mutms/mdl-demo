@@ -15,4 +15,8 @@
   <p class="tm">Moodle™ is a registered trademark of Moodle Pty Ltd. MuTMS is an
      independent project not affiliated with or endorsed by Moodle Pty Ltd.</p>
 </footer>
+{{/* Liveness watcher: reloads the page when the coarse state changes under it
+     (a reset, an install finishing, a rebuilt/restarted container), so an open
+     tab never shows stale state. */}}
+<div hx-get="/alive?s={{.StateSig}}" hx-trigger="every 5s" hx-swap="none" aria-hidden="true"></div>
 {{end}}

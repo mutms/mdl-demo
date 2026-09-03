@@ -44,6 +44,10 @@ var static embed.FS
 type Server struct {
 	version string
 	job     *job
+	// epoch identifies this process instance. A page embeds it and a tiny
+	// poller re-checks it; when it differs the process restarted (a rebuilt
+	// container, say) and the open page — now showing stale state — reloads.
+	epoch string
 }
 
 // Serve runs the UI until the process is stopped; the init supervisor owns
@@ -52,7 +56,7 @@ type Server struct {
 // into the container after this point (the CLI, `mdl-demo url`) can rely on
 // the identity being there.
 func Serve(out io.Writer, version string) error {
-	s := &Server{version: version, job: &job{}}
+	s := &Server{version: version, job: &job{}, epoch: strconv.FormatInt(time.Now().UnixNano(), 36)}
 	logSink.Store(s.job)
 
 	if err := adoptEnv(out); err != nil {
@@ -93,6 +97,7 @@ func Serve(out io.Writer, version string) error {
 	mux.HandleFunc("POST /sso/qr", s.csrf(s.handleSSOQR))
 	mux.HandleFunc("GET /sso/status", s.handleSSOStatus)
 	mux.HandleFunc("GET /lang", s.handleLang)
+	mux.HandleFunc("GET /alive", s.handleAlive)
 
 	// Mailpit's UI (all the site's outgoing mail) proxied under /mail — the
 	// presenter's tool, reachable on the same terms as the rest of the
@@ -157,6 +162,10 @@ type view struct {
 	Name  string
 	Title string
 	Lang  string
+	// StateSig captures the coarse state the page was rendered for (process
+	// instance + installed/busy/recipe). The page's watcher reloads when it
+	// changes — a reset (web or CLI), an install finishing, a rebuilt container.
+	StateSig string
 	// Path is the current request path, so the language switcher can return
 	// here (the console sends no Referer).
 	Path           string
@@ -397,7 +406,25 @@ func (s *Server) buildView(r *http.Request) view {
 	} else {
 		v.Services = append(v.Services, serviceRow{Name: "cloudflared", Status: "no tunnel"})
 	}
+	v.StateSig = sigString(s.epoch, v.Installed, v.Busy, v.Recipe)
 	return v
+}
+
+// sigString is the coarse page-state signature the liveness watcher compares
+// (see handleAlive). Deliberately excludes tunnel state — that changes through
+// smooth section swaps and should not force a full reload.
+func sigString(epoch string, installed, busy bool, recipe string) string {
+	return fmt.Sprintf("%s|%t|%t|%s", epoch, installed, busy, recipe)
+}
+
+// stateSig recomputes the current signature from live state, for handleAlive to
+// compare against the one the page was rendered with.
+func (s *Server) stateSig() string {
+	installed, recipe := false, ""
+	if st, err := state.Load(); err == nil && st.Installed() {
+		installed, recipe = true, st.Recipe
+	}
+	return sigString(s.epoch, installed, !s.job.idle(), recipe)
 }
 
 func (s *Server) render(w http.ResponseWriter, name string, v view) {
@@ -410,6 +437,19 @@ func (s *Server) render(w http.ResponseWriter, name string, v view) {
 
 func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "page", s.buildView(r))
+}
+
+// handleAlive is the open-page liveness check: the page polls it with the state
+// signature it was rendered against; a mismatch means the coarse state changed
+// under it — a reset (web or CLI), an install finishing, or a rebuilt container
+// (new process) — so the page is stale and htmx reloads it (HX-Refresh).
+func (s *Server) handleAlive(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Query().Get("s") != s.stateSig() {
+		w.Header().Set("HX-Refresh", "true")
+	}
+	// 200 with an empty body (hx-swap="none" changes nothing on a match); htmx
+	// reliably acts on the HX-Refresh header on a 200.
+	w.WriteHeader(http.StatusOK)
 }
 
 func (s *Server) renderFragment(w http.ResponseWriter, r *http.Request, section string) {
