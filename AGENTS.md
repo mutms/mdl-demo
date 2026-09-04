@@ -175,8 +175,8 @@ interactive/visual checks (htmx swaps, spinners, the epoch reload) to a human.
 End-to-end: `sudo podman exec mpd-test-mdl-demo-<port> mdl-demo install --recipe
 moodle/release/<version> --adminpass 'Test1234!'`, then browse the site
 (https://site-<port>.mdl-demo.<vm>.mpd.test, or http://127.0.0.1:<port+1> on the
-VM). `dev/README.md` has the full verification flow, multi-arch builds (build on
-an Apple silicon Mac — fastest) and release steps.
+VM). `DEV.md` covers dev-environment setup; multi-arch release builds and
+the publish steps live in `dev/github-publish.sh` (run on an Apple silicon Mac).
 
 Typical extension points: new UI feature → handler in
 `webui/server.go` + a template file in `webui/templates/` (htmx section

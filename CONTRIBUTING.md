@@ -6,11 +6,15 @@ demo data, pre-installed image variants, UI improvements — and AI coding tools
 make all of that very approachable (see `AGENTS.md`, written to get an AI
 assistant productive in this codebase quickly).
 
+Setting up a dev environment and the build loop are in [DEV.md](DEV.md); the
+architecture, invariants, testing workflow and extension points in
+[AGENTS.md](AGENTS.md).
+
 ## Ground rules
 
 - **Build & check**: `make build test vet fmt-check` must pass; `make image`
   + `make run` (rootful podman) is the smoke test. Full end-to-end
-  verification steps are in `dev/README.md`.
+  verification steps are in `AGENTS.md`.
 - **Keep it dependency-free**: the Go module is standard library only. Talk to
   [mudev](https://github.com/mutms/mudev) as a binary, do not import it.
 - **AI-assisted contributions are fine** — that is how most of this project

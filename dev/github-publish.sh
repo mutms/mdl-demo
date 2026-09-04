@@ -1,13 +1,25 @@
 #!/usr/bin/env bash
-# Build the multi-arch release image on macOS and publish it to ghcr.io.
+# Build the multi-arch release image on macOS (Apple silicon — both arches
+# build natively, no emulation) and publish it to ghcr.io.
 #
 # The version comes from git: HEAD must be exactly on a vX.Y.Z tag that is
 # already pushed to origin, and the working tree must be clean — the script
 # refuses to publish anything else, so no "dirty" or "-4-gabc1234" builds
 # can ever reach the registry.
 #
-# Log in first (interactive, keeps credentials out of this script):
-#   container registry login ghcr.io
+# Release steps:
+#   1. Move the [Unreleased] entries in CHANGELOG.md under a new
+#      [X.Y.Z] - YYYY-MM-DD heading; commit and push.
+#   2. Tag that commit and push the tag:
+#        git tag -a vX.Y.Z -m 'Release vX.Y.Z' && git push origin vX.Y.Z
+#   3. On the Mac, check out the tag, log in, and run this script:
+#        git fetch --tags && git checkout vX.Y.Z
+#        container registry login ghcr.io   # interactive; creds stay out of scripts
+#        dev/github-publish.sh
+#
+# First release only: the new package is private by default — make it public
+# in the GitHub package settings, or the README's run commands fail with an
+# authentication error.
 #
 # Forks: IMAGE=ghcr.io/<owner>/<repo> dev/github-publish.sh
 
