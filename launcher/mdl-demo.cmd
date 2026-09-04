@@ -6,6 +6,7 @@ rem   mdl-demo create [NNNN] [--name="Fancy demo"] [--tag=v0.1.2] [--open]
 rem   mdl-demo start|stop|delete [NNNN]
 rem   mdl-demo list
 rem   mdl-demo gc
+rem   mdl-demo install^|uninstall   (print setup/removal steps; change nothing)
 rem
 rem NNNN is the demo's number: the port of its management console. The
 rem container is named mdl-demo-NNNN, the console is http://127.0.0.1:NNNN and
@@ -22,6 +23,7 @@ set "PORT=8081"
 set "NAME="
 set "TAG=latest"
 set "OPEN="
+set "ALL="
 set "POSITIONAL=0"
 
 set "CMD=%~1"
@@ -29,6 +31,10 @@ if "%CMD%"=="" set "CMD=help"
 if /i "%CMD%"=="help" goto usage
 if /i "%CMD%"=="--help" goto usage
 if /i "%CMD%"=="-h" goto usage
+rem install/uninstall only PRINT the steps; they change nothing and must work
+rem before wslc exists, so handle them before the runtime check below.
+if /i "%CMD%"=="install" goto install
+if /i "%CMD%"=="uninstall" goto uninstall
 shift
 
 rem Two checks, two different fixes: wslc is not installed at all, or it is
@@ -47,6 +53,7 @@ set "ARG=%~1"
 if /i "%ARG%"=="--name" ( set "NAME=%~2" & shift & shift & goto parse )
 if /i "%ARG%"=="--tag"  ( set "TAG=%~2" & shift & shift & goto parse )
 if /i "%ARG%"=="--open" ( set "OPEN=1" & shift & goto parse )
+if /i "%ARG%"=="--all"  ( set "ALL=1" & shift & goto parse )
 if /i "%ARG%"=="--help" goto usage
 if /i "%ARG%"=="-h"     goto usage
 echo %ARG%| findstr /r "^[0-9][0-9]*$" >nul
@@ -132,13 +139,47 @@ exit /b 0
 wslc ps -a | findstr /c:"CONTAINER" /c:"mdl-demo-"
 exit /b 0
 
-rem Reclaim disk from unused (dangling) images - the old layers left behind
-rem when a newer image is pulled (a fresh latest, a bigger --tag). Only images
-rem no container uses are touched; demos, their sites and data are never
-rem affected.
 :gc
-echo removing unused (dangling) images...
-wslc image prune
+if defined ALL (
+    echo removing all unused images ^(they re-download when a demo needs them^)...
+    wslc image prune --all
+) else (
+    echo removing unused ^(dangling^) images...
+    wslc image prune
+    echo still low on disk? "mdl-demo gc --all" removes unused demo images too.
+)
+exit /b 0
+
+:install
+echo Setting up mdl-demo on Windows 11 - just the steps, nothing is changed.
+echo.
+echo   1. Install the WSL containers preview:
+echo          wsl --update --pre-release
+echo      then open a NEW terminal window. Details:
+echo          https://devblogs.microsoft.com/commandline/wsl-container-is-now-available-for-public-preview/
+echo.
+echo   2. Keep mdl-demo.cmd in a folder on your PATH, or run it from the
+echo      folder you downloaded it into.
+echo.
+echo   3. Start your first demo:
+echo          mdl-demo create
+exit /b 0
+
+:uninstall
+echo Removing mdl-demo on Windows 11 - just the steps, nothing is changed.
+echo.
+echo   1. Delete your demos - this removes their sites and data:
+echo          mdl-demo list
+echo          mdl-demo delete NNNN     for each demo the list shows
+echo.
+echo   2. Reclaim the disk the images used:
+echo          mdl-demo gc
+echo          wslc image remove ghcr.io/mutms/mdl-demo
+echo.
+echo   3. Delete mdl-demo.cmd.
+echo.
+echo   4. Optional: remove the WSL containers preview if you use it for
+echo      nothing else.
 exit /b 0
 
 rem Waits for the console to answer, then hands it to the default browser.
@@ -162,13 +203,7 @@ echo mdl-demo: the console has not answered yet - open %URL% when it does 1>&2
 goto :eof
 
 :nowslc
-echo mdl-demo: WSL containers ^(wslc^) are not installed. 1>&2
-echo. 1>&2
-echo   They come with the Windows Subsystem for Linux preview on Windows 11. 1>&2
-echo   In a terminal run 1>&2
-echo       wsl --update --pre-release 1>&2
-echo   then open a NEW terminal window and try this command again. 1>&2
-echo   Details: https://devblogs.microsoft.com/commandline/wsl-container-is-now-available-for-public-preview/ 1>&2
+echo mdl-demo: WSL containers ^(wslc^) are not installed - run "mdl-demo install" for the setup steps. 1>&2
 exit /b 1
 
 :wslcdown
@@ -193,7 +228,10 @@ echo   start  [NNNN]   start a stopped demo
 echo   stop   [NNNN]   stop a running demo (the site and its data are kept)
 echo   delete [NNNN]   stop and remove a demo, including its site and data
 echo   list            show all demos
-echo   gc              reclaim disk from unused images (containers are never touched)
+echo   gc [--all]      reclaim disk from unused images (never touches containers);
+echo                   --all also removes images no demo is using (e.g. the demo image)
+echo   install         print how to set up mdl-demo on this system (changes nothing)
+echo   uninstall       print how to remove mdl-demo from this system (changes nothing)
 echo.
 echo Options for create:
 echo   --name="..."    label shown in the console heading, also the Moodle site name
