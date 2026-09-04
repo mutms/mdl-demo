@@ -67,7 +67,7 @@ func Serve(out io.Writer, version string) error {
 	// below (host check + CSRF cookie); s.csrf gates the state-changing ones.
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", s.handleHome)
-	for _, name := range []string{"site", "install", "users", "tools", "progress", "jobstatus"} {
+	for _, name := range []string{"site", "install", "users", "tools", "progress", "jobstatus", "statuspill"} {
 		section := name
 		mux.HandleFunc("GET /section/"+section, func(w http.ResponseWriter, r *http.Request) {
 			s.renderFragment(w, r, section)
@@ -188,6 +188,10 @@ type view struct {
 	ServiceProblems []serviceRow
 	Users           []userRow
 	Job             jobView
+	// Section is a sub-page's label (a translation key like "Backups"); empty on
+	// the dashboard. The sticky top bar uses it to switch the brand from a plain
+	// identity into a "← back to console" link that also names the sub-page.
+	Section string
 	// Page-specific fields.
 	// Error is a page-level failure message (the backups listing not being
 	// readable, say) — not to be confused with Job.Error, which reports the
@@ -601,6 +605,7 @@ func (s *Server) backupsView(r *http.Request) view {
 		v.Error = err.Error()
 	}
 	v.Backups = rows
+	v.Section = "Backups"
 	return v
 }
 
@@ -669,6 +674,7 @@ func (s *Server) pluginsView(r *http.Request) view {
 		}
 		v.Plugins = rows
 	}
+	v.Section = "Plugins"
 	return v
 }
 
@@ -679,6 +685,7 @@ func (s *Server) handlePluginsPage(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleRecommendsPage(w http.ResponseWriter, r *http.Request) {
 	v := s.buildView(r)
 	v.Recommends = recommends()
+	v.Section = "Recommendations"
 	s.render(w, "recommends", v)
 }
 
@@ -1151,6 +1158,7 @@ func gitRev(dir string) string {
 func (s *Server) handleDebug(w http.ResponseWriter, r *http.Request) {
 	v := s.buildView(r)
 	v.Snapshot = true // a diagnostics report is a snapshot; don't reload it mid-read
+	v.Section = "Diagnostics"
 	var b strings.Builder
 	fmt.Fprintf(&b, "mdl-demo %s\nmode: %s\ntime: %s\n",
 		s.version, svc.Current().Mode(), time.Now().UTC().Format(time.RFC3339))

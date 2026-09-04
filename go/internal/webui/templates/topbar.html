@@ -1,0 +1,35 @@
+{{/* The sticky top bar, on every page. Left: the demo's identity, which doubles
+     as back-navigation — the console is flat (every sub-page hangs directly off
+     the dashboard), so "back" always means "home". On a sub-page the whole brand
+     is a link to / prefixed with ←; on the dashboard it is plain text plus the
+     version. Right: the language/theme controls, with the live job status pill
+     beneath them. Staying pinned keeps the identity (and so the mdl-demo name)
+     visible while scrolling, and gives a home for a future Settings icon. */}}
+{{define "topbar"}}
+<header class="topbar">
+  {{/* Breadcrumb identity. Only the demo ID is a link — it is the constant back
+       anchor (the console is flat, so home = back); the "» Section" after it is
+       plain text naming where you are, so you never click the current page's own
+       name to leave it. This h1 is the page's heading, so sub-pages drop the
+       in-page title that would repeat it (see recommends.html). The fixed
+       project line sits smaller beneath, with the version. */}}
+  <div class="brand">
+    <h1 class="bcrumb"><a class="bid" href="/">{{.ID}}</a>{{if .Section}} <span class="bsep" aria-hidden="true">»</span> <span class="bsect">{{t .Lang .Section}}</span>{{end}}</h1>
+    <p class="btag">{{if .Version}}{{.Version}} — {{end}}{{if .Name}}{{.Name}}{{else}}{{t .Lang "Moodle/MuTMS demo console"}}{{end}}</p>
+  </div>
+  <div class="topright">
+    {{template "topctl" .}}
+    {{template "statuspill" .}}
+  </div>
+</header>
+{{end}}
+
+{{/* The job status pill: spinner + activity while a job runs (install, restore,
+     reset, backup), quiet otherwise. It polls and swaps only itself, so it stays
+     live even on the diagnostics page — which opts out of the whole-page reload
+     watcher — without disturbing the report being read. */}}
+{{define "statuspill"}}
+<div id="statuspill" class="statuspill" hx-get="/section/statuspill" hx-trigger="every {{if .Busy}}1.5s{{else}}5s{{end}}" hx-swap="outerHTML" aria-live="polite">
+  {{if .Busy}}<span class="jobstate"><span class="spin"></span>{{t .Lang .Job.Label}}</span>{{end}}
+</div>
+{{end}}

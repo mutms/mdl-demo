@@ -1,8 +1,7 @@
 {{define "debug"}}<!doctype html>
 <html lang="{{.Lang}}">
 {{template "head" .}}
-<header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>{{t .Lang "— diagnostics"}}</span></h1>
-<p class="sub"><a href="/">{{t .Lang "← back"}}</a></p></div>{{template "topctl" .}}</header>
+{{template "topbar" .}}
 {{if .ServiceProblems}}
 <article>
   <h2>{{t .Lang "Service problems"}}</h2>

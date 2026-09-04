@@ -4,8 +4,7 @@
 {{define "plugins"}}<!doctype html>
 <html lang="{{.Lang}}">
 {{template "head" .}}
-<header><div><h1>{{.ID}}{{if .Name}} · {{.Name}}{{end}} <span>{{t .Lang "— plugins"}}</span></h1>
-<p class="sub"><a href="/">{{t .Lang "← back"}}</a></p></div>{{template "topctl" .}}</header>
+{{template "topbar" .}}
 
 <article>
   <h2>{{t .Lang "Additional plugins"}}</h2>

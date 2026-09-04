@@ -1,13 +1,7 @@
 {{define "page"}}<!doctype html>
 <html lang="{{.Lang}}">
 {{template "head" .}}
-<header>
-  <div>
-    <h1>{{.ID}} <span>— {{if .Name}}{{.Name}}{{else}}{{t .Lang "Moodle/MuTMS demo console"}}{{end}}</span></h1>
-    <p class="sub">{{.Version}}</p>
-  </div>
-  {{template "topctl" .}}
-</header>
+{{template "topbar" .}}
 
 {{template "site" .}}
 {{template "install" .}}

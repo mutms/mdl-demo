@@ -19,10 +19,24 @@
     --ok: #4ade80; --okbg: #16a34a26; --err: #f87171; --errbg: #dc262626; }
 html { font-size: 93.75%; }
 body { margin: 0 auto; padding: 2rem 1.5rem 4rem; max-width: 52rem; }
-header { margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: baseline; }
-h1 { font-size: 1.35rem; margin: 0; letter-spacing: -.01em; }
-h1 span { color: var(--dim); font-weight: 400; }
-.sub { color: var(--dim); margin: .2rem 0 0; font-size: .85rem; }
+/* Sticky top bar: stays pinned so the demo identity (and the mdl-demo name) and
+   the live job status are visible however far the page is scrolled. It lives in
+   the centered column; its opaque ground hides content passing beneath. */
+header.topbar { position: sticky; top: 0; z-index: 20; margin: 0 0 1.7rem;
+  padding: .7rem 0 .65rem; background: var(--bg); border-bottom: 1px solid var(--line);
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.brand { min-width: 0; }
+h1.bcrumb { margin: 0; font-size: 1.2rem; font-weight: 400; line-height: 1.25;
+  letter-spacing: -.01em; color: var(--fg); }
+.bcrumb .bid { font-weight: 700; color: var(--fg); text-decoration: none; }
+.bcrumb .bid:hover { color: var(--accent); }
+.bcrumb .bsep, .bcrumb .bsect { color: var(--dim); font-weight: 400; }
+.btag { margin: .12rem 0 0; color: var(--dim); font-size: .76rem; }
+/* Right column: language/theme controls, live status pill beneath them. */
+.topright { display: flex; flex-direction: column; align-items: flex-end; gap: .4rem; flex: none; }
+.statuspill { min-height: 1.15rem; }
+.jobstate { display: inline-flex; align-items: center; font-size: .76rem; color: var(--ok);
+  background: var(--okbg); padding: .12rem .55rem; border-radius: 999px; }
 h2 { font-size: .78rem; text-transform: uppercase; letter-spacing: .07em;
      color: var(--dim); margin: 0 0 .75rem; font-weight: 600; }
 /* A card's own title (its first h2) is the page's main landmark, so it reads
@@ -147,9 +161,8 @@ button.toggle[aria-checked="true"]::after { left: calc(100% - 1.4rem + 3px); }
 .tunnelform.busy .tunspin { display: inline-block; }
 /* Pico styles bare <nav>; pin the header controls' own metrics so the
      lang links and the theme glyph sit on one center line. */
-header > .row, .topctl { align-items: center; }
+.topctl { align-items: center; gap: .45rem; }
 header form { margin: 0; }
-.topctl { gap: .45rem; }
 .langs { display: flex; align-items: center; margin: 0; padding: 0; }
 .langs a { font-size: .75rem; line-height: 1; color: var(--dim);
   text-decoration: none; padding: .25rem .3rem; border-radius: 5px; }

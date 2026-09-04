@@ -105,6 +105,7 @@ var messages = map[string]map[string]string{
 
 		"— diagnostics":    "– diagnostika",
 		"Report a problem": "Nahlásit problém",
+		"Diagnostics":      "Diagnostika",
 		"← back":           "← zpět",
 
 		"Site recipe": "Recept stránek",
@@ -227,6 +228,7 @@ var messages = map[string]map[string]string{
 
 		"— diagnostics":    "– Diagnose",
 		"Report a problem": "Problem melden",
+		"Diagnostics":      "Diagnose",
 		"← back":           "← zurück",
 
 		"Site recipe": "Website-Rezept",
