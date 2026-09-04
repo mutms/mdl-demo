@@ -1,12 +1,12 @@
 # mdl-demo
 
 Try Moodle™ or MuTMS on your own computer. One command, no web server,
-database or PHP to set up.
+database or PHP to set up, and no online registration.
 
-mdl-demo is a container image - think of a container as a small computer
-inside your own, with its own files and programs, that cannot touch the rest
-of your machine. This one has everything a Moodle site needs, plus a web
-console that sets up and manages the demo site for you - effortlessly.
+mdl-demo is a container image - think of a small computer inside your own,
+with its own files and programs, that cannot touch the rest of your machine.
+This one has everything a Moodle site needs, plus a web console that sets up
+and manages the demo site for you - effortlessly.
 
 ## How it works
 
