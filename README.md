@@ -18,9 +18,9 @@ and manages the demo site for you - effortlessly.
 5. A few minutes later your site is ready at <http://127.0.0.1:8082>.
 
 Only your computer can see it. To show it to others, one click in the console
-gives it a temporary public link, and another click takes it back private.
+gives it a temporary public link, and another click makes it private again.
 Reset the site in the console to start over with a different version, or delete
-the container when you are done and everything is gone.
+the container when you are done testing.
 
 <!-- A short demo video / animated walkthrough will live here. -->
 
