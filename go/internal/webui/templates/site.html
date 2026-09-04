@@ -12,6 +12,7 @@
        one-row table. */}}
   <dl class="site">
     <dt>{{t .Lang "Site name"}}</dt><dd>{{.SiteName}}</dd>
+    {{if .MoodleRelease}}<dt>{{t .Lang "Version"}}</dt><dd>{{.MoodleRelease}}</dd>{{end}}
     <dt>{{t .Lang "Recipe"}}</dt><dd>{{.Recipe}}</dd>
     {{/* New tab on purpose: landing inside Moodle in the same tab loses
          people — they forget the management UI's address to get back. */}}

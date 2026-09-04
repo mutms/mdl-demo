@@ -177,11 +177,13 @@ type view struct {
 	Snapshot bool
 	// Path is the current request path, so the language switcher can return
 	// here (the console sends no Referer).
-	Path           string
-	CSRF           string
-	Installed      bool
-	Busy           bool
-	Recipe         string
+	Path      string
+	CSRF      string
+	Installed bool
+	Busy      bool
+	Recipe    string
+	// MoodleRelease is the installed Moodle version, e.g. "4.5.13 (20250109)".
+	MoodleRelease  string
 	SiteName       string
 	Wwwroot        string
 	TunnelURL      string
@@ -497,6 +499,7 @@ func (s *Server) buildView(r *http.Request) view {
 	if st, err := state.Load(); err == nil && st.Installed() {
 		v.Installed = true
 		v.Recipe = st.Recipe
+		v.MoodleRelease, _ = moodle.Version()
 		v.SiteName = st.Fullname
 		v.Wwwroot = st.Wwwroot
 		v.InstalledAt = st.InstalledAt.Format("2006-01-02 15:04 MST")

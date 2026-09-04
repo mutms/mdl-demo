@@ -14,10 +14,38 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/mutms/mdl-demo/go/internal/execx"
 )
+
+var (
+	reRelease = regexp.MustCompile(`\$release\s*=\s*['"]([^'"]+)['"]`)
+	reVersion = regexp.MustCompile(`\$version\s*=\s*([0-9.]+)`)
+)
+
+// Version returns the tree's Moodle release and numeric version, read straight
+// from version.php — the same $release/$version that become $CFG->release and
+// $CFG->version, and what an upgrade rewrites. "Build: " is dropped from the
+// release so it reads "4.5.13 (20250109)". Empty strings if unreadable.
+func Version() (release, version string) {
+	path := filepath.Join(Root, "version.php")
+	if !exists(path) {
+		path = filepath.Join(Root, "public", "version.php")
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", ""
+	}
+	if m := reRelease.FindSubmatch(data); m != nil {
+		release = strings.Replace(string(m[1]), "(Build: ", "(", 1)
+	}
+	if m := reVersion.FindSubmatch(data); m != nil {
+		version = string(m[1])
+	}
+	return release, version
+}
 
 const (
 	// Root is where mudev assembles the code tree.
