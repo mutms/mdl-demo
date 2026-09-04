@@ -611,8 +611,13 @@ func (s *Server) backupsView(r *http.Request) view {
 
 func (s *Server) handleBackupsPage(w http.ResponseWriter, r *http.Request) {
 	v := s.backupsView(r)
-	// The "Restore into…" dialog needs the recipe catalogue.
+	// The "Restore into…" dialog needs the recipe catalogue, ordered like the
+	// install chooser's tabs: Moodle, MuTMS, IOMAD, then any others (stable, so
+	// the within-vendor order the catalogue already sorts by is kept).
 	if list, err := recipes.List(); err == nil {
+		slices.SortStableFunc(list, func(a, b recipes.Recipe) int {
+			return vendorRank(a.Vendor) - vendorRank(b.Vendor)
+		})
 		v.Recipes = list
 	}
 	s.render(w, "backups", v)
