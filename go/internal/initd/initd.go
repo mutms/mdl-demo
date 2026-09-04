@@ -383,11 +383,14 @@ func (s *Supervisor) Statuses() []svc.Status {
 	for _, p := range s.procs {
 		out = append(out, s.statusOf(p))
 	}
-	cron := svc.Status{Name: "moodle-cron (ticker)", State: "inactive"}
+	// The cron ticker only runs while a site is installed — that is by design,
+	// not a fault. So list it only when installed (and then it is active),
+	// exactly like the on-demand cloudflared is simply absent otherwise; this
+	// keeps it out of the "services not running" banner on an empty demo.
 	if st, err := state.Load(); err == nil && st.Installed() {
-		cron.State, cron.Running = "active", true
+		out = append(out, svc.Status{Name: "moodle-cron (ticker)", State: "active", Running: true})
 	}
-	return append(out, cron)
+	return out
 }
 
 func (s *Supervisor) Diagnostics() []svc.Diag {

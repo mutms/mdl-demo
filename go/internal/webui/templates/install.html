@@ -59,25 +59,9 @@
       <button type="submit" class="install">{{t .Lang "Install"}}</button>
     </div>
   </form>
-  {{if .Backups}}
-  <h2 class="mt-lg">{{t .Lang "Restore a backup"}}</h2>
-  <table>
-    {{range .Backups}}{{if .Restorable}}
-    <tr>
-      <td class="name">{{.Name}}{{if .Recipe}}<br><span class="role">{{.Recipe}}</span>{{end}}</td>
-      <td class="meta">{{.Created}}</td>
-      <td class="tr">
-        <form method="post" action="/backups/restore"
-              data-confirm="{{t $.Lang "Restore this backup now? Expect a few minutes."}}">
-          <input type="hidden" name="csrf" value="{{$.CSRF}}">
-          <input type="hidden" name="file" value="{{.Name}}">
-          <button class="act">{{t $.Lang "Restore"}}</button>
-        </form>
-      </td>
-    </tr>
-    {{end}}{{end}}
-  </table>
-  {{end}}
+  {{/* Restoring a backup lives on the Backups page (Tools card), not here — an
+       inline restore table would push the Tools section down the empty
+       dashboard. */}}
 </article>
 {{end}}
 </div>

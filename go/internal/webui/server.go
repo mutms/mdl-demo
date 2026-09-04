@@ -469,14 +469,11 @@ func (s *Server) buildView(r *http.Request) view {
 		v.TunnelURL = tunnel.URL()
 		v.TunnelStarting = tunnel.Starting()
 	} else {
-		// The empty dashboard IS the chooser: an uninstalled demo has exactly
-		// two useful actions — install a recipe or restore a backup — so the
-		// site card lists both. Cheap enough for the 5s section poll (recipe
-		// header scan + first-tar-entry meta reads).
+		// The empty dashboard IS the install chooser. Restoring a backup is the
+		// other way to fill an empty demo, but that lives on the Backups page
+		// (Tools card) so it doesn't crowd the chooser or push Tools down.
 		list, _ := recipes.List()
 		v.VendorTabs = groupRecipes(list)
-		// Not installed here, so no code to keep: pass no hash.
-		v.Backups, _ = backupRows("")
 		if err == nil {
 			v.Fullname = st.Name
 			v.Shortname = st.Name
