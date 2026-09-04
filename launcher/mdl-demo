@@ -4,6 +4,7 @@
 #   mdl-demo create [NNNN] [--name="Fancy demo"] [--tag=v0.1.2] [--open]
 #   mdl-demo start|stop|delete [NNNN]
 #   mdl-demo list
+#   mdl-demo gc
 #
 # NNNN is the demo's number: the port of its management console. The
 # container is named mdl-demo-NNNN, the console is http://127.0.0.1:NNNN and
@@ -27,6 +28,7 @@ Commands:
   stop   [NNNN]   stop a running demo (the site and its data are kept)
   delete [NNNN]   stop and remove a demo, including its site and data
   list            show all demos
+  gc              reclaim disk from unused images (containers are never touched)
 
 Options for create:
   --name="..."    label shown in the console heading, also the Moodle site name
@@ -151,6 +153,15 @@ case "$cmd" in
         ;;
     list)
         container ls -a | awk 'NR == 1 || $1 ~ /^mdl-demo-/'
+        ;;
+    gc)
+        # Reclaim disk from unused (dangling) images — the old layers left
+        # behind when a newer image is pulled (a fresh 'latest', a bigger --tag).
+        # Only images no container uses are touched; demos, their sites and data
+        # are never affected. Not scoped to mdl-demo: dangling images have no
+        # tag to scope by, but they are unreferenced leftovers by definition.
+        echo "removing unused (dangling) images…"
+        container image prune
         ;;
     help|--help|-h)
         usage

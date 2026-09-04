@@ -5,6 +5,7 @@ rem
 rem   mdl-demo create [NNNN] [--name="Fancy demo"] [--tag=v0.1.2] [--open]
 rem   mdl-demo start|stop|delete [NNNN]
 rem   mdl-demo list
+rem   mdl-demo gc
 rem
 rem NNNN is the demo's number: the port of its management console. The
 rem container is named mdl-demo-NNNN, the console is http://127.0.0.1:NNNN and
@@ -73,6 +74,7 @@ if /i "%CMD%"=="start"  goto start
 if /i "%CMD%"=="stop"   goto stop
 if /i "%CMD%"=="delete" goto delete
 if /i "%CMD%"=="list"   goto list
+if /i "%CMD%"=="gc"     goto gc
 echo mdl-demo: unknown command "%CMD%" (see: mdl-demo help) 1>&2
 exit /b 1
 
@@ -130,6 +132,15 @@ exit /b 0
 wslc ps -a | findstr /c:"CONTAINER" /c:"mdl-demo-"
 exit /b 0
 
+rem Reclaim disk from unused (dangling) images - the old layers left behind
+rem when a newer image is pulled (a fresh latest, a bigger --tag). Only images
+rem no container uses are touched; demos, their sites and data are never
+rem affected.
+:gc
+echo removing unused (dangling) images...
+wslc image prune
+exit /b 0
+
 rem Waits for the console to answer, then hands it to the default browser.
 rem The container is running before the console is listening: "wslc run"
 rem returns once the init has been started and the init opens the port a
@@ -182,6 +193,7 @@ echo   start  [NNNN]   start a stopped demo
 echo   stop   [NNNN]   stop a running demo (the site and its data are kept)
 echo   delete [NNNN]   stop and remove a demo, including its site and data
 echo   list            show all demos
+echo   gc              reclaim disk from unused images (containers are never touched)
 echo.
 echo Options for create:
 echo   --name="..."    label shown in the console heading, also the Moodle site name

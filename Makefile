@@ -38,6 +38,23 @@ tidy:
 clean:
 	rm -rf bin dist
 
+# Remove every mdl-demo test container — the default `mpd-test-mdl-demo` and any
+# PORT= variants (mpd-test-mdl-demo-<port>). Leaves other projects' containers
+# alone. `-` + `xargs -r`: a no-op when none exist.
+.PHONY: clean-test
+clean-test:
+	-sudo podman ps -a --format '{{.Names}}' | grep '^mpd-test-mdl-demo' | xargs -r sudo podman rm -f
+
+# Full teardown of mdl-demo's podman footprint: all test containers, the image,
+# and reclaimable space (dangling images + build cache). Does NOT remove other
+# projects' tagged images or any volumes. For a VM-wide sweep that also drops
+# other projects' unused images, run `sudo podman system prune -a` yourself.
+.PHONY: clean-podman
+clean-podman: clean-test
+	-sudo podman rmi -f mdl-demo
+	-sudo podman image prune -f
+	-sudo podman builder prune -f
+
 # The build context is the repo root.
 image:
 	sudo podman build -t mdl-demo --build-arg VERSION=$(VERSION) -f container/Containerfile .
