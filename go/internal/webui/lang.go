@@ -72,7 +72,7 @@ func tr(lang, s string) string {
 
 var messages = map[string]map[string]string{
 	"cs": {
-		"Moodle demo console": "konzole demo Moodlu",
+		"Moodle/MuTMS demo console": "konzole demo Moodle/MuTMS",
 
 		"Demo site":  "Demo stránky",
 		"Recipe":     "Recept",
@@ -194,7 +194,7 @@ var messages = map[string]map[string]string{
 		"Backups survive a site reset but live inside this container — deleting the container deletes them. Download the ones you want to keep.": "Zálohy přežijí smazání stránek, ale žijí uvnitř tohoto kontejneru – smazáním kontejneru zaniknou. Ty, které si chcete ponechat, si stáhněte.",
 	},
 	"de": {
-		"Moodle demo console": "Moodle-Demo-Konsole",
+		"Moodle/MuTMS demo console": "Moodle/MuTMS-Demo-Konsole",
 
 		"Demo site":  "Demo-Website",
 		"Recipe":     "Rezept",
