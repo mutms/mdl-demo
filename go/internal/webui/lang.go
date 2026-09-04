@@ -170,6 +170,7 @@ var messages = map[string]map[string]string{
 		"Patched Moodle core with multi-tenancy and every MuTMS plugin.":           "Upravené jádro Moodlu s více nájemci (multi-tenancy) a všemi pluginy MuTMS.",
 		"All MuTMS plugins on plain Moodle core — no multi-tenancy.":               "Všechny pluginy MuTMS na obyčejném jádře Moodlu – bez více nájemců.",
 		"The full MuTMS suite in active development, on the latest stable Moodle.": "Kompletní sada MuTMS ve vývoji, na nejnovějším stabilním Moodlu.",
+		"IOMAD, a multi-tenant Moodle distribution — its current stable branches.": "IOMAD, distribuce Moodlu s více nájemci – jeho aktuální stabilní větve.",
 		"Site name": "Název stránek",
 
 		"— backups": "– zálohy",
@@ -291,6 +292,7 @@ var messages = map[string]map[string]string{
 		"Patched Moodle core with multi-tenancy and every MuTMS plugin.":           "Gepatchter Moodle-Kern mit Mandantenfähigkeit und allen MuTMS-Plugins.",
 		"All MuTMS plugins on plain Moodle core — no multi-tenancy.":               "Alle MuTMS-Plugins auf reinem Moodle-Kern – ohne Mandantenfähigkeit.",
 		"The full MuTMS suite in active development, on the latest stable Moodle.": "Das komplette MuTMS-Paket in aktiver Entwicklung, auf dem neuesten stabilen Moodle.",
+		"IOMAD, a multi-tenant Moodle distribution — its current stable branches.": "IOMAD, eine mandantenfähige Moodle-Distribution – ihre aktuellen stabilen Branches.",
 		"Site name": "Name der Website",
 		"Restore this backup now? Expect a few minutes.": "Diese Sicherung jetzt wiederherstellen? Rechnen Sie mit einigen Minuten.",
 

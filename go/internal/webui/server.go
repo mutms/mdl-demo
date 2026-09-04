@@ -243,6 +243,22 @@ var streamCopy = map[string]streamText{
 	"mutms/release":  {"Full suite", "Patched Moodle core with multi-tenancy and every MuTMS plugin."},
 	"mutms/moodle":   {"On plain Moodle", "All MuTMS plugins on plain Moodle core — no multi-tenancy."},
 	"mutms/dev":      {"Development", "The full MuTMS suite in active development, on the latest stable Moodle."},
+	"iomad/dev":      {"Development", "IOMAD, a multi-tenant Moodle distribution — its current stable branches."},
+}
+
+// vendorRank orders the chooser's tabs: the three known vendors first in this
+// order, then any other vendor after them (alphabetically, via stable sort).
+func vendorRank(vendor string) int {
+	switch vendor {
+	case "moodle":
+		return 0
+	case "mutms":
+		return 1
+	case "iomad":
+		return 2
+	default:
+		return 3
+	}
 }
 
 // streamRank orders streams within a tab: release first, then the plugins-only
@@ -316,6 +332,11 @@ func groupRecipes(list []recipes.Recipe) []vendorTab {
 			return streamRank(a.Stream) - streamRank(b.Stream)
 		})
 	}
+	// Known vendors first (Moodle, MuTMS, IOMAD); any others after, kept in the
+	// catalogue's alphabetical order by the stable sort.
+	slices.SortStableFunc(tabs, func(a, b vendorTab) int {
+		return vendorRank(a.Vendor) - vendorRank(b.Vendor)
+	})
 	if len(tabs) > 0 {
 		tabs[0].Active = true
 	}
