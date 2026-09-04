@@ -256,9 +256,9 @@ type recommendRow struct{ Name, URL, Blurb string }
 
 func recommends() []recommendRow {
 	return []recommendRow{
-		{"MuTMS", "https://mutms.org", "Open multi-tenancy, programs and certifications for Moodle."},
-		{"mudev", "https://github.com/mutms/mudev", "Assembles Moodle test-site code trees from recipes and a plugin catalogue."},
-		{"mpd", "https://github.com/mutms/mpd", "Reproducible dev VMs and tooling for Moodle work."},
+		{"MuTMS", "https://mutms.org", "My suite of open-source plugins adding multi-tenancy, programs, certifications and other improvements to Moodle."},
+		{"mudev", "https://github.com/mutms/mudev", "Wires multiple plugin git repos into a Moodle tree — for dev work, CI and test environments."},
+		{"mpd", "https://github.com/mutms/mpd", "Self-contained Moodle development VMs and tooling used for MuTMS development."},
 		{"Camp Registry", "https://camp-registry.org/", "An open, community catalogue of Moodle plugins."},
 		{"mdlshield", "https://mdlshield.com", "Security scanning and hardening for Moodle."},
 	}

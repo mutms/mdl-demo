@@ -8,8 +8,14 @@
 <p class="sub"><a href="/">{{t .Lang "← back"}}</a></p></div>{{template "topctl" .}}</header>
 
 <article>
-  <h2>{{t .Lang "My recommendations"}}</h2>
-  <p class="empty">{{t .Lang "Projects and companies I like."}} {{t .Lang "Think I'd like your project? Get in touch through MuTMS."}}</p>
+  <h2>{{t .Lang "Recommendations"}}</h2>
+  {{/* The signed statement and the blurbs stay English in every language — one
+       voice for the maintainer's own words. Only the chrome around them (this
+       heading, the header, back link, Tools card) localizes. */}}
+  <blockquote class="statement">
+    <p>Projects and companies I like. Think I'd like your project and you'd want to see it here? Get in touch through MuTMS.</p>
+    <p class="sig">-- skodak</p>
+  </blockquote>
   <dl class="recs">
     {{range .Recommends}}
     <dt><a href="{{.URL}}" target="_blank" rel="noopener">{{.Name}} <span class="ext" aria-hidden="true">↗</span></a></dt>

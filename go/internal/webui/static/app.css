@@ -47,6 +47,9 @@ dl.recs { margin: .6rem 0 0; }
 dl.recs dt { margin-top: .85rem; font-weight: 600; }
 dl.recs dt:first-child { margin-top: 0; }
 dl.recs dd { margin: .1rem 0 0; color: var(--dim); font-size: .88rem; }
+blockquote.statement { margin: 1.2rem 0 1.6rem; padding: .1rem 0 .1rem 1rem; border-left: 3px solid var(--accent); font-style: italic; }
+blockquote.statement p { margin: 0; color: var(--dim); }
+blockquote.statement p.sig { margin: .3rem 0 0; text-align: right; }
 .badge { display: inline-block; font-size: .72rem; padding: .05rem .5rem;
          border-radius: 999px; background: var(--idlebg); color: var(--idle); }
 .badge.on { background: var(--okbg); color: var(--ok); }
