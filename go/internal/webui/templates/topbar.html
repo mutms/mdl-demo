@@ -22,6 +22,8 @@
     {{template "statuspill" .}}
   </div>
 </header>
+{{/* Reachable from the gear on every page, so it lives with the bar. */}}
+{{template "settingsdialog" .}}
 {{end}}
 
 {{/* The job status pill: spinner + activity while a job runs (install, restore,

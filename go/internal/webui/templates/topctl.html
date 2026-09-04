@@ -6,4 +6,5 @@
     <a href="/lang?set=en&to={{.Path}}"{{if eq .Lang "en"}} class="cur"{{end}}>EN</a><a href="/lang?set=cs&to={{.Path}}"{{if eq .Lang "cs"}} class="cur"{{end}}>CS</a><a href="/lang?set=de&to={{.Path}}"{{if eq .Lang "de"}} class="cur"{{end}}>DE</a>
   </nav>
   <button id="themebtn" type="button" title="{{t .Lang "Theme"}}">◐</button>
+  <button id="settingsbtn" type="button" title="{{t .Lang "Settings"}}" aria-label="{{t .Lang "Settings"}}" data-open="settingsdialog">⚙</button>
 </div>{{end}}

@@ -167,10 +167,23 @@ header form { margin: 0; }
 .langs a { font-size: .75rem; line-height: 1; color: var(--dim);
   text-decoration: none; padding: .25rem .3rem; border-radius: 5px; }
 .langs a.cur { background: var(--idlebg); color: var(--fg); font-weight: 600; }
-#themebtn { background: none; border: 0; color: var(--dim); font-size: 1rem;
+#themebtn, #settingsbtn { background: none; border: 0; color: var(--dim); font-size: 1rem;
   cursor: pointer; padding: .2rem .3rem; margin: 0; line-height: 1;
-  display: inline-flex; align-items: center; }
-#themebtn:hover { color: var(--fg); }
+  display: inline-flex; align-items: center; width: auto; }
+#themebtn:hover, #settingsbtn:hover { color: var(--fg); }
+/* Settings dialog: sections stacked, each with a small uppercase label. */
+dialog article > h2 { font-size: 1.05rem; text-transform: none; letter-spacing: -.01em;
+  font-weight: 600; margin: 0 0 .9rem; color: var(--fg); }
+.setgroup { margin: 0 0 1.1rem; }
+.setgroup:last-child { margin-bottom: 0; }
+.seth { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--dim); font-weight: 600; margin: 0 0 .3rem; }
+.hint { color: var(--dim); font-size: .85rem; margin: .1rem 0 .6rem; }
+.catlist { list-style: none; padding: 0; margin: .6rem 0 0; font-size: .82rem; }
+.catlist li { display: flex; gap: .5rem; padding: .12rem 0; }
+.catlist .catname { font-weight: 600; min-width: 6.5rem; }
+.catlist li.ok .catmsg { color: var(--ok); font-family: ui-monospace, monospace; }
+.catlist li.bad .catmsg { color: var(--err); overflow-wrap: anywhere; }
 .spin { display: inline-block; width: .85em; height: .85em; margin-right: .35em;
   border: 2px solid var(--line); border-top-color: var(--accent);
   border-radius: 50%; vertical-align: -.1em;

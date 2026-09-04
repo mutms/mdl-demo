@@ -128,6 +128,11 @@ var messages = map[string]map[string]string{
 
 		"Theme": "Vzhled",
 
+		"Settings":          "Nastavení",
+		"Catalogues":        "Katalogy",
+		"Update catalogues": "Aktualizovat katalogy",
+		"Pull the latest plugins and site recipes from git — new versions appear in the installer.": "Stáhne nejnovější pluginy a recepty z gitu – nové verze se objeví v instalátoru.",
+
 		"Copy the whole block below into a bug report":                                                                 "Celý blok níže zkopírujte do hlášení chyby",
 		"It contains service states and recent log lines, no passwords.":                                               "Obsahuje stavy služeb a poslední řádky logů, žádná hesla.",
 		"The exact code tree — plugins and their git sources. Share it only if your problem is about the code itself.": "Přesný strom kódu – pluginy a jejich zdroje v gitu. Sdílejte jej jen tehdy, když se problém týká samotného kódu.",
@@ -246,6 +251,11 @@ var messages = map[string]map[string]string{
 		"Create user":       "Benutzer anlegen",
 
 		"Theme": "Darstellung",
+
+		"Settings":          "Einstellungen",
+		"Catalogues":        "Kataloge",
+		"Update catalogues": "Kataloge aktualisieren",
+		"Pull the latest plugins and site recipes from git — new versions appear in the installer.": "Holt die neuesten Plugins und Rezepte aus Git – neue Versionen erscheinen im Installer.",
 
 		"Copy the whole block below into a bug report":                                                                 "Kopieren Sie den gesamten Block unten in eine Fehlermeldung",
 		"It contains service states and recent log lines, no passwords.":                                               "Er enthält Dienststatus und aktuelle Logzeilen, keine Passwörter.",

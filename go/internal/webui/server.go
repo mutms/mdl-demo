@@ -81,6 +81,7 @@ func Serve(out io.Writer, version string) error {
 	mux.HandleFunc("POST /tunnel/stop", s.csrf(s.handleTunnelStop))
 	mux.HandleFunc("GET /tunnel/qr.png", s.handleTunnelQR)
 	mux.HandleFunc("POST /users/create", s.csrf(s.handleUserCreate))
+	mux.HandleFunc("POST /settings/update-catalogues", s.csrf(s.handleSettingsUpdate))
 	mux.HandleFunc("GET /plugins", s.handlePluginsPage)
 	mux.HandleFunc("GET /recommends", s.handleRecommendsPage)
 	mux.HandleFunc("GET /backups", s.handleBackupsPage)
@@ -216,6 +217,15 @@ type view struct {
 	Recommends []recommendRow
 	// The empty dashboard's recipe chooser: vendor tabs of version streams.
 	VendorTabs []vendorTab
+	// Settings dialog: result of a catalogue git pull, rendered back into it.
+	CatUpdates []catUpdate
+}
+
+// catUpdate is one catalogue's git-pull result for the Settings dialog.
+type catUpdate struct {
+	Name string
+	Msg  string
+	OK   bool
 }
 
 // vendorTab is one tab of the install chooser — all of a vendor's streams.
@@ -417,7 +427,28 @@ func (s *Server) baseView(r *http.Request) view {
 		st = &state.State{}
 	}
 	v.ID, v.Name, v.Title = st.ID(), st.Name, st.Title()
+	// Recording/screenshot mode (MDL_DEMO_HIDE_PORT): drop the "-NNNN" port from
+	// the shown identity so it reads "mdl-demo". A boot-time container setting,
+	// not a per-viewer toggle, so it is right on the very first paint — no flash
+	// of the port. The port stays the demo's real identity everywhere else
+	// (container name, URLs, the ID the CLI prints).
+	if boolEnv("MDL_DEMO_HIDE_PORT") {
+		v.ID = strings.TrimSuffix(v.ID, "-"+strconv.Itoa(st.Port()))
+		v.Title = v.ID
+		if v.Name != "" {
+			v.Title = v.ID + " · " + v.Name
+		}
+	}
 	return v
+}
+
+// boolEnv reads a container env var as a boolean (1/true/yes/on, case-folded).
+func boolEnv(key string) bool {
+	switch strings.ToLower(strings.TrimSpace(state.ContainerEnv(key))) {
+	case "1", "true", "yes", "on":
+		return true
+	}
+	return false
 }
 
 func (s *Server) buildView(r *http.Request) view {
@@ -685,6 +716,14 @@ func (s *Server) pluginsView(r *http.Request) view {
 
 func (s *Server) handlePluginsPage(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "plugins", s.pluginsView(r))
+}
+
+// handleSettingsUpdate git-pulls the catalogues and swaps the result back into
+// the Settings dialog. CSRF-guarded like every state-changing POST.
+func (s *Server) handleSettingsUpdate(w http.ResponseWriter, r *http.Request) {
+	v := s.buildView(r)
+	v.CatUpdates = updateCatalogues()
+	s.render(w, "catresult", v)
 }
 
 func (s *Server) handleRecommendsPage(w http.ResponseWriter, r *http.Request) {
@@ -1097,10 +1136,7 @@ func toolVersions() string {
 	fmt.Fprintf(&b, "mudev: %s\n", mudevVer)
 	// mudev's default catalogue paths (see Containerfile); recipes.Dir is the
 	// recipe one.
-	for _, c := range []struct{ name, dir string }{
-		{"mdl-recipes", recipes.Dir},
-		{"mdl-plugins", "/srv/extra/mdl-plugins"},
-	} {
+	for _, c := range catalogues() {
 		fmt.Fprintf(&b, "%s: %s\n", c.name, gitRev(c.dir))
 	}
 	// The supervised services, each self-reported (first line of --version).
@@ -1149,6 +1185,35 @@ func cmdVersion(name string, args ...string) string {
 
 // gitRev is the short HEAD revision of a git checkout, "unknown" if it cannot
 // be read.
+// catalogues are the git-checked-out code catalogues mudev clones from (see the
+// Containerfile). The Settings dialog can git-pull them to pick up new recipes
+// and plugins without rebuilding the image.
+func catalogues() []struct{ name, dir string } {
+	return []struct{ name, dir string }{
+		{"mdl-recipes", recipes.Dir},
+		{"mdl-plugins", "/srv/extra/mdl-plugins"},
+	}
+}
+
+// updateCatalogues fast-forwards each catalogue checkout from its origin and
+// reports per-repo. Fast-forward only: these are read-only mirrors, never edited
+// in the container, so a non-ff would mean something is wrong — better to fail
+// loudly than merge.
+func updateCatalogues() []catUpdate {
+	var out []catUpdate
+	for _, c := range catalogues() {
+		u := catUpdate{Name: c.name}
+		if _, err := execx.Output(c.dir, "git", "pull", "--ff-only"); err != nil {
+			u.Msg = err.Error()
+		} else {
+			u.OK = true
+			u.Msg = gitRev(c.dir)
+		}
+		out = append(out, u)
+	}
+	return out
+}
+
 func gitRev(dir string) string {
 	out, err := execx.Output(dir, "git", "rev-parse", "--short", "HEAD")
 	if err != nil {
