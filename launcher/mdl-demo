@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # mdl-demo - run Moodle/MuTMS demo containers on macOS (Apple container).
+# Project, docs and the latest version of this script:
+#   https://github.com/mutms/mdl-demo   (see MACOS.md)
 #
 #   mdl-demo create [NNNN] [--name="Fancy demo"] [--tag=v0.1.2] [--open]
 #   mdl-demo start|stop|delete [NNNN]
@@ -21,6 +23,8 @@ IMAGE="${MDL_DEMO_IMAGE:-ghcr.io/mutms/mdl-demo}"
 
 usage() {
     cat <<EOF
+mdl-demo - run throwaway Moodle/MuTMS demo sites on macOS, in a container.
+
 Usage: mdl-demo <command> [NNNN] [options]
 
 Commands:
@@ -43,6 +47,9 @@ Options for create and start:
 
 The demo's number NNNN is the port of its console: http://127.0.0.1:NNNN.
 The Moodle site is on the next port, NNNN+1.
+
+What this is, the full guide, and the latest version of this script:
+  https://github.com/mutms/mdl-demo   (see MACOS.md)
 EOF
 }
 

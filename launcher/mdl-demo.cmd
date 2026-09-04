@@ -1,6 +1,8 @@
 @echo off
 setlocal EnableExtensions
 rem mdl-demo.cmd - run Moodle/MuTMS demo containers on Windows 11 (WSL containers, wslc).
+rem Project, docs and the latest version of this script:
+rem   https://github.com/mutms/mdl-demo   (see WINDOWS.md)
 rem
 rem   mdl-demo create [NNNN] [--name="Fancy demo"] [--tag=v0.1.2] [--open]
 rem   mdl-demo start|stop|delete [NNNN]
@@ -220,6 +222,8 @@ echo mdl-demo: the demo number must be a port between 1024 and 65534 (got "%PORT
 exit /b 1
 
 :usage
+echo mdl-demo - run throwaway Moodle/MuTMS demo sites on Windows, in a container.
+echo.
 echo Usage: mdl-demo ^<command^> [NNNN] [options]
 echo.
 echo Commands:
@@ -242,4 +246,7 @@ echo   --open          open the console in your browser once it answers
 echo.
 echo The demo's number NNNN is the port of its console: http://127.0.0.1:NNNN.
 echo The Moodle site is on the next port, NNNN+1.
+echo.
+echo What this is, the full guide, and the latest version of this script:
+echo   https://github.com/mutms/mdl-demo   (see WINDOWS.md)
 exit /b 0
