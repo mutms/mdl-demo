@@ -91,19 +91,37 @@ func Path(name string) (string, error) {
 // spaces to dashes, everything else stripped, a too-short remainder replaced
 // by "demo", then a timestamp.
 func SuggestName(fullname string, now time.Time) string {
+	base := cleanBase(fullname)
+	if len(base) < 3 {
+		base = "demo"
+	}
+	return base + "-" + now.Format("20060102-150405") + ".mdb"
+}
+
+// cleanBase reduces a name to a safe filename stem: ASCII-folded, spaces to
+// hyphens, only [a-zA-Z0-9-] kept, no leading/trailing/repeated hyphens.
+func cleanBase(s string) string {
 	base := strings.Map(func(r rune) rune {
 		if unicode.Is(unicode.Mn, r) {
 			return -1
 		}
 		return r
-	}, norm.NFD.String(fullname))
+	}, norm.NFD.String(s))
 	base = strings.ReplaceAll(base, " ", "-")
 	base = regexp.MustCompile(`[^a-zA-Z0-9-]`).ReplaceAllString(base, "")
-	base = strings.Trim(regexp.MustCompile(`-+`).ReplaceAllString(base, "-"), "-")
-	if len(base) < 3 {
-		base = "demo"
+	return strings.Trim(regexp.MustCompile(`-+`).ReplaceAllString(base, "-"), "-")
+}
+
+// CleanName turns a user-typed backup name into a safe "<name>.mdb" filename
+// (any .mdb the user added is dropped first). Returns "" when nothing usable is
+// left, so the caller can fall back to SuggestName.
+func CleanName(s string) string {
+	s = strings.TrimSuffix(s, ".mdb")
+	base := cleanBase(s)
+	if base == "" {
+		return ""
 	}
-	return base + "-" + now.Format("20060102-150405") + ".mdb"
+	return base + ".mdb"
 }
 
 // Info is one row of the backups listing. Meta is nil for a file that is not

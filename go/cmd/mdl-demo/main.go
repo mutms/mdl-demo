@@ -123,7 +123,12 @@ func cmdInstall(args []string) error {
 }
 
 func cmdBackup() error {
-	_, err := site.Backup(stdoutLog, version)
+	// Optional name argument; empty auto-generates from the site name and time.
+	name := ""
+	if len(os.Args) > 2 {
+		name = os.Args[2]
+	}
+	_, err := site.Backup(stdoutLog, version, name)
 	return err
 }
 

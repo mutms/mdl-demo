@@ -83,7 +83,9 @@ var messages = map[string]map[string]string{
 		"Cancel":     "Zrušit",
 		"Confirm":    "Potvrdit",
 		"Wipe the demo site? The database, code tree and all data are deleted.": "Opravdu smazat demo stránky? Databáze, kód i všechna data budou odstraněny.",
-		"Back up data":                "Zálohovat data",
+		"Back up data": "Zálohovat data",
+		"Backup name":  "Název zálohy",
+		"The site is briefly unavailable while it is copied.": "Stránky jsou během kopírování krátce nedostupné.",
 		"Quick Tunnel":                "Quick Tunnel",
 		"No demo site installed yet.": "Zatím nejsou nainstalovány žádné demo stránky.",
 
@@ -177,7 +179,6 @@ var messages = map[string]map[string]string{
 
 		"Back up": "Zálohování",
 		"A backup packs the database, the uploaded files and the site's exact code recipe into one portable .mdb file.": "Záloha zabalí databázi, nahrané soubory a přesný recept kódu stránek do jednoho přenosného souboru .mdb.",
-		"Create a backup now? The site is briefly unavailable while it is copied.":                                      "Vytvořit zálohu nyní? Stránky budou během kopírování krátce nedostupné.",
 		"Upload": "Nahrát",
 		"Upload a .mdb file created here or by another demo container.": "Nahrajte soubor .mdb vytvořený zde nebo jiným demo kontejnerem.",
 		"The site's code is rebuilt from the selected recipe, then the backup's data is loaded and upgraded to match. The bundled recipe restores the exact original site.": "Kód stránek se znovu sestaví podle vybraného receptu, poté se nahrají data zálohy a povýší se na odpovídající verzi. Přibalený recept obnoví přesně původní stránky.",
@@ -207,7 +208,9 @@ var messages = map[string]map[string]string{
 		"Cancel":     "Abbrechen",
 		"Confirm":    "Bestätigen",
 		"Wipe the demo site? The database, code tree and all data are deleted.": "Demo-Website wirklich löschen? Datenbank, Code und alle Daten werden entfernt.",
-		"Back up data":                "Daten sichern",
+		"Back up data": "Daten sichern",
+		"Backup name":  "Name der Sicherung",
+		"The site is briefly unavailable while it is copied.": "Die Website ist während des Kopierens kurz nicht verfügbar.",
 		"Quick Tunnel":                "Quick Tunnel",
 		"No demo site installed yet.": "Noch keine Demo-Website installiert.",
 
@@ -299,9 +302,7 @@ var messages = map[string]map[string]string{
 		"IOMAD, a multi-tenant Moodle distribution — its current stable branches.": "IOMAD, eine mandantenfähige Moodle-Distribution – ihre aktuellen stabilen Branches.",
 		"Site name": "Name der Website",
 
-		"Back up": "Sichern",
 		"A backup packs the database, the uploaded files and the site's exact code recipe into one portable .mdb file.": "Eine Sicherung packt die Datenbank, die hochgeladenen Dateien und das genaue Code-Rezept der Website in eine portable .mdb-Datei.",
-		"Create a backup now? The site is briefly unavailable while it is copied.":                                      "Jetzt eine Sicherung erstellen? Die Website ist während des Kopierens kurz nicht erreichbar.",
 		"Upload": "Hochladen",
 		"Upload a .mdb file created here or by another demo container.": "Laden Sie eine .mdb-Datei hoch, die hier oder von einem anderen Demo-Container erstellt wurde.",
 		"The site's code is rebuilt from the selected recipe, then the backup's data is loaded and upgraded to match. The bundled recipe restores the exact original site.": "Der Code der Website wird aus dem gewählten Rezept neu aufgebaut, dann werden die Daten der Sicherung geladen und entsprechend aktualisiert. Das mitgelieferte Rezept stellt exakt die ursprüngliche Website wieder her.",

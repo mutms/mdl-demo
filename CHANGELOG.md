@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - IOMAD demos in the installer
 - Restore option to keep the current code and skip the download
 - Moodle version shown on the demo site card
+- Name a backup before creating it, with the default prefilled
 - `MDL_DEMO_HIDE_PORT` to hide the port in the top bar for screen recordings
 
 ### Changed

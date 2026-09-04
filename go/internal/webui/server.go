@@ -217,6 +217,9 @@ type view struct {
 	SSOQR      template.URL
 	// Backups page.
 	Backups []backupRow
+	// BackupName is the Backup dialog's prefilled default name, without the .mdb
+	// extension (added on save).
+	BackupName string
 	// Plugins page: additional plugins bucketed by type.
 	PluginGroups []pluginGroup
 	// Recommendations page.
@@ -675,6 +678,9 @@ func (s *Server) backupsView(r *http.Request) view {
 		v.Error = err.Error()
 	}
 	v.Backups = rows
+	if v.Installed {
+		v.BackupName = strings.TrimSuffix(backup.SuggestName(v.SiteName, time.Now()), ".mdb")
+	}
 	v.Section = "Backups"
 	return v
 }
@@ -792,7 +798,16 @@ func (s *Server) handleRecommendsPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleBackupCreate(w http.ResponseWriter, r *http.Request) {
-	if !s.job.startBackup(s.version) {
+	// A name from the Backup dialog is cleaned to a safe "<name>.mdb"; blank (or
+	// nothing usable left) falls back to the generated name in site.Backup.
+	name := backup.CleanName(r.FormValue("name"))
+	if name != "" {
+		if err := backup.CheckName(name); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	if !s.job.startBackup(s.version, name) {
 		http.Error(w, "another operation is already running", http.StatusConflict)
 		return
 	}

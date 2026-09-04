@@ -159,9 +159,9 @@ func (j *job) startReset() bool {
 	return j.start("reset", "", "", site.Reset)
 }
 
-func (j *job) startBackup(version string) bool {
+func (j *job) startBackup(version, name string) bool {
 	return j.start("backup", "", "", func(logf execx.Logf) error {
-		_, err := site.Backup(logf, version)
+		_, err := site.Backup(logf, version, name)
 		return err
 	})
 }

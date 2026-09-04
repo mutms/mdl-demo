@@ -60,7 +60,7 @@ func roleLabel(id string) string {
 
 // Backup snapshots the installed site into a new .mdb file in backup.Dir and
 // returns its name. version stamps the archive metadata.
-func Backup(logf execx.Logf, version string) (string, error) {
+func Backup(logf execx.Logf, version, name string) (string, error) {
 	st, err := state.Load()
 	if err != nil {
 		return "", err
@@ -81,7 +81,12 @@ func Backup(logf execx.Logf, version string) (string, error) {
 	if fullname == "" {
 		fullname = st.Name
 	}
-	name := backup.SuggestName(fullname, time.Now())
+	// A user-supplied name (Backup dialog or CLI arg) wins, cleaned to a safe
+	// "<name>.mdb"; otherwise generate one from the site name and the time.
+	name = backup.CleanName(name)
+	if name == "" {
+		name = backup.SuggestName(fullname, time.Now())
+	}
 	logf("Backing up the site into " + name)
 
 	// Whenever the site's internals (database, data directory) are being
