@@ -674,7 +674,7 @@ func (s *Server) pluginsView(r *http.Request) view {
 		}
 		v.Plugins = rows
 	}
-	v.Section = "Plugins"
+	v.Section = "Installed plugins"
 	return v
 }
 
