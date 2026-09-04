@@ -103,9 +103,8 @@ var messages = map[string]map[string]string{
 		"restoring":  "obnovuje se",
 		"failed":     "selhalo",
 
-		"Report a problem": "Nahlásit problém",
-		"Diagnostics":      "Diagnostika",
-		"← back":           "← zpět",
+		"Diagnostics": "Diagnostika",
+		"← back":      "← zpět",
 
 		"Site recipe": "Recept stránek",
 		"Install":     "Instalovat",
@@ -133,7 +132,7 @@ var messages = map[string]map[string]string{
 		"Update catalogues": "Aktualizovat katalogy",
 		"Pull the latest plugins and site recipes from git — new versions appear in the installer.": "Stáhne nejnovější pluginy a recepty z gitu – nové verze se objeví v instalátoru.",
 
-		"Copy the whole block below into a bug report":                                                                 "Celý blok níže zkopírujte do hlášení chyby",
+		"When you report a problem, copy the whole block below into your issue at":                                     "Když hlásíte problém, zkopírujte celý blok níže do hlášení na",
 		"It contains service states and recent log lines, no passwords.":                                               "Obsahuje stavy služeb a poslední řádky logů, žádná hesla.",
 		"The exact code tree — plugins and their git sources. Share it only if your problem is about the code itself.": "Přesný strom kódu – pluginy a jejich zdroje v gitu. Sdílejte jej jen tehdy, když se problém týká samotného kódu.",
 		"Service problems":                 "Problémy se službami",
@@ -227,9 +226,8 @@ var messages = map[string]map[string]string{
 		"restoring":  "wird wiederhergestellt",
 		"failed":     "fehlgeschlagen",
 
-		"Report a problem": "Problem melden",
-		"Diagnostics":      "Diagnose",
-		"← back":           "← zurück",
+		"Diagnostics": "Diagnose",
+		"← back":      "← zurück",
 
 		"Site recipe": "Website-Rezept",
 		"Install":     "Installieren",
@@ -257,7 +255,7 @@ var messages = map[string]map[string]string{
 		"Update catalogues": "Kataloge aktualisieren",
 		"Pull the latest plugins and site recipes from git — new versions appear in the installer.": "Holt die neuesten Plugins und Rezepte aus Git – neue Versionen erscheinen im Installer.",
 
-		"Copy the whole block below into a bug report":                                                                 "Kopieren Sie den gesamten Block unten in eine Fehlermeldung",
+		"When you report a problem, copy the whole block below into your issue at":                                     "Wenn Sie ein Problem melden, kopieren Sie den ganzen Block unten in Ihre Meldung auf",
 		"It contains service states and recent log lines, no passwords.":                                               "Er enthält Dienststatus und aktuelle Logzeilen, keine Passwörter.",
 		"The exact code tree — plugins and their git sources. Share it only if your problem is about the code itself.": "Der genaue Code-Baum – Plugins und ihre Git-Quellen. Teilen Sie ihn nur, wenn Ihr Problem den Code selbst betrifft.",
 		"Service problems":                 "Dienstprobleme",

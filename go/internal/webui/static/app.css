@@ -167,18 +167,14 @@ header form { margin: 0; }
 .langs a { font-size: .75rem; line-height: 1; color: var(--dim);
   text-decoration: none; padding: .25rem .3rem; border-radius: 5px; }
 .langs a.cur { background: var(--idlebg); color: var(--fg); font-weight: 600; }
+/* Theme glyph and settings gear: quiet controls that share the langs' metrics.
+   The gear is an SVG (aligns and scales cleanly, unlike a symbol glyph). */
 #themebtn, #settingsbtn { background: none; border: 0; color: var(--dim); font-size: 1rem;
-  cursor: pointer; padding: .2rem .3rem; margin: 0; line-height: 1;
+  cursor: pointer; padding: .2rem .3rem; margin: 0; line-height: 1; text-decoration: none;
   display: inline-flex; align-items: center; width: auto; }
 #themebtn:hover, #settingsbtn:hover { color: var(--fg); }
-/* Settings dialog: sections stacked, each with a small uppercase label. */
-dialog article > h2 { font-size: 1.05rem; text-transform: none; letter-spacing: -.01em;
-  font-weight: 600; margin: 0 0 .9rem; color: var(--fg); }
-.setgroup { margin: 0 0 1.1rem; }
-.setgroup:last-child { margin-bottom: 0; }
-.seth { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em;
-  color: var(--dim); font-weight: 600; margin: 0 0 .3rem; }
-.hint { color: var(--dim); font-size: .85rem; margin: .1rem 0 .6rem; }
+#settingsbtn svg { display: block; }
+/* Settings page: the catalogue-update result, one line per repo. */
 .catlist { list-style: none; padding: 0; margin: .6rem 0 0; font-size: .82rem; }
 .catlist li { display: flex; gap: .5rem; padding: .12rem 0; }
 .catlist .catname { font-weight: 600; min-width: 6.5rem; }

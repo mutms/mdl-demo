@@ -74,7 +74,11 @@ func Serve(out io.Writer, version string) error {
 		})
 	}
 	mux.HandleFunc("GET /joblog", s.handleJobLog)
-	mux.HandleFunc("GET /debug", s.handleDebug)
+	mux.HandleFunc("GET /settings", s.handleSettingsPage)
+	// /debug was the old diagnostics URL; it now lives on the Settings page.
+	mux.HandleFunc("GET /debug", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/settings", http.StatusMovedPermanently)
+	})
 	mux.HandleFunc("POST /install", s.csrf(s.handleInstall))
 	mux.HandleFunc("POST /reset", s.csrf(s.handleReset))
 	mux.HandleFunc("POST /tunnel/start", s.csrf(s.handleTunnelStart))
@@ -217,11 +221,11 @@ type view struct {
 	Recommends []recommendRow
 	// The empty dashboard's recipe chooser: vendor tabs of version streams.
 	VendorTabs []vendorTab
-	// Settings dialog: result of a catalogue git pull, rendered back into it.
+	// Settings page: result of a catalogue git pull, rendered back into it.
 	CatUpdates []catUpdate
 }
 
-// catUpdate is one catalogue's git-pull result for the Settings dialog.
+// catUpdate is one catalogue's git-pull result for the Settings page.
 type catUpdate struct {
 	Name string
 	Msg  string
@@ -719,7 +723,7 @@ func (s *Server) handlePluginsPage(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleSettingsUpdate git-pulls the catalogues and swaps the result back into
-// the Settings dialog. CSRF-guarded like every state-changing POST.
+// the Settings page. CSRF-guarded like every state-changing POST.
 func (s *Server) handleSettingsUpdate(w http.ResponseWriter, r *http.Request) {
 	v := s.buildView(r)
 	v.CatUpdates = updateCatalogues()
@@ -1183,11 +1187,9 @@ func cmdVersion(name string, args ...string) string {
 	return strings.TrimSpace(out)
 }
 
-// gitRev is the short HEAD revision of a git checkout, "unknown" if it cannot
-// be read.
 // catalogues are the git-checked-out code catalogues mudev clones from (see the
-// Containerfile). The Settings dialog can git-pull them to pick up new recipes
-// and plugins without rebuilding the image.
+// Containerfile). The Settings page can git-pull them to pick up new recipes and
+// plugins without rebuilding the image — even before the first install.
 func catalogues() []struct{ name, dir string } {
 	return []struct{ name, dir string }{
 		{"mdl-recipes", recipes.Dir},
@@ -1214,6 +1216,7 @@ func updateCatalogues() []catUpdate {
 	return out
 }
 
+// gitRev is the short HEAD revision of a git checkout, "unknown" if unreadable.
 func gitRev(dir string) string {
 	out, err := execx.Output(dir, "git", "rev-parse", "--short", "HEAD")
 	if err != nil {
@@ -1222,13 +1225,13 @@ func gitRev(dir string) string {
 	return strings.TrimSpace(out)
 }
 
-// handleDebug renders the diagnostics page: one copy-pasteable report of
-// mode, versions, state and per-service status + log tails, so an end user
-// can paste it whole into a bug report.
-func (s *Server) handleDebug(w http.ResponseWriter, r *http.Request) {
+// handleSettingsPage renders the Settings page: the catalogue-update action and
+// the diagnostics report — one copy-pasteable block of mode, versions, state and
+// per-service status + log tails, so an end user can paste it into a bug report.
+func (s *Server) handleSettingsPage(w http.ResponseWriter, r *http.Request) {
 	v := s.buildView(r)
-	v.Snapshot = true // a diagnostics report is a snapshot; don't reload it mid-read
-	v.Section = "Diagnostics"
+	v.Snapshot = true // the diagnostics report is a snapshot; don't reload it mid-read
+	v.Section = "Settings"
 	var b strings.Builder
 	fmt.Fprintf(&b, "mdl-demo %s\nmode: %s\ntime: %s\n",
 		s.version, svc.Current().Mode(), time.Now().UTC().Format(time.RFC3339))
@@ -1280,7 +1283,7 @@ func (s *Server) handleDebug(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	v.DebugReport = b.String()
-	s.render(w, "debug", v)
+	s.render(w, "settings", v)
 }
 
 func hostOnly(hostport string) string {
