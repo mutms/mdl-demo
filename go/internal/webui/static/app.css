@@ -174,6 +174,29 @@ header form { margin: 0; }
 #themebtn:hover { color: var(--fg); }
 /* Settings page: the catalogue-update result, one line per repo. */
 .catlist { list-style: none; padding: 0; margin: .6rem 0 0; font-size: .82rem; }
+/* Installed plugins: type groups, each a dense grid of clickable items, so a
+   full suite fits without scrolling; details go to a dialog, not the list. */
+.pgroup { margin: 0 0 1rem; }
+.pgh { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--dim);
+  font-weight: 600; margin: 0 0 .35rem; display: flex; align-items: baseline; gap: .4rem; }
+.pgcount { font-size: .68rem; color: var(--dim); background: var(--idlebg);
+  border-radius: 999px; padding: .02rem .42rem; font-weight: 600; }
+.pgrid { list-style: none; padding: 0; margin: 0; display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: .1rem .7rem; }
+.pgrid li { list-style: none; } /* Pico sets ul li{list-style:square} on the li */
+.pitem { display: block; width: 100%; text-align: left; background: none; border: 0;
+  padding: .18rem .35rem; margin: 0; cursor: pointer; border-radius: 5px; line-height: 1.2; }
+.pitem:hover { background: var(--idlebg); }
+.pname { display: block; font-size: .85rem; color: var(--fg); font-weight: 500; }
+.pcomp { display: block; font-size: .68rem; color: var(--dim);
+  font-family: ui-monospace, SFMono-Regular, monospace; }
+/* Dialog title + a plugin's detail list. */
+dialog article > h2 { font-size: 1.05rem; text-transform: none; letter-spacing: -.01em;
+  font-weight: 600; margin: 0 0 .8rem; color: var(--fg); }
+dl.pdetail { display: grid; grid-template-columns: auto 1fr; gap: .3rem .85rem; margin: 0; font-size: .85rem; }
+dl.pdetail dt { color: var(--dim); font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .05em; align-self: center; }
+dl.pdetail dd { margin: 0; overflow-wrap: anywhere; }
 .catlist li { display: flex; gap: .5rem; padding: .12rem 0; }
 .catlist .catname { font-weight: 600; min-width: 6.5rem; }
 .catlist li.ok .catmsg { color: var(--ok); font-family: ui-monospace, monospace; }

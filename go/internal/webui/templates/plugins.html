@@ -1,6 +1,8 @@
-{{/* The Plugins page: the additional (non-core) plugins the demo site carries.
-     Stage (a) lists them; the "add from a git repository" form and catalogue
-     browse land here later (see the placeholder below). */}}
+{{/* The Installed plugins page: the additional (non-core) plugins the site
+     carries, grouped by plugin type. Each type is a dense grid of compact items
+     (name + component); clicking one opens the detail dialog (app.js fills it
+     from the item's data-*). Kept dense so a full suite fits without scrolling;
+     the technical detail lives in the dialog, not the list. */}}
 {{define "plugins"}}<!doctype html>
 <html lang="{{.Lang}}">
 {{template "head" .}}
@@ -10,20 +12,26 @@
   <h2>{{t .Lang "Installed plugins"}}</h2>
   {{if .Installed}}
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
-  {{if .Plugins}}
-  <p class="empty">{{t .Lang "The plugins this demo site carries on top of the ones Moodle ships with."}}</p>
-  <table>
-    <tr><th>{{t .Lang "Plugin"}}</th><th>{{t .Lang "Component"}}</th><th>{{t .Lang "Version"}}</th></tr>
-    {{range .Plugins}}
-    <tr>
-      <td class="name">
-        {{if .SourceURL}}<a href="{{.SourceURL}}" target="_blank" rel="noopener">{{.DisplayName}} <span class="ext" aria-hidden="true">↗</span></a>{{else}}{{.DisplayName}}{{end}}
-        <br><span class="role">{{.Relpath}}</span></td>
-      <td class="meta">{{.Component}}</td>
-      <td class="meta">{{if .Release}}{{.Release}}<br><span class="role">{{.Version}}</span>{{else}}{{.Version}}{{end}}</td>
-    </tr>
-    {{end}}
-  </table>
+  {{if .PluginGroups}}
+  <p class="empty">{{t .Lang "The plugins this demo site carries on top of the ones Moodle ships with."}}
+     {{t .Lang "Select one for details."}}</p>
+  {{range .PluginGroups}}
+  {{$label := .Label}}
+  <div class="pgroup">
+    <h3 class="pgh">{{.Label}} <span class="pgcount">{{len .Plugins}}</span></h3>
+    <ul class="pgrid">
+      {{range .Plugins}}
+      <li><button type="button" class="pitem"
+            data-name="{{.DisplayName}}" data-component="{{.Component}}" data-type="{{$label}}"
+            data-version="{{.Version}}" data-release="{{.Release}}"
+            data-relpath="{{.Relpath}}" data-source="{{.SourceURL}}">
+        <span class="pname">{{.DisplayName}}</span>
+        <span class="pcomp">{{.Component}}</span>
+      </button></li>
+      {{end}}
+    </ul>
+  </div>
+  {{end}}
   {{else}}
   <p class="empty">{{t .Lang "No additional plugins installed yet."}}</p>
   {{end}}
@@ -31,6 +39,21 @@
   <p class="empty">{{t .Lang "No demo site installed yet."}}</p>
   {{end}}
 </article>
+
+{{/* Plugin detail dialog, filled by app.js from the clicked item's data-*. */}}
+<dialog id="plugindialog" data-close="backdrop">
+  <article>
+    <button class="dlgclose" type="button" aria-label="Close">×</button>
+    <h2 id="pd-name"></h2>
+    <dl class="pdetail">
+      <dt>{{t .Lang "Type"}}</dt><dd id="pd-type"></dd>
+      <dt>{{t .Lang "Component"}}</dt><dd id="pd-component"></dd>
+      <dt>{{t .Lang "Version"}}</dt><dd id="pd-version"></dd>
+      <dt>{{t .Lang "Location"}}</dt><dd id="pd-relpath"></dd>
+      <dt id="pd-source-dt">{{t .Lang "Source"}}</dt><dd><a id="pd-source" href="#" target="_blank" rel="noopener"></a></dd>
+    </dl>
+  </article>
+</dialog>
 
 {{template "footer" .}}
 </html>{{end}}

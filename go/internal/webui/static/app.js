@@ -116,6 +116,29 @@ document.addEventListener('click', function (e) {
   document.querySelector('#restoredialog select').value = b.dataset.samecode ? 'keep' : '';
   document.getElementById('restoredialog').showModal();
 });
+// Installed plugins: click an item to open the detail dialog, filled from the
+// item's data-* (the list already carries everything — no fetch).
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('.pitem');
+  if (!b) return;
+  var d = document.getElementById('plugindialog');
+  if (!d) return;
+  var set = function (id, val) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = val || '—';
+  };
+  set('pd-name', b.dataset.name);
+  set('pd-type', b.dataset.type);
+  set('pd-component', b.dataset.component);
+  set('pd-version', b.dataset.release ? b.dataset.release + ' (' + b.dataset.version + ')' : b.dataset.version);
+  set('pd-relpath', b.dataset.relpath);
+  var a = document.getElementById('pd-source');
+  var src = b.dataset.source;
+  if (src) { a.href = src; a.textContent = src; }
+  document.getElementById('pd-source-dt').hidden = !src; // hide the Source row when unknown
+  a.parentNode.hidden = !src;
+  d.showModal();
+});
 document.addEventListener('click', function (e) {
   var r = e.target.closest('button.reveal');
   if (!r) return;

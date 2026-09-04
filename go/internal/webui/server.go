@@ -215,8 +215,8 @@ type view struct {
 	SSOQR      template.URL
 	// Backups page.
 	Backups []backupRow
-	// Plugins page.
-	Plugins []pluginRow
+	// Plugins page: additional plugins bucketed by type.
+	PluginGroups []pluginGroup
 	// Recommendations page.
 	Recommends []recommendRow
 	// The empty dashboard's recipe chooser: vendor tabs of version streams.
@@ -403,6 +403,7 @@ type serviceRow struct {
 // component, the localized name, where it sits in the tree, and its version.
 type pluginRow struct {
 	Component   string
+	Type        string
 	DisplayName string
 	Relpath     string
 	// Version is Moodle's numeric version (the YYYYMMDDXX code date, always
@@ -411,6 +412,40 @@ type pluginRow struct {
 	Release string
 	// SourceURL is the plugin's repository on GitHub/GitLab, "" when unknown.
 	SourceURL string
+}
+
+// pluginGroup is one plugin-type's plugins, for the type-grouped Plugins page.
+type pluginGroup struct {
+	Type    string
+	Label   string
+	Plugins []pluginRow
+}
+
+// pluginTypeLabels give Moodle's frankenstyle plugin-type slugs a friendly name;
+// an unlisted type falls back to its slug (see pluginTypeLabel). English only —
+// these are secondary labels on a technical page.
+var pluginTypeLabels = map[string]string{
+	"mod": "Activity modules", "block": "Blocks", "tool": "Admin tools",
+	"local": "Local plugins", "enrol": "Enrolment methods", "auth": "Authentication",
+	"theme": "Themes", "format": "Course formats", "report": "Reports",
+	"qtype": "Question types", "qbank": "Question bank", "qbehaviour": "Question behaviours",
+	"filter": "Filters", "editor": "Editors", "repository": "Repositories",
+	"portfolio": "Portfolios", "webservice": "Web services", "gradingform": "Grading methods",
+	"gradereport": "Grade reports", "gradeexport": "Grade exports", "gradeimport": "Grade imports",
+	"availability": "Availability conditions", "customfield": "Custom fields",
+	"dataformat": "Data formats", "profilefield": "Profile fields", "antivirus": "Antivirus",
+	"search": "Search engines", "media": "Media players", "plagiarism": "Plagiarism",
+	"contenttype": "Content bank", "fileconverter": "Document converters",
+	"assignsubmission": "Assignment submissions", "assignfeedback": "Assignment feedback",
+	"quizaccess": "Quiz access rules", "atto": "Atto editor", "tiny": "TinyMCE editor",
+	"certificateelement": "Certificate elements", "cachestore": "Cache stores",
+}
+
+func pluginTypeLabel(t string) string {
+	if l, ok := pluginTypeLabels[t]; ok {
+		return l
+	}
+	return t
 }
 
 // userRow is one Moodle account shown in the accounts section — its plaintext
@@ -672,6 +707,7 @@ func pluginRows() ([]pluginRow, error) {
 	for _, p := range plugins {
 		rows = append(rows, pluginRow{
 			Component:   p.Component,
+			Type:        p.Type,
 			DisplayName: p.DisplayName,
 			Relpath:     p.Relpath,
 			Version:     p.VersionDisk.String(),
@@ -686,6 +722,24 @@ func pluginRows() ([]pluginRow, error) {
 		return strings.Compare(a.Relpath, b.Relpath)
 	})
 	return rows, nil
+}
+
+// groupPlugins buckets the rows by plugin type into groups ordered by their
+// friendly label, so the Plugins page reads as "Activity modules … / Blocks …"
+// instead of one long technical table.
+func groupPlugins(rows []pluginRow) []pluginGroup {
+	byType := map[string][]pluginRow{}
+	for _, r := range rows {
+		byType[r.Type] = append(byType[r.Type], r)
+	}
+	groups := make([]pluginGroup, 0, len(byType))
+	for t, ps := range byType {
+		groups = append(groups, pluginGroup{Type: t, Label: pluginTypeLabel(t), Plugins: ps})
+	}
+	slices.SortFunc(groups, func(a, b pluginGroup) int {
+		return strings.Compare(a.Label, b.Label)
+	})
+	return groups
 }
 
 // sourceURLFor returns the URL of the checkout whose relpath is the longest
@@ -709,7 +763,7 @@ func (s *Server) pluginsView(r *http.Request) view {
 		if err != nil {
 			v.Error = err.Error()
 		}
-		v.Plugins = rows
+		v.PluginGroups = groupPlugins(rows)
 	}
 	v.Section = "Installed plugins"
 	return v
