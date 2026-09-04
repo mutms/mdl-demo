@@ -83,11 +83,23 @@ form.stack { max-width: 26rem; }
 .ff > select ~ label { transform: scale(.78) translateY(-.62rem); }
 .ff > input:focus ~ label { color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { .ff > label { transition: none; } }
-/* The confirm dialog reuses the modal shell; its two buttons sit in a row. */
-dialog#confirmdialog .msg { margin: .2rem 0 1.1rem; }
+/* The confirm dialog reuses the modal shell; its two buttons sit in a row. The
+   right padding keeps the message clear of the × close button, and the row gets
+   air above it. */
+dialog#confirmdialog .msg { margin: .3rem 0 1.4rem; padding-right: 1.5rem; }
+dialog#confirmdialog .row.end, dialog#ssodialog .row.end { gap: .5rem; }
+/* A dialog form's submit row wants a clear gap below the last field, and space
+   between its Cancel and submit buttons. */
+dialog .stack .row.end { margin-top: .6rem; gap: .5rem; }
 /* Pico makes buttons full-width form blocks with generous padding; this
      console uses them inline in rows, tables and headers, and quieter. */
-button { width: auto; margin-bottom: 0; padding: .4rem .85rem; }
+/* Match Pico's own button selector group, not a bare `button`: Pico sizes
+   buttons via [type=button]/[type=submit]/[role=button] (specificity 0,1,0),
+   which a lone `button` rule (0,0,1) cannot override — so a type="button"
+   (e.g. a dialog's Cancel) would keep Pico's larger padding and stand taller
+   than its bare-<button> neighbour. Same selectors + later load = consistent. */
+button, [role=button], [type=button], [type=submit], [type=reset] {
+  width: auto; margin-bottom: 0; padding: .4rem .85rem; }
 .error { color: var(--err); background: var(--errbg); border-radius: var(--pico-border-radius);
   padding: .5rem .7rem; font-size: .88rem; }
 pre.log { font: .78rem/1.45 ui-monospace, SFMono-Regular, monospace;
@@ -194,10 +206,7 @@ details.older { margin-top: .35rem; }
    button sits on the right. */
 .installbar { margin-top: 1.2rem; display: flex; align-items: center;
   gap: .8rem; flex-wrap: wrap; }
-input.inline { flex: 1 1 14rem; min-width: 8rem; margin: 0; font: inherit;
-  color: var(--fg); background: var(--card);
-  border: 1px solid var(--line); border-radius: 6px; padding: .4rem .6rem; }
-input.inline:focus { border-color: var(--accent); outline: none; }
+.installbar .ff { flex: 1 1 14rem; min-width: 8rem; margin: 0; }
 button.install { flex: 0 0 auto; }
 button.install[disabled] { opacity: .5; cursor: not-allowed; }
 /* When a package is picked the Install button pops once to carry the eye to

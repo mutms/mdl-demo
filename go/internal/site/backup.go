@@ -7,6 +7,8 @@ package site
 // passwords: account passwords are regenerated at the end of every restore.
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -154,6 +156,33 @@ func Backup(logf execx.Logf, version string) (string, error) {
 	return name, nil
 }
 
+// CurrentRecipeHash returns the SHA-256 (hex) of the code tree's
+// `mudev recipe export --sort` output — the exact recipe form a backup embeds
+// (see backup.RecipeHash), so the two hashes compare directly to tell whether a
+// restore can keep the code already on disk. Read-only on the tree; the caller
+// should only run it for an installed, idle site. mudev insists on a .yaml
+// destination (no stdout), so it goes through a temp file.
+func CurrentRecipeHash() (string, error) {
+	if !moodle.Detected() {
+		return "", fmt.Errorf("no Moodle tree to hash")
+	}
+	tmp, err := os.CreateTemp("", "mdl-recipe-*.yaml")
+	if err != nil {
+		return "", err
+	}
+	tmp.Close()
+	defer os.Remove(tmp.Name())
+	if _, err := execx.Output(moodle.Root, "mudev", "recipe", "export", "--sort", "--file", tmp.Name()); err != nil {
+		return "", err
+	}
+	data, err := os.ReadFile(tmp.Name())
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:]), nil
+}
+
 // RestoreOptions selects what to restore and onto which code tree.
 type RestoreOptions struct {
 	// File is the backup's name inside backup.Dir.
@@ -166,6 +195,13 @@ type RestoreOptions struct {
 	// instead — the upgrade path (back up on 4.5, restore into 5.3), with
 	// upgrade.php bridging the data.
 	Recipe string
+	// KeepCode restores only the database and data onto the code tree already on
+	// disk, skipping the minutes-long git checkout — the fast path when the user
+	// knows the current tree already matches the backup (or is a version they
+	// want to upgrade the backup's data into). Requires an installed site;
+	// upgrade.php still bridges the data to whatever version the tree carries.
+	// Overrides Recipe.
+	KeepCode bool
 }
 
 // Restore replaces the demo site with a backup's content. It always wipes and
@@ -189,17 +225,24 @@ func Restore(logf execx.Logf, o RestoreOptions) error {
 	if err != nil {
 		return err
 	}
+	st, err := state.Load()
+	if err != nil {
+		return err
+	}
 	treeRecipe := meta.Recipe
-	if o.Recipe != "" {
+	if o.KeepCode {
+		// Keeping the code means keeping the tree that is already installed, so
+		// there must be one — and its recipe is what the restored site carries.
+		if !st.Installed() || !moodle.Detected() {
+			return fmt.Errorf("keep current code needs an installed Moodle tree")
+		}
+		treeRecipe = st.Recipe
+	} else if o.Recipe != "" {
 		rec, err := recipes.Get(o.Recipe)
 		if err != nil {
 			return err
 		}
 		treeRecipe = rec.ID
-	}
-	st, err := state.Load()
-	if err != nil {
-		return err
 	}
 	if o.Wwwroot == "" {
 		o.Wwwroot = st.SiteURLFor(state.DefaultHost)
@@ -224,10 +267,16 @@ func Restore(logf execx.Logf, o RestoreOptions) error {
 	if err := apache.RestorePlaceholder(logf); err != nil {
 		return err
 	}
-	logf("Removing the current database, code tree and data")
+	if o.KeepCode {
+		logf("Removing the current database and data (keeping the code tree)")
+	} else {
+		logf("Removing the current database, code tree and data")
+	}
 	warn("dropping the database", pgdb.Drop(logf))
-	if err := clearDir(moodle.Root); err != nil {
-		return err
+	if !o.KeepCode {
+		if err := clearDir(moodle.Root); err != nil {
+			return err
+		}
 	}
 	if err := os.RemoveAll(moodle.Dataroot); err != nil {
 		return err
@@ -236,7 +285,9 @@ func Restore(logf execx.Logf, o RestoreOptions) error {
 	// Rebuild: code tree from the chosen recipe (or the backup's own), then
 	// the same provisioning steps as Install, with the installer replaced by
 	// the dump + dataroot + upgrade.php.
-	if o.Recipe != "" {
+	if o.KeepCode {
+		logf("Keeping the current Moodle code tree (" + treeRecipe + ")")
+	} else if o.Recipe != "" {
 		logf("Assembling Moodle code tree from recipe " + treeRecipe + " (shallow clone of several git repositories)")
 		if err := execx.Run(logf, moodle.Root, "mudev", "clone", "--shallow", treeRecipe); err != nil {
 			return err

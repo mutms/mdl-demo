@@ -35,7 +35,8 @@ document.addEventListener('click', function (e) {
   }
 });
 document.addEventListener('click', function (e) {
-  var c = e.target.closest('button.dlgclose');
+  // The × corner button and a form dialog's Cancel button both just close it.
+  var c = e.target.closest('button.dlgclose, [data-dlgcancel]');
   if (c) c.closest('dialog').close();
 });
 // Theme toggle: auto → light → dark. Auto = no data-theme, no stored value.
@@ -108,7 +109,11 @@ document.addEventListener('click', function (e) {
   if (!f) return;
   f.value = b.dataset.restore;
   document.getElementById('restorename').textContent = b.dataset.restore;
-  document.querySelector('#restoredialog select').selectedIndex = 0;
+  // Default to keeping the current code when this backup's recipe matches the
+  // installed tree (data-samecode, set server-side) — it skips the checkout.
+  // Otherwise the bundled recipe (value ""), an exact rebuild. The "keep"
+  // option only exists when a site is installed, so this is a no-op otherwise.
+  document.querySelector('#restoredialog select').value = b.dataset.samecode ? 'keep' : '';
   document.getElementById('restoredialog').showModal();
 });
 document.addEventListener('click', function (e) {
@@ -162,6 +167,15 @@ document.addEventListener('submit', function (e) {
     var d = document.getElementById('confirmdialog');
     if (!d) { if (confirm(f.dataset.confirm)) f.submit(); return; } // no dialog on page: fall back
     d.querySelector('.msg').textContent = f.dataset.confirm;
+    // Label the action button with the action itself ("Reset site", "Delete"),
+    // not a generic "Confirm" — clearer and safer. Taken from the button that
+    // was clicked (its text, or aria-label for the icon-only ones); the
+    // translated "Confirm" stays as the fallback.
+    var ok = d.querySelector('[data-confirm-ok]');
+    if (!ok.dataset.base) ok.dataset.base = ok.textContent.trim();
+    var s = e.submitter;
+    var verb = s && (s.getAttribute('aria-label') || s.textContent.trim());
+    ok.textContent = verb || ok.dataset.base;
     pendingConfirm = f;
     d.showModal();
     return;
@@ -189,6 +203,20 @@ document.addEventListener('click', function (e) {
 // (backdrop click, Esc, ×) keeps a stale form from firing on the next confirm.
 document.addEventListener('close', function (e) {
   if (e.target.id === 'confirmdialog') pendingConfirm = null;
+}, true);
+
+// Liveness reload (see handleAlive): the /alive poll fires "stale-page" when the
+// coarse state changed under the open page. Reload — but NOT while a modal is
+// open, or a job finishing (backup, install, reset) would yank the dialog out
+// from under the user. Defer to the next dialog close instead; the poll keeps
+// re-firing meanwhile, so the flag just stays set until nothing is open.
+var pendingReload = false;
+document.body.addEventListener('stale-page', function () {
+  if (document.querySelector('dialog[open]')) pendingReload = true;
+  else location.reload();
+});
+document.addEventListener('close', function () {
+  if (pendingReload && !document.querySelector('dialog[open]')) location.reload();
 }, true);
 // data-open: open that dialog; data-clear empties an element first (the SSO
 // dialog body, so a stale stage never shows while htmx fetches the new one).

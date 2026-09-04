@@ -9,6 +9,8 @@ package backup
 import (
 	"archive/tar"
 	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -279,6 +281,36 @@ func ExtractFile(path, member, dest string) error {
 			return err
 		}
 		return out.Close()
+	}
+}
+
+// RecipeHash returns the SHA-256 (hex) of the archive's recipe.yaml member —
+// the tree's `mudev recipe export --sort` output, which is deterministic (no
+// timestamps, sorted), so equal hashes mean the same code recipe. Used to
+// decide whether a restore can keep the code already on disk. Reads at most a
+// megabyte: a recipe is small, and this caps a malformed archive.
+func RecipeHash(path string) (string, error) {
+	f, tr, err := open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			return "", fmt.Errorf("%s missing from archive", RecipeName)
+		}
+		if err != nil {
+			return "", err
+		}
+		if filepath.Clean(hdr.Name) != RecipeName {
+			continue
+		}
+		h := sha256.New()
+		if _, err := io.Copy(h, io.LimitReader(tr, 1<<20)); err != nil {
+			return "", err
+		}
+		return hex.EncodeToString(h.Sum(nil)), nil
 	}
 }
 

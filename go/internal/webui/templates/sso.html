@@ -6,14 +6,16 @@
 {{define "ssodialog"}}
 <p class="empty">{{t .Lang "Open the demo site as"}} <code>{{.SSOUser}}</code>
    {{if .TunnelURL}}{{t .Lang "— in a new tab here, or on a phone via a single-use QR code."}}{{else}}{{t .Lang "in a new tab here."}}{{end}}</p>
-<div class="row">
+{{/* Right-aligned like every dialog footer: secondary (QR) left of the primary
+     (Log in), which sits rightmost. */}}
+<div class="row end">
+  {{if .TunnelURL}}<button class="secondary" hx-post="/sso/qr" hx-vals='{"csrf":"{{.CSRF}}","user":"{{.SSOUser}}"}' hx-target="#ssobody">{{t .Lang "QR code"}}</button>{{end}}
   {{/* The new tab takes over; the dialog closes behind it (app.js). */}}
   <form method="post" action="/sso/login" target="_blank" data-close-dialog="ssodialog">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
     <input type="hidden" name="user" value="{{.SSOUser}}">
     <button>{{t .Lang "Log in as"}} {{.SSOUser}}</button>
   </form>
-  {{if .TunnelURL}}<button class="secondary" hx-post="/sso/qr" hx-vals='{"csrf":"{{.CSRF}}","user":"{{.SSOUser}}"}' hx-target="#ssobody">{{t .Lang "QR code"}}</button>{{end}}
 </div>
 {{end}}
 

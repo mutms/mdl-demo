@@ -369,6 +369,10 @@ type backupRow struct {
 	// Restorable is false for a file that is not a readable .mdb archive
 	// (a foreign upload, say): it can be downloaded or deleted, not restored.
 	Restorable bool
+	// SameCode is true when this backup's recipe matches the code tree already
+	// on disk (equal recipe hashes) — the restore dialog then defaults to the
+	// fast "keep current code" path. Only set for an installed, idle site.
+	SameCode bool
 }
 
 type serviceRow struct {
@@ -432,7 +436,8 @@ func (s *Server) buildView(r *http.Request) view {
 		// header scan + first-tar-entry meta reads).
 		list, _ := recipes.List()
 		v.VendorTabs = groupRecipes(list)
-		v.Backups, _ = backupRows()
+		// Not installed here, so no code to keep: pass no hash.
+		v.Backups, _ = backupRows("")
 		if err == nil {
 			v.Fullname = st.Name
 			v.Shortname = st.Name
@@ -484,14 +489,18 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 
 // handleAlive is the open-page liveness check: the page polls it with the state
 // signature it was rendered against; a mismatch means the coarse state changed
-// under it — a reset (web or CLI), an install finishing, or a rebuilt container
-// (new process) — so the page is stale and htmx reloads it (HX-Refresh).
+// under it — a reset (web or CLI), an install/backup finishing, or a rebuilt
+// container (new process) — so the page is stale and wants reloading.
+//
+// It fires a "stale-page" event rather than htmx's own HX-Refresh: app.js holds
+// the reload back while a modal <dialog> is open, so a job finishing (busy flips
+// in the signature) can never yank a dialog out from under the user mid-action.
 func (s *Server) handleAlive(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("s") != s.stateSig() {
-		w.Header().Set("HX-Refresh", "true")
+		w.Header().Set("HX-Trigger", "stale-page")
 	}
-	// 200 with an empty body (hx-swap="none" changes nothing on a match); htmx
-	// reliably acts on the HX-Refresh header on a 200.
+	// 200 with an empty body (hx-swap="none" changes nothing); htmx dispatches
+	// the HX-Trigger event on a 200.
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -544,7 +553,12 @@ func (s *Server) handleInstall(w http.ResponseWriter, r *http.Request) {
 // backupRows shapes the backups listing for the template. Reading each file's
 // metadata is cheap by format contract: meta.json is always the first tar
 // entry.
-func backupRows() ([]backupRow, error) {
+// backupRows shapes the listing. currentHash, when non-empty, is the installed
+// tree's recipe hash (site.CurrentRecipeHash): a restorable backup whose recipe
+// hashes equal it is flagged SameCode, so the dialog can default to keeping the
+// code. Empty currentHash (not installed, or busy) leaves every row SameCode
+// false — the safe default.
+func backupRows(currentHash string) ([]backupRow, error) {
 	list, err := backup.List()
 	if err != nil {
 		return nil, err
@@ -559,6 +573,13 @@ func backupRows() ([]backupRow, error) {
 		if b.Meta != nil {
 			row.Recipe = b.Meta.Recipe
 			row.Restorable = true
+			if currentHash != "" {
+				if p, err := backup.Path(b.Name); err == nil {
+					if h, err := backup.RecipeHash(p); err == nil {
+						row.SameCode = h == currentHash
+					}
+				}
+			}
 		}
 		rows = append(rows, row)
 	}
@@ -567,7 +588,15 @@ func backupRows() ([]backupRow, error) {
 
 func (s *Server) backupsView(r *http.Request) view {
 	v := s.buildView(r)
-	rows, err := backupRows()
+	// For an installed, idle site, hash the current tree's recipe once so the
+	// listing can flag which backups match it (fast "keep current code"
+	// restore). Skipped while busy — the tree may be mid-rebuild — and when
+	// empty, where there is nothing to keep.
+	var currentHash string
+	if v.Installed && !v.Busy {
+		currentHash, _ = site.CurrentRecipeHash()
+	}
+	rows, err := backupRows(currentHash)
 	if err != nil {
 		v.Error = err.Error()
 	}
@@ -681,21 +710,27 @@ func (s *Server) handleBackupRestore(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid demo site URL", http.StatusBadRequest)
 		return
 	}
+	// The recipe select's "keep" sentinel means: restore data onto the code
+	// tree already on disk, skipping the git checkout (the fast path).
+	recipe := strings.TrimSpace(r.FormValue("recipe"))
 	o := site.RestoreOptions{
-		File:    file,
-		Wwwroot: wwwroot,
-		Recipe:  strings.TrimSpace(r.FormValue("recipe")),
+		File:     file,
+		Wwwroot:  wwwroot,
+		KeepCode: recipe == "keep",
+	}
+	if !o.KeepCode {
+		o.Recipe = recipe
 	}
 	if !s.job.startRestore(o) {
 		http.Error(w, "another operation is already running", http.StatusConflict)
 		return
 	}
-	// The dashboard's chooser restores land back on the dashboard.
-	back := "/backups"
-	if r.FormValue("back") == "/" {
-		back = "/"
-	}
-	http.Redirect(w, r, back, http.StatusSeeOther)
+	// A restore rebuilds the whole site, so it always lands on the dashboard —
+	// progress is watched there (busy site card + log), and the restored site
+	// shows up when the job finishes, exactly like install and reset. Wherever
+	// it was started from (Backups page or the empty-dashboard chooser), the
+	// Backups page is the wrong place to sit afterwards.
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func (s *Server) handleBackupDelete(w http.ResponseWriter, r *http.Request) {

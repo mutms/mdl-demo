@@ -50,7 +50,10 @@
       </select>
       <label for="cu-role">{{t .Lang "Global role"}}</label>
     </div>
-    <div class="row end"><button>{{t .Lang "Create user"}}</button></div>
+    <div class="row end">
+      <button type="button" class="secondary outline" data-dlgcancel>{{t .Lang "Cancel"}}</button>
+      <button>{{t .Lang "Create user"}}</button>
+    </div>
   </form>
   </article>
 </dialog>

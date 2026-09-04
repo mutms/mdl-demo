@@ -51,20 +51,28 @@
   <article>
   <button class="dlgclose" type="button" aria-label="Close">×</button>
   <p class="empty">{{t .Lang "The site's code is rebuilt from the selected recipe, then the backup's data is loaded and upgraded to match. The bundled recipe restores the exact original site."}}</p>
-  <form class="stack" method="post" action="/backups/restore"
-        data-confirm="{{t .Lang "Replace the current demo site with this backup? The existing database, code tree and data are deleted."}}">
+  {{/* No data-confirm: this dialog, with its warning text and explicit Restore
+       button, IS the confirmation — a second modal would be redundant. */}}
+  <form class="stack" method="post" action="/backups/restore">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
     <input type="hidden" name="file" id="restorefile">
     <p class="m0"><code id="restorename"></code></p>
-    <label>{{t .Lang "Site recipe"}}
-      <select name="recipe">
+    <div class="ff">
+      <select id="restore-recipe" name="recipe">
         {{/* value="" = full restore from the recipe.yaml inside the backup. */}}
         <option value="" selected>{{t .Lang "Bundled recipe (exact original)"}}</option>
+        {{/* value="keep" = reuse the code already on disk, skipping the checkout;
+             only meaningful when a site is installed. */}}
+        {{if .Installed}}<option value="keep">{{t .Lang "Keep current code (fast — no re-download)"}}</option>{{end}}
         {{range .Recipes}}<option value="{{.ID}}">{{.ID}} — {{.Name}}</option>
         {{end}}
       </select>
-    </label>
-    <div class="row end"><button>{{t .Lang "Restore"}}</button></div>
+      <label for="restore-recipe">{{t .Lang "Site recipe"}}</label>
+    </div>
+    <div class="row end">
+      <button type="button" class="secondary outline" data-dlgcancel>{{t .Lang "Cancel"}}</button>
+      <button>{{t .Lang "Restore"}}</button>
+    </div>
   </form>
   </article>
 </dialog>

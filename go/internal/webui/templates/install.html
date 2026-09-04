@@ -50,8 +50,12 @@
     </div>
     <div class="installbar">
       {{/* Optional: left blank it defaults to the demo/recipe name; the short
-           name derives from it server-side. */}}
-      <input name="fullname" class="inline" value="{{.Fullname}}" placeholder="{{t .Lang "Type your site name"}}" maxlength="254" aria-label="{{t .Lang "Site name"}}">
+           name derives from it server-side. Floating label like every other
+           field; placeholder=" " keeps :placeholder-shown driving the float. */}}
+      <div class="ff">
+        <input id="install-fullname" name="fullname" value="{{.Fullname}}" placeholder=" " maxlength="254">
+        <label for="install-fullname">{{t .Lang "Site name"}}</label>
+      </div>
       <button type="submit" class="install">{{t .Lang "Install"}}</button>
     </div>
   </form>
@@ -67,7 +71,6 @@
               data-confirm="{{t $.Lang "Restore this backup now? Expect a few minutes."}}">
           <input type="hidden" name="csrf" value="{{$.CSRF}}">
           <input type="hidden" name="file" value="{{.Name}}">
-          <input type="hidden" name="back" value="/">
           <button class="act">{{t $.Lang "Restore"}}</button>
         </form>
       </td>
