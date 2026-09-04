@@ -82,6 +82,7 @@ func Serve(out io.Writer, version string) error {
 	mux.HandleFunc("GET /tunnel/qr.png", s.handleTunnelQR)
 	mux.HandleFunc("POST /users/create", s.csrf(s.handleUserCreate))
 	mux.HandleFunc("GET /plugins", s.handlePluginsPage)
+	mux.HandleFunc("GET /recommends", s.handleRecommendsPage)
 	mux.HandleFunc("GET /backups", s.handleBackupsPage)
 	mux.HandleFunc("GET /section/backuplist", s.handleBackupList)
 	mux.HandleFunc("POST /backups/create", s.csrf(s.handleBackupCreate))
@@ -207,6 +208,8 @@ type view struct {
 	Backups []backupRow
 	// Plugins page.
 	Plugins []pluginRow
+	// Recommendations page.
+	Recommends []recommendRow
 	// The empty dashboard's recipe chooser: vendor tabs of version streams.
 	VendorTabs []vendorTab
 }
@@ -244,6 +247,21 @@ var streamCopy = map[string]streamText{
 	"mutms/moodle":   {"On plain Moodle", "All MuTMS plugins on plain Moodle core — no multi-tenancy."},
 	"mutms/dev":      {"Development", "The full MuTMS suite in active development, on the latest stable Moodle."},
 	"iomad/dev":      {"Development", "IOMAD, a multi-tenant Moodle distribution — its current stable branches."},
+}
+
+// recommendRow is one entry on the maintainer's recommendations page. The list
+// is deliberately curated and personal (recommends()), clearly the maintainer's
+// own view — and forkable: a fork replaces it with its own picks.
+type recommendRow struct{ Name, URL, Blurb string }
+
+func recommends() []recommendRow {
+	return []recommendRow{
+		{"MuTMS", "https://mutms.org", "Open multi-tenancy, programs and certifications for Moodle."},
+		{"mudev", "https://github.com/mutms/mudev", "Assembles Moodle test-site code trees from recipes and a plugin catalogue."},
+		{"mpd", "https://github.com/mutms/mpd", "Reproducible dev VMs and tooling for Moodle work."},
+		{"Camp Registry", "https://camp-registry.org/", "An open, community catalogue of Moodle plugins."},
+		{"mdlshield", "https://mdlshield.com", "Security scanning and hardening for Moodle."},
+	}
 }
 
 // vendorRank orders the chooser's tabs: the three known vendors first in this
@@ -627,6 +645,12 @@ func (s *Server) pluginsView(r *http.Request) view {
 
 func (s *Server) handlePluginsPage(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "plugins", s.pluginsView(r))
+}
+
+func (s *Server) handleRecommendsPage(w http.ResponseWriter, r *http.Request) {
+	v := s.buildView(r)
+	v.Recommends = recommends()
+	s.render(w, "recommends", v)
 }
 
 func (s *Server) handleBackupCreate(w http.ResponseWriter, r *http.Request) {

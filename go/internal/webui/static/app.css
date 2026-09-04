@@ -42,6 +42,11 @@ td.meta { color: var(--dim); font-family: ui-monospace, SFMono-Regular, monospac
 .name { font-weight: 600; }
 .role { color: var(--dim); font-weight: 400; font-size: .82rem; }
 .ext { color: var(--dim); font-size: .78rem; }
+/* Recommendations list: a name (link) with its blurb below. */
+dl.recs { margin: .6rem 0 0; }
+dl.recs dt { margin-top: .85rem; font-weight: 600; }
+dl.recs dt:first-child { margin-top: 0; }
+dl.recs dd { margin: .1rem 0 0; color: var(--dim); font-size: .88rem; }
 .badge { display: inline-block; font-size: .72rem; padding: .05rem .5rem;
          border-radius: 999px; background: var(--idlebg); color: var(--idle); }
 .badge.on { background: var(--okbg); color: var(--ok); }
@@ -132,6 +137,7 @@ details table { margin: .4rem 0 .2rem; }
 details table tr:last-child td { border-bottom: 0; }
 /* Install chooser: vendor tabs of version streams. Panels hide only once JS
    marks the box .js (progressive enhancement — no JS shows every panel). */
+.tabs { margin-top: 1.3rem; }               /* set the vendor row off from the heading */
 .tabbar { display: flex; gap: .4rem; border-bottom: 1px solid var(--line);
   margin: 0 0 1rem; }
 .tab { background: none; border: 0; border-bottom: 2px solid transparent;

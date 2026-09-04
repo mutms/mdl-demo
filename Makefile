@@ -102,3 +102,7 @@ hotpatch:
 	sudo podman exec $(TEST_NAME) mv -f /usr/bin/mdl-demo.new /usr/bin/mdl-demo
 	sudo podman restart $(TEST_NAME)
 	@echo "hot-patched $(TEST_NAME) with $(VERSION)"
+
+	@echo ""
+	@echo "test console: http://$(BRIDGE_IP):$(PORT)  ($(TEST_NAME))"
+	@echo ""
