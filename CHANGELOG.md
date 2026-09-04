@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Settings page to update the plugin and recipe catalogues from git
+- Installed plugins grouped by type with a per-plugin detail view
+- Recommendations page of projects and companies the maintainer likes
+- IOMAD demos in the installer
+- Restore option to keep the current code and skip the download
+- Moodle version shown on the demo site card
+- `MDL_DEMO_HIDE_PORT` to hide the port in the top bar for screen recordings
+
+### Changed
+
+- Sticky top bar with breadcrumb navigation and a live job-status indicator
+- Unified dialogs and floating-label forms across the console
+- Diagnostics and bug reporting moved onto the Settings page
+- Launchers gained `gc`, `install` and `uninstall`
+
+### Fixed
+
+- Cron is no longer reported as a failed service before the first install
+- A background reload no longer closes an open dialog
+
 ## [0.4.1] - 2026-09-02
 
 ### Changed
