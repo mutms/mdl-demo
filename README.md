@@ -10,8 +10,8 @@ and manages the demo site for you - effortlessly.
 
 ## How it works
 
-1. Add your operating system's container support - Apple's `container` on
-   macOS, Microsoft's `wslc` on Windows. (It comes from the OS maker, see below.)
+1. Install container support in your OS - Apple's `container` on
+   macOS, Microsoft's `wslc` on Windows.
 2. Run one command for your system.
 3. Open the console at <http://127.0.0.1:8081>.
 4. Pick a Moodle version and click install.

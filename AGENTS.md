@@ -14,7 +14,7 @@ One Go binary (`go/`, module `github.com/mutms/mdl-demo/go`) with three jobs:
 PID 1 of the container, management web UI, and CLI.
 
 - `cmd/mdl-demo` — subcommand dispatch (`init`, `serve`, `recipes`,
-  `install`, `status`, `reset`, `url`, `cron`, `version`).
+  `install`, `status`, `reset`, `backup`, `restore`, `url`, `cron`, `version`).
 - `internal/initd` — **the container's init**: starts and supervises
   postgresql/php-fpm/apache2/mailpit (restart with backoff), central zombie reaper,
   per-minute Moodle cron ticker, ordered shutdown on SIGTERM. The web UI
@@ -57,8 +57,9 @@ PID 1 of the container, management web UI, and CLI.
   image at `/usr/share/mdl-demo/php` and copied into the docroot as
   `mdl-demo/` on site install (root-owned, like the whole tree).
 - `launcher/mdl-demo` (bash, Apple `container`) and `launcher/mdl-demo.cmd`
-  (pure batch, `wslc`) — `create|start|stop|delete [NNNN]` / `list`; the only
-  place the outside port mapping and env vars are spelled out for users.
+  (pure batch, `wslc`) — `create|start|stop|delete|gc [NNNN]` / `list` / print-only
+  `install`|`uninstall`; the only place the outside port mapping and env vars are
+  spelled out for users.
 - `container/Containerfile` — two-stage build; stage 1 cross-compiles
   Go for `$TARGETARCH`, stage 2 is the runtime image.
 - Code assembly is delegated to the [mudev](https://github.com/mutms/mudev)
