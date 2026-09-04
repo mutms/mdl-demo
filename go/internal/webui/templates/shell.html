@@ -30,21 +30,30 @@
        masked on the Accounts card — the whole point of console-side users. */}}
   <form class="stack" method="post" action="/users/create">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
-    <label>{{t .Lang "Username"}}
-      <input name="username" required pattern="[a-z0-9._-]+" title="{{t .Lang "lowercase letters, digits, . _ -"}}">
-    </label>
-    <label>{{t .Lang "First name"}} <input name="firstname" required maxlength="100"></label>
-    <label>{{t .Lang "Last name"}} <input name="lastname" required maxlength="100"></label>
-    <label>{{t .Lang "Global role"}}
-      <select name="role">
+    <div class="ff">
+      <input id="cu-username" name="username" placeholder=" " required pattern="[a-z0-9._-]+" title="{{t .Lang "lowercase letters, digits, . _ -"}}">
+      <label for="cu-username">{{t .Lang "Username"}}</label>
+    </div>
+    <div class="ff">
+      <input id="cu-firstname" name="firstname" placeholder=" " required maxlength="100">
+      <label for="cu-firstname">{{t .Lang "First name"}}</label>
+    </div>
+    <div class="ff">
+      <input id="cu-lastname" name="lastname" placeholder=" " required maxlength="100">
+      <label for="cu-lastname">{{t .Lang "Last name"}}</label>
+    </div>
+    <div class="ff">
+      <select id="cu-role" name="role">
         <option value="">{{t .Lang "None (plain user)"}}</option>
         <option value="manager">{{t .Lang "Manager"}}</option>
         <option value="admin">{{t .Lang "Administrator"}}</option>
       </select>
-    </label>
-    <div><button>{{t .Lang "Create user"}}</button></div>
+      <label for="cu-role">{{t .Lang "Global role"}}</label>
+    </div>
+    <div class="row end"><button>{{t .Lang "Create user"}}</button></div>
   </form>
   </article>
 </dialog>
+{{template "confirmdialog" .}}
 {{template "footer" .}}
 </html>{{end}}

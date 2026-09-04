@@ -1,0 +1,19 @@
+{{/* One confirm dialog for every destructive action — the single replacement
+     for the browser's native confirm() popup, so all confirmations share the
+     console's modal look. A form carrying data-confirm="…" is intercepted in
+     app.js: the submit is held, this dialog opens with that message, and the
+     form only submits if the user clicks the confirm button. Rendered at page
+     level (like the other dialogs) so a swapped fragment can never take it out
+     from under an open confirmation. */}}
+{{define "confirmdialog"}}
+<dialog id="confirmdialog" data-close="backdrop">
+  <article>
+    <button class="dlgclose" type="button" aria-label="Close">×</button>
+    <p class="msg"></p>
+    <div class="row end">
+      <button class="act" type="button" data-confirm-cancel>{{t .Lang "Cancel"}}</button>
+      <button class="secondary" type="button" data-confirm-ok>{{t .Lang "Confirm"}}</button>
+    </div>
+  </article>
+</dialog>
+{{end}}

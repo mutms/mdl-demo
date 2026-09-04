@@ -64,10 +64,11 @@
         {{end}}
       </select>
     </label>
-    <div><button>{{t .Lang "Restore"}}</button></div>
+    <div class="row end"><button>{{t .Lang "Restore"}}</button></div>
   </form>
   </article>
 </dialog>
 
+{{template "confirmdialog" .}}
 {{template "footer" .}}
 </html>{{end}}

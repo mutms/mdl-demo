@@ -149,19 +149,47 @@ document.addEventListener('submit', function (e) {
   var card = f.closest('#tools');
   if (card) card.removeAttribute('hx-trigger');
 });
-// data-confirm: ask before a destructive form submits.
+// data-confirm: ask before a destructive form submits, using the console's own
+// confirm dialog (never the browser's native confirm popup). The submit is held
+// and the form kept in pendingConfirm; clicking the dialog's confirm button
+// re-submits it with a flag set so this handler lets it straight through.
 // data-close-dialog: close that dialog once the form goes off (a new tab).
+var pendingConfirm = null;
 document.addEventListener('submit', function (e) {
   var f = e.target;
-  if (f.dataset.confirm && !confirm(f.dataset.confirm)) {
+  if (f.dataset.confirm && !f.dataset.confirmed) {
     e.preventDefault();
+    var d = document.getElementById('confirmdialog');
+    if (!d) { if (confirm(f.dataset.confirm)) f.submit(); return; } // no dialog on page: fall back
+    d.querySelector('.msg').textContent = f.dataset.confirm;
+    pendingConfirm = f;
+    d.showModal();
     return;
   }
   if (f.dataset.closeDialog) {
-    var d = document.getElementById(f.dataset.closeDialog);
-    if (d) d.close();
+    var cd = document.getElementById(f.dataset.closeDialog);
+    if (cd) cd.close();
   }
 });
+// Confirm dialog buttons: OK re-submits the held form; anything else drops it.
+document.addEventListener('click', function (e) {
+  if (e.target.closest('[data-confirm-ok]')) {
+    var f = pendingConfirm;
+    pendingConfirm = null;
+    document.getElementById('confirmdialog').close();
+    if (f) { f.dataset.confirmed = '1'; f.requestSubmit ? f.requestSubmit() : f.submit(); }
+    return;
+  }
+  if (e.target.closest('[data-confirm-cancel]')) {
+    pendingConfirm = null;
+    document.getElementById('confirmdialog').close();
+  }
+});
+// Dropping the held form whenever the confirm dialog closes any other way
+// (backdrop click, Esc, ×) keeps a stale form from firing on the next confirm.
+document.addEventListener('close', function (e) {
+  if (e.target.id === 'confirmdialog') pendingConfirm = null;
+}, true);
 // data-open: open that dialog; data-clear empties an element first (the SSO
 // dialog body, so a stale stage never shows while htmx fetches the new one).
 document.addEventListener('click', function (e) {

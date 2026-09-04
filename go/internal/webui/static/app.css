@@ -63,6 +63,28 @@ dl.site dt { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em
 dl.site dd { margin: 0; font-size: .85rem; color: var(--dim); overflow-wrap: anywhere; }
 dl.site dd.name { font-weight: 600; color: var(--fg); }
 form.stack { max-width: 26rem; }
+/* Floating-label fields (the one form idiom, Bootstrap-5 style): the label sits
+   inside the control and shrinks up out of the way once the field has focus or a
+   value. Markup is <div class="ff"><input id=x placeholder=" "><label for=x>….
+   The " " placeholder is load-bearing: :placeholder-shown is how we tell an
+   empty field from a filled one. */
+.ff { position: relative; margin: 0 0 .8rem; }
+.ff > input, .ff > select {
+  height: 3.4rem; margin: 0; padding: 1.35rem .75rem .3rem; font: inherit;
+}
+.ff > select { padding-top: 1.2rem; }
+.ff > label {
+  position: absolute; top: 0; left: 0; margin: 0; padding: 1.05rem .75rem;
+  color: var(--dim); pointer-events: none; transform-origin: 0 0;
+  transition: transform .12s ease-out, color .12s ease-out; white-space: nowrap;
+}
+.ff > input:focus ~ label,
+.ff > input:not(:placeholder-shown) ~ label,
+.ff > select ~ label { transform: scale(.78) translateY(-.62rem); }
+.ff > input:focus ~ label { color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { .ff > label { transition: none; } }
+/* The confirm dialog reuses the modal shell; its two buttons sit in a row. */
+dialog#confirmdialog .msg { margin: .2rem 0 1.1rem; }
 /* Pico makes buttons full-width form blocks with generous padding; this
      console uses them inline in rows, tables and headers, and quieter. */
 button { width: auto; margin-bottom: 0; padding: .4rem .85rem; }
