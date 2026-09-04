@@ -48,8 +48,6 @@ EOF
 
 die() { echo "mdl-demo: $*" >&2; exit 1; }
 
-# install/uninstall only PRINT the steps - they never change the system. They
-# run before the runtime check below, so they work on a fresh Mac.
 install_help() {
     cat <<EOF
 Setting up mdl-demo on macOS - these are just the steps, nothing is changed.
@@ -109,14 +107,20 @@ if ! command -v container >/dev/null 2>&1; then
     exit 1
 fi
 if ! container ls >/dev/null 2>&1; then
-    cat >&2 <<EOF
-mdl-demo: Apple container is installed but not running.
+    # Installed but its background service is not up (the usual state right
+    # after installation or a reboot) - just start it and carry on.
+    echo "mdl-demo: starting Apple container's background service..." >&2
+    container system start >/dev/null 2>&1 || true
+    if ! container ls >/dev/null 2>&1; then
+        cat >&2 <<EOF
+mdl-demo: Apple container is installed but would not start.
 
-  Start its background service with
+  Start it yourself with
       container system start
-  and try this command again.
+  then run your mdl-demo command again.
 EOF
-    exit 1
+        exit 1
+    fi
 fi
 
 
