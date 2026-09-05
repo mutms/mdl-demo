@@ -124,6 +124,9 @@ pre.log { font: .78rem/1.45 ui-monospace, SFMono-Regular, monospace;
   max-height: 22rem; }
 pre.log.short { max-height: 5cm; }
 .row { display: flex; gap: .6rem; align-items: center; }
+/* Pico gives inputs a bottom margin; in a centered row it lifts them off the
+   button beside them, so drop it. */
+.row input, .row select { margin-bottom: 0; }
 /* Tools are cards in a responsive grid: navigation cards (whole card is a
    link) sit beside the Quick Tunnel switch card. */
 .toolgrid { display: grid; gap: .7rem;

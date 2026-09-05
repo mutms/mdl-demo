@@ -739,8 +739,12 @@ func groupPlugins(rows []pluginRow) []pluginGroup {
 	for t, ps := range byType {
 		groups = append(groups, pluginGroup{Type: t, Label: pluginTypeLabel(t), Plugins: ps})
 	}
+	// Order the type groups by where they live in the tree (each group's plugins
+	// are already relpath-sorted, so Plugins[0] is the group's first path), so a
+	// nested type sits under its parent — certificate elements after admin tools,
+	// not alphabetically adrift.
 	slices.SortFunc(groups, func(a, b pluginGroup) int {
-		return strings.Compare(a.Label, b.Label)
+		return strings.Compare(a.Plugins[0].Relpath, b.Plugins[0].Relpath)
 	})
 	return groups
 }
