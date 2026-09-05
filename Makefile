@@ -94,7 +94,7 @@ run:
 
 # Hot-patch the running test container with a freshly built binary — far faster
 # than `make image` for iterating on Go/template/CSS/JS changes (all embedded in
-# the binary). NOTE: PHP under php/ is NOT updated this way — rebuild the image
+# the binary). NOTE: PHP under container/php/ is NOT updated this way — rebuild the image
 # for that. The site, database and dataroot survive the restart; the console's
 # epoch changes, so open browser tabs reload themselves.
 #

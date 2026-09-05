@@ -173,7 +173,7 @@ func Maintenance(logf execx.Logf, enable bool) error {
 	return RunCLI(logf, "admin/cli/maintenance.php", flag)
 }
 
-// SetPassword sets a known account's password via php/cli/setpassword.php
+// SetPassword sets a known account's password via container/php/cli/setpassword.php
 // (which warns and skips a user that no longer exists).
 func SetPassword(logf execx.Logf, username, password string) error {
 	return runCLI(logf, []string{password}, "mdl-demo/cli/setpassword.php",
@@ -252,7 +252,7 @@ require_once(__DIR__ . '/lib/setup.php'); // Do not edit
 }
 
 // PHPShare is where the image keeps the console's Moodle-side PHP (the repo's
-// php/ dir): web endpoints at the top, CLI scripts under cli/.
+// container/php/ dir): web endpoints at the top, CLI scripts under cli/.
 const PHPShare = "/usr/share/mdl-demo/php"
 
 // InstallPHP copies the console's PHP into the docroot as <docroot>/mdl-demo/
@@ -262,7 +262,7 @@ func InstallPHP(logf execx.Logf) error {
 	return execx.Run(logf, "", "cp", "-r", PHPShare, filepath.Join(Docroot(), "mdl-demo"))
 }
 
-// CreateUser creates a demo account via php/cli/createuser.php. role is "",
+// CreateUser creates a demo account via container/php/cli/createuser.php. role is "",
 // "manager" (system-context Manager) or "admin" (site administrator).
 func CreateUser(logf execx.Logf, username, password, firstname, lastname, role string) error {
 	args := []string{

@@ -71,10 +71,10 @@ PID 1 of the container, management web UI, and CLI.
   (demo identity adopted once from `MDL_DEMO_PORT`/`MDL_DEMO_NAME`, the site
   URL override from `mdl-demo url`, installed site), command runner with
   line-streamed logs.
-- `php/` — the console's Moodle-side PHP: web endpoints at the top (e.g. the
-  single-use login handler), CLI scripts under `php/cli/`. Baked into the
-  image at `/usr/share/mdl-demo/php` and copied into the docroot as
-  `mdl-demo/` on site install (root-owned, like the whole tree).
+- `container/php/` — the console's Moodle-side PHP: web endpoints at the top
+  (e.g. the single-use login handler), CLI scripts under `container/php/cli/`.
+  Baked into the image at `/usr/share/mdl-demo/php` and copied into the docroot
+  as `mdl-demo/` on site install (root-owned, like the whole tree).
 - `launcher/mdl-demo` (bash, Apple `container`) and `launcher/mdl-demo.cmd`
   (pure batch, `wslc`) — `create|start|stop|delete|gc [NNNN]` / `list` / print-only
   `install`|`uninstall`; the only place the outside port mapping and env vars are
@@ -181,7 +181,7 @@ make hotpatch PORT=6391   # rebuild + inject + restart THAT container
 ```
 
 `hotpatch` covers Go/template/CSS/JS (all embedded in the binary); it does NOT
-update `php/` — rebuild the image (`make image`) for PHP changes. The site, DB
+update `container/php/` — rebuild the image (`make image`) for PHP changes. The site, DB
 and dataroot survive the restart, and the console's epoch bumps so open browser
 tabs reload themselves. Requires the image to exist (`make image`) and an amd64
 mpd VM (the target the cp'd binary is built for).
