@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New logos and graphics
 - Offline mode helper script
 - Custom poster cards support
-- Build-time kill switches for feature disabling
+- Kill switches to disable features (`MDL_DEMO_NO_*`)
 - New launcher option `--image`
 
 ### Changed
