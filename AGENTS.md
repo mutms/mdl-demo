@@ -35,7 +35,12 @@ PID 1 of the container, management web UI, and CLI.
   same-origin files, beside the CSRF cookie, the Origin and Fetch Metadata
   checks and the Host allow-list (see invariant 10);
   single-flight background job in
-  `job.go`; en/cs/de UI strings in `lang.go`; diagnostics page at `/debug`.
+  `job.go`; en/cs/de UI strings in `lang.go`; diagnostics on the Settings page
+  (`/settings`; `/debug` redirects there). The dashboard's **Tools card** is a
+  3×3 grid of navigation cards (each a sub-page): upstream caps it at **8** so a
+  fork can drop in its own card (first or last) as the 9th and still fit the
+  glanceable grid — beyond that, nest inside a card (as Settings does) rather
+  than add tiles.
 - `internal/tunnel` — the optional Cloudflare Quick Tunnel (one `cloudflared`
   child; rewrites the site's wwwroot to the public URL while it runs).
 - `internal/sso` — single-use login tokens behind the console's "Log in…"

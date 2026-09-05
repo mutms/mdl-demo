@@ -190,7 +190,10 @@ type view struct {
 	Wwwroot        string
 	TunnelURL      string
 	TunnelStarting bool
-	InstalledAt    string
+	// TunnelEnabled is false when MDL_DEMO_NO_TUNNEL is set — a custom/offline
+	// image that hides the Quick Tunnel card and disables its routes.
+	TunnelEnabled bool
+	InstalledAt   string
 	// ServiceProblems is the supervised services that are NOT running — shown
 	// (only when non-empty) so the diag page flags trouble instead of listing
 	// everything that is fine. cloudflared's normal "no tunnel" is not a problem.
@@ -499,10 +502,15 @@ func boolEnv(key string) bool {
 	return false
 }
 
+// tunnelEnabled reports whether the Quick Tunnel is available (off when the
+// custom-image env MDL_DEMO_NO_TUNNEL is set).
+func tunnelEnabled() bool { return !boolEnv("MDL_DEMO_NO_TUNNEL") }
+
 func (s *Server) buildView(r *http.Request) view {
 	v := s.baseView(r)
 	v.Job, v.Busy = s.job.view(), !s.job.idle()
 	v.CSRF = csrfToken(r)
+	v.TunnelEnabled = tunnelEnabled()
 	if st, err := state.Load(); err == nil && st.Installed() {
 		v.Installed = true
 		v.Recipe = st.Recipe
@@ -1167,6 +1175,10 @@ func (s *Server) handleSSOStatus(w http.ResponseWriter, r *http.Request) {
 // few seconds, so a plain form POST + redirect beats wiring them into the
 // single-flight job. The captured log tail makes a failure diagnosable.
 func (s *Server) handleTunnelStart(w http.ResponseWriter, r *http.Request) {
+	if !tunnelEnabled() {
+		http.NotFound(w, r)
+		return
+	}
 	st, err := state.Load()
 	if err != nil || !st.Installed() {
 		redirect(w, r, "/")

@@ -10,8 +10,10 @@
   <h2>{{t .Lang "Tools"}}</h2>
   <div class="toolgrid">
     {{if .Installed}}
+    {{if .TunnelEnabled}}
     {{/* Quick Tunnel: a switch, on = the site is public. The form posts to
-         start or stop depending on where the switch currently sits. */}}
+         start or stop depending on where the switch currently sits. Absent on a
+         custom image built with MDL_DEMO_NO_TUNNEL (offline/corporate). */}}
     <div class="tool">
       <div class="tool-h">
         <svg class="tool-i" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18"/></svg>
@@ -38,6 +40,7 @@
       </div>
       <p class="tool-d">{{t .Lang "Share the demo site on a public trycloudflare.com URL, so the audience can open it on their own devices."}}</p>
     </div>
+    {{end}}
 
     <a class="tool" href="/plugins">
       <div class="tool-h">
