@@ -24,8 +24,10 @@
       <li><button type="button" class="pitem"
             data-name="{{.DisplayName}}" data-component="{{.Component}}" data-type="{{$label}}"
             data-version="{{.Version}}" data-release="{{.Release}}"
-            data-relpath="{{.Relpath}}" data-source="{{.SourceURL}}">
-        <span class="pname">{{.DisplayName}}</span>
+            data-relpath="{{.Relpath}}" data-source="{{.SourceURL}}"
+            data-camp="{{.CampURL}}"
+            {{with .Advisory}}data-advisory="{{.ID}} — {{.Severity}}: {{t $.Lang "affected"}} {{.AffectedVersions}}{{if .FixedIn}}, {{t $.Lang "fixed in"}} {{.FixedIn}}{{end}}" data-advisory-sev="{{.Severity}}"{{end}}>
+        <span class="pname">{{.DisplayName}}{{if .Advisory}} <span class="advdot" aria-label="{{t $.Lang "security advisory"}}">!</span>{{end}}</span>
         <span class="pcomp">{{.Component}}</span>
       </button></li>
       {{end}}
@@ -44,7 +46,7 @@
      form (and the page reloads itself when it finishes — state-signature
      watcher); otherwise the form: paste a URL, "Find versions" swaps in the ref
      picker, Add starts the job. */}}
-{{if .Installed}}
+{{if and .Installed .UrlInstallEnabled}}
 {{if .Busy}}
 {{template "progress" .}}
 {{else}}
@@ -69,12 +71,14 @@
   <article>
     <button class="dlgclose" type="button" aria-label="Close">×</button>
     <h2 id="pd-name"></h2>
+    <p id="pd-advisory" class="advbadge" hidden></p>
     <dl class="pdetail">
       <dt>{{t .Lang "Type"}}</dt><dd id="pd-type"></dd>
       <dt>{{t .Lang "Component"}}</dt><dd id="pd-component"></dd>
       <dt>{{t .Lang "Version"}}</dt><dd id="pd-version"></dd>
       <dt>{{t .Lang "Location"}}</dt><dd id="pd-relpath"></dd>
       <dt id="pd-source-dt">{{t .Lang "Source"}}</dt><dd><a id="pd-source" href="#" target="_blank" rel="noopener"></a></dd>
+      <dt id="pd-camp-dt">{{t .Lang "Camp"}}</dt><dd><a id="pd-camp" href="#" target="_blank" rel="noopener">{{t .Lang "Latest on Camp"}} <span class="ext" aria-hidden="true">↗</span></a></dd>
     </dl>
   </article>
 </dialog>
@@ -98,7 +102,7 @@
     <label for="plugin-ref">{{t .Lang "Version"}}</label>
   </div>
   <label class="check"><input type="checkbox" name="backupfirst" checked> {{t .Lang "Back up first, so I can undo this"}}</label>
-  <div class="row end"><button>{{t .Lang "Add plugin"}}</button></div>
+  <div class="row end"><button>{{t .Lang "Install plugin"}}</button></div>
 </form>
 {{end}}
 {{end}}

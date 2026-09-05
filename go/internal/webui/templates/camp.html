@@ -1,0 +1,113 @@
+{{/* The Camp registry browse page: search + type/status filter + pagination over
+     the baked community catalogue (~6,400 plugins). The filter form does a
+     GET /camp and htmx swaps only the #camplist region (the handler renders the
+     "camplist" fragment for HX requests). Clicking a row opens the detail/add
+     dialog (app.js fills it from data-*). Data is ODbL — the credit sits under
+     the list. Everything here is gated by CampEnabled server-side; the whole page
+     404s when Camp is off. */}}
+{{define "camp"}}<!doctype html>
+<html lang="{{.Lang}}">
+{{template "head" .}}
+{{template "topbar" .}}
+
+<article>
+  <h2>{{t .Lang "Camp registry"}}</h2>
+  <p class="empty">{{t .Lang "The community plugin catalogue from camp-registry.org. Search, then test one in this demo site."}}</p>
+
+  <form class="camptools" hx-get="/camp" hx-target="#camplist" hx-swap="innerHTML"
+        hx-trigger="submit, input from:#camp-q delay:300ms, change from:#camp-type, change from:#camp-status, change from:#camp-tier">
+    <input type="search" id="camp-q" name="q" class="grow" placeholder="{{t .Lang "Search plugins…"}}" value="{{.CampQuery.Text}}" autocomplete="off">
+    <div class="camptools-selects">
+      <select id="camp-type" name="type" aria-label="{{t .Lang "Type"}}">
+        <option value="">{{t .Lang "All types"}}</option>
+        {{range .CampTypes}}<option value="{{.}}"{{if eq . $.CampQuery.Type}} selected{{end}}>{{.}}</option>{{end}}
+      </select>
+      <select id="camp-status" name="status" aria-label="{{t .Lang "Status"}}">
+        <option value="">{{t .Lang "Any status"}}</option>
+        <option value="active"{{if eq "active" .CampQuery.Status}} selected{{end}}>{{t .Lang "active"}}</option>
+        <option value="abandoned"{{if eq "abandoned" .CampQuery.Status}} selected{{end}}>{{t .Lang "abandoned"}}</option>
+        <option value="archived"{{if eq "archived" .CampQuery.Status}} selected{{end}}>{{t .Lang "archived"}}</option>
+      </select>
+      <select id="camp-tier" name="tier" aria-label="{{t .Lang "Tier"}}">
+        <option value="">{{t .Lang "All tiers"}}</option>
+        <option value="claimed"{{if eq "claimed" .CampTierSel}} selected{{end}}>{{t .Lang "Claimed"}}</option>
+        <option value="verified"{{if eq "verified" .CampTierSel}} selected{{end}}>{{t .Lang "Verified"}}</option>
+      </select>
+    </div>
+  </form>
+
+  <div id="camplist">{{template "camplist" .}}</div>
+
+  <p class="campcredit">{{t .Lang "Data from the camp registry"}} (<a href="https://camp-registry.org" target="_blank" rel="noopener">camp-registry.org</a>), ODbL.</p>
+</article>
+
+{{/* Camp plugin detail + add dialog, filled by app.js from the clicked row. Add
+     reuses the git-URL install flow: the source URL is seeded into the same
+     /plugins/refs → /plugins/add two-step, so backup-first and the job come for
+     free — and the kill switch is inherited (the form 404s when disabled). */}}
+<dialog id="campdialog" data-close="backdrop">
+  <article>
+    <button class="dlgclose" type="button" aria-label="Close">×</button>
+    <h2 id="cd-name"></h2>
+    <p id="cd-advisory" class="advbadge" hidden></p>
+    <p id="cd-summary" class="empty"></p>
+    <dl class="pdetail">
+      <dt>{{t .Lang "Type"}}</dt><dd id="cd-type"></dd>
+      <dt>{{t .Lang "Component"}}</dt><dd id="cd-component"></dd>
+      <dt id="cd-license-dt">{{t .Lang "License"}}</dt><dd id="cd-license"></dd>
+      <dt id="cd-tier-dt">{{t .Lang "Tier"}}</dt><dd id="cd-tier"></dd>
+    </dl>
+    <p><a id="cd-camp" href="#" target="_blank" rel="noopener">{{t .Lang "Latest on Camp"}} <span class="ext" aria-hidden="true">↗</span></a></p>
+    {{if and .Installed .UrlInstallEnabled}}
+    <form id="cd-refform" hx-post="/plugins/refs" hx-target="#cd-refs" hx-swap="innerHTML" hx-disabled-elt="find button">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <input type="hidden" name="url" id="cd-url" value="">
+      <div class="row end"><button class="secondary">{{t .Lang "Find versions"}}</button></div>
+    </form>
+    <div id="cd-refs"></div>
+    {{else if not .UrlInstallEnabled}}
+    <p class="empty">{{t .Lang "Adding plugins is disabled on this image."}}</p>
+    {{else}}
+    <p class="empty">{{t .Lang "Install a demo site first, then you can add plugins."}}</p>
+    {{end}}
+  </article>
+</dialog>
+
+{{template "footer" .}}
+</html>{{end}}
+
+{{/* The result list — swapped in on every filter/paginate. */}}
+{{define "camplist"}}
+{{if .CampPlugins}}
+<p class="camptotal">{{.CampTotal}} {{t .Lang "plugins"}}</p>
+<ul class="camprows">
+  {{range .CampPlugins}}
+  {{$adv := index $.CampAdvisory .Component}}
+  <li><button type="button" class="camprow"
+        data-name="{{.Component}}" data-component="{{.Component}}" data-type="{{.Type}}"
+        data-summary="{{.Summary}}" data-license="{{.License}}" data-source="{{.Source}}"
+        data-camp="{{.URL}}" data-tier="{{if ge .Tier 2}}{{t $.Lang "Verified"}}{{else if ge .Tier 1}}{{t $.Lang "Claimed"}}{{end}}"
+        {{if $adv}}{{$a := index $adv 0}}data-advisory="{{$a.ID}} — {{$a.Severity}}: {{t $.Lang "affected"}} {{$a.AffectedVersions}}{{if $a.FixedIn}}, {{t $.Lang "fixed in"}} {{$a.FixedIn}}{{end}}" data-advisory-sev="{{$a.Severity}}"{{end}}>
+    <span class="cr-top">
+      <span class="cr-comp">{{.Component}}</span>
+      {{if ge .Tier 2}}<span class="cr-tier tier2">{{t $.Lang "Verified"}}</span>{{else if ge .Tier 1}}<span class="cr-tier tier1">{{t $.Lang "Claimed"}}</span>{{end}}
+      {{if index $.CampInstalled .Component}}<span class="cr-inst">{{t $.Lang "installed"}}</span>{{end}}
+      {{if $adv}}<span class="advdot" aria-label="{{t $.Lang "security advisory"}}">!</span>{{end}}
+      {{if .Stars}}<span class="cr-stars" aria-label="{{t $.Lang "stars"}}">★ {{.Stars}}</span>{{end}}
+    </span>
+    <span class="cr-sum">{{.Summary}}</span>
+    <span class="cr-meta">{{.Type}}{{if .Status}} · {{.Status}}{{end}}</span>
+  </button></li>
+  {{end}}
+</ul>
+{{if gt .CampPages 1}}
+<nav class="camppager">
+  {{if .CampPrev}}<button type="button" class="secondary" hx-get="/camp?{{.CampQS}}&page={{.CampPrev}}" hx-target="#camplist" hx-swap="innerHTML">{{t .Lang "Previous"}}</button>{{else}}<span></span>{{end}}
+  <span class="camppage">{{.CampPage}} / {{.CampPages}}</span>
+  {{if .CampNext}}<button type="button" class="secondary" hx-get="/camp?{{.CampQS}}&page={{.CampNext}}" hx-target="#camplist" hx-swap="innerHTML">{{t .Lang "Next"}}</button>{{else}}<span></span>{{end}}
+</nav>
+{{end}}
+{{else}}
+<p class="empty">{{t .Lang "No plugins match."}}</p>
+{{end}}
+{{end}}

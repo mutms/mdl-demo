@@ -314,3 +314,45 @@ footer .tm { margin: .5rem 0 0; font-size: .72rem; opacity: .85; }
 .row.actions { margin: .9rem 0 0; }
 .row.end { justify-content: flex-end; gap: .15rem; }
 .row.names { align-items: flex-start; gap: .9rem; margin: .6rem 0 0; }
+
+/* Security-advisory badge (installed-plugins + Camp dialogs) and its list dot.
+   Severity tints the badge; the dot flags a row at a glance. */
+.advbadge { margin: 0 0 .6rem; padding: .35rem .6rem; border-radius: var(--pico-border-radius);
+  font-size: .82rem; background: var(--errbg); color: var(--err); }
+.advbadge.sev-medium { background: #f59e0b1f; color: #b45309; }
+.advbadge.sev-low { background: var(--idlebg); color: var(--idle); }
+.advdot { display: inline-flex; align-items: center; justify-content: center;
+  width: 1rem; height: 1rem; border-radius: 999px; background: var(--err); color: #fff;
+  font-size: .7rem; font-weight: 700; line-height: 1; }
+
+/* Camp registry browse: a filter toolbar, a list of clickable rows and a pager. */
+/* Search on its own full-width row; the type + status selects side by side below
+   (Pico makes selects full-width, so they need the flex row). */
+.camptools { display: flex; flex-direction: column; gap: .5rem; margin: .2rem 0 1rem; }
+.camptools input, .camptools select { margin: 0; }
+.camptools-selects { display: flex; gap: .5rem; }
+.camptools-selects select { flex: 1; }
+.camptotal { color: var(--dim); font-size: .8rem; margin: 0 0 .5rem; }
+.camprows { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); }
+.camprow { display: flex; flex-direction: column; gap: .25rem; width: 100%; text-align: left;
+  padding: .6rem .7rem; border: 1px solid var(--line); border-radius: var(--pico-border-radius);
+  background: var(--card); color: inherit; cursor: pointer;
+  transition: border-color .12s, background .12s; }
+.camprow:hover { border-color: var(--accent); background: var(--idlebg); }
+.cr-top { display: flex; align-items: center; gap: .4rem; }
+.cr-comp { font-weight: 600; font-size: .9rem; overflow-wrap: anywhere; }
+.cr-inst { font-size: .68rem; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--ok); border: 1px solid var(--ok); border-radius: 999px; padding: 0 .35rem; }
+.cr-tier { font-size: .68rem; text-transform: uppercase; letter-spacing: .04em;
+  border-radius: 999px; padding: 0 .35rem; border: 1px solid; }
+.cr-tier.tier2 { color: var(--accent); border-color: var(--accent); }
+.cr-tier.tier1 { color: var(--dim); border-color: var(--line); }
+.cr-stars { margin-left: auto; color: var(--dim); font-size: .78rem; white-space: nowrap; }
+.cr-sum { color: var(--dim); font-size: .8rem; line-height: 1.35;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cr-meta { color: var(--dim); font-size: .72rem; }
+.camppager { display: flex; align-items: center; justify-content: space-between;
+  gap: .5rem; margin: 1rem 0 0; }
+.camppage { color: var(--dim); font-size: .82rem; }
+.campcredit { color: var(--dim); font-size: .72rem; margin: 1.2rem 0 0; }

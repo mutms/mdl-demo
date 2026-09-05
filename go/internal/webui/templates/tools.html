@@ -100,6 +100,20 @@
       </div>
       <p class="tool-d">{{t .Lang "Refresh the code catalogues, or grab a diagnostics report."}}</p>
     </a>
+
+    {{/* Camp registry browse — the community plugin catalogue. Last slot; absent
+         on a custom image built with MDL_DEMO_NO_CAMP (the data isn't even
+         loaded then). See camp.go / camp-registry.org. */}}
+    {{if .CampEnabled}}
+    <a class="tool" href="/camp">
+      <div class="tool-h">
+        <svg class="tool-i" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 3 8l9 5 9-5-9-5z"/><path d="M3 13l9 5 9-5"/></svg>
+        <span class="tool-t">{{t .Lang "Camp registry"}}</span>
+        <span class="tool-x arrow">&rarr;</span>
+      </div>
+      <p class="tool-d">{{t .Lang "Browse the community catalogue and test plugins in this demo site."}}</p>
+    </a>
+    {{end}}
   </div>
 </article>
 {{end}}

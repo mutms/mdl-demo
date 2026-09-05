@@ -137,6 +137,49 @@ document.addEventListener('click', function (e) {
   if (src) { a.href = src; a.textContent = src; }
   document.getElementById('pd-source-dt').hidden = !src; // hide the Source row when unknown
   a.parentNode.hidden = !src;
+  // Camp link (most up-to-date info) and any security advisory — only present
+  // when Camp is enabled and the component is in the catalogue.
+  var camp = document.getElementById('pd-camp'), campDt = document.getElementById('pd-camp-dt');
+  if (camp) {
+    var cu = b.dataset.camp;
+    if (cu) camp.href = cu;
+    camp.parentNode.hidden = !cu;
+    if (campDt) campDt.hidden = !cu;
+  }
+  var adv = document.getElementById('pd-advisory');
+  if (adv) {
+    var msg = b.dataset.advisory;
+    adv.textContent = msg || '';
+    adv.hidden = !msg;
+    adv.className = 'advbadge' + (b.dataset.advisorySev ? ' sev-' + b.dataset.advisorySev : '');
+  }
+  d.showModal();
+});
+// Camp browse: a row opens the detail/add dialog, seeding the source URL into
+// the (reused) ref-finder form. Clears any refs left from a previous open.
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('.camprow');
+  if (!b) return;
+  var d = document.getElementById('campdialog');
+  if (!d) return;
+  var set = function (id, val) { var el = document.getElementById(id); if (el) el.textContent = val || '—'; };
+  set('cd-name', b.dataset.component);
+  set('cd-type', b.dataset.type);
+  set('cd-component', b.dataset.component);
+  var sum = document.getElementById('cd-summary');
+  if (sum) { sum.textContent = b.dataset.summary || ''; sum.hidden = !b.dataset.summary; }
+  var lic = document.getElementById('cd-license'), licDt = document.getElementById('cd-license-dt');
+  if (lic) { lic.textContent = b.dataset.license || '—'; lic.parentNode.hidden = !b.dataset.license; if (licDt) licDt.hidden = !b.dataset.license; }
+  var tier = document.getElementById('cd-tier'), tierDt = document.getElementById('cd-tier-dt');
+  if (tier) { tier.textContent = b.dataset.tier || ''; tier.parentNode.hidden = !b.dataset.tier; if (tierDt) tierDt.hidden = !b.dataset.tier; }
+  var camp = document.getElementById('cd-camp');
+  if (camp && b.dataset.camp) camp.href = b.dataset.camp;
+  var adv = document.getElementById('cd-advisory');
+  if (adv) { var m = b.dataset.advisory; adv.textContent = m || ''; adv.hidden = !m; adv.className = 'advbadge' + (b.dataset.advisorySev ? ' sev-' + b.dataset.advisorySev : ''); }
+  var u = document.getElementById('cd-url');
+  if (u) u.value = b.dataset.source || '';
+  var refs = document.getElementById('cd-refs');
+  if (refs) refs.innerHTML = '';
   d.showModal();
 });
 document.addEventListener('click', function (e) {

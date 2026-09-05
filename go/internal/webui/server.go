@@ -22,9 +22,11 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/mutms/mdl-demo/go/internal/backup"
+	"github.com/mutms/mdl-demo/go/internal/camp"
 	"github.com/mutms/mdl-demo/go/internal/execx"
 	"github.com/mutms/mdl-demo/go/internal/moodle"
 	"github.com/mutms/mdl-demo/go/internal/recipes"
@@ -51,6 +53,34 @@ type Server struct {
 	// poster is the optional image-baked custom Tools card, loaded once at boot;
 	// nil in the stock image (see poster.go).
 	poster *poster
+	// camp is the Camp registry catalogue, lazily loaded on first use (see
+	// campCatalog) when campEnabled(), and reloaded after a Settings "Camp
+	// update". nil when MDL_DEMO_NO_CAMP or the data was never baked. campMu
+	// guards it against the concurrent reload.
+	campMu sync.Mutex
+	camp   *camp.Catalog
+}
+
+// campCatalog returns the loaded Camp catalogue, loading it on first use. It
+// returns nil when Camp is disabled (MDL_DEMO_NO_CAMP), so every Camp code path
+// is a nil check away from "off" — the data is never even read when disabled.
+func (s *Server) campCatalog() *camp.Catalog {
+	if !campEnabled() {
+		return nil
+	}
+	s.campMu.Lock()
+	defer s.campMu.Unlock()
+	if s.camp == nil {
+		s.camp, _ = camp.Load(camp.Dir)
+	}
+	return s.camp
+}
+
+// reloadCamp re-reads the catalogue (after a git pull on the Settings page).
+func (s *Server) reloadCamp() {
+	s.campMu.Lock()
+	defer s.campMu.Unlock()
+	s.camp, _ = camp.Load(camp.Dir)
 }
 
 // Serve runs the UI until the process is stopped; the init supervisor owns
@@ -95,6 +125,8 @@ func Serve(out io.Writer, version string) error {
 	mux.HandleFunc("POST /plugins/add", s.csrf(s.handlePluginAdd))
 	mux.HandleFunc("GET /recommends", s.handleRecommendsPage)
 	mux.HandleFunc("GET /poster", s.handlePosterPage)
+	mux.HandleFunc("GET /camp", s.handleCampPage)
+	mux.HandleFunc("POST /settings/update-camp", s.csrf(s.handleCampUpdate))
 	mux.HandleFunc("GET /backups", s.handleBackupsPage)
 	mux.HandleFunc("GET /section/backuplist", s.handleBackupList)
 	mux.HandleFunc("POST /backups/create", s.csrf(s.handleBackupCreate))
@@ -242,6 +274,30 @@ type view struct {
 	CatUpdates []catUpdate
 	// Poster is the optional image-baked custom Tools card (nil in the stock image).
 	Poster *poster
+	// CampEnabled is false when MDL_DEMO_NO_CAMP is set — hides the Camp card,
+	// its page, its Settings button and the "Latest on Camp" links, and the data
+	// is never loaded. UrlInstallEnabled is false when MDL_DEMO_NO_PLUGIN_URL is
+	// set — hides the git-URL add box and Camp's Add button (the handlers also
+	// refuse). Both are boot-time, server-side (like TunnelEnabled).
+	CampEnabled       bool
+	UrlInstallEnabled bool
+	// Camp browse page.
+	CampPlugins []camp.Plugin
+	CampTotal   int
+	CampPage    int
+	CampPages   int
+	CampPrev    int    // 0 = no previous page
+	CampNext    int    // 0 = no next page
+	CampQS      string // current filter as a query string (no page), for pager links
+	CampTypes   []string
+	CampQuery   camp.Query
+	CampTierSel string // the tier filter selection ("", "claimed", "verified")
+	// CampAdvisory maps a shown plugin's component to its advisories (badges).
+	CampAdvisory map[string][]camp.Advisory
+	// CampInstalled marks components already present on the site.
+	CampInstalled map[string]bool
+	// CampUpdate is the "Camp update" git-pull result (Settings page).
+	CampUpdate *catUpdate
 }
 
 // catUpdate is one catalogue's git-pull result for the Settings page.
@@ -431,6 +487,12 @@ type pluginRow struct {
 	Release string
 	// SourceURL is the plugin's repository on GitHub/GitLab, "" when unknown.
 	SourceURL string
+	// CampURL is the plugin's page on camp-registry.org (the most up-to-date
+	// info), "" when Camp is disabled or the component is not in the catalogue.
+	CampURL string
+	// Advisory is the highest-severity live security advisory for this component
+	// from Camp, nil when none (or Camp disabled).
+	Advisory *camp.Advisory
 }
 
 // pluginGroup is one plugin-type's plugins, for the type-grouped Plugins page.
@@ -514,11 +576,24 @@ func boolEnv(key string) bool {
 // custom-image env MDL_DEMO_NO_TUNNEL is set).
 func tunnelEnabled() bool { return !boolEnv("MDL_DEMO_NO_TUNNEL") }
 
+// campEnabled reports whether the Camp registry feature is available (off when
+// the custom-image env MDL_DEMO_NO_CAMP is set — a fork with no lock-in strips
+// Camp entirely; the data is then never even loaded).
+func campEnabled() bool { return !boolEnv("MDL_DEMO_NO_CAMP") }
+
+// urlInstallEnabled reports whether adding arbitrary plugins from a git URL is
+// available (off when MDL_DEMO_NO_PLUGIN_URL is set). This gates the git-URL box
+// on the Installed-plugins page AND Camp installs (which reuse that path);
+// recipe install at site-create is unaffected.
+func urlInstallEnabled() bool { return !boolEnv("MDL_DEMO_NO_PLUGIN_URL") }
+
 func (s *Server) buildView(r *http.Request) view {
 	v := s.baseView(r)
 	v.Job, v.Busy = s.job.view(), !s.job.idle()
 	v.CSRF = csrfToken(r)
 	v.TunnelEnabled = tunnelEnabled()
+	v.CampEnabled = campEnabled()
+	v.UrlInstallEnabled = urlInstallEnabled()
 	if st, err := state.Load(); err == nil && st.Installed() {
 		v.Installed = true
 		v.Recipe = st.Recipe
@@ -713,8 +788,10 @@ func (s *Server) handleBackupList(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "backuplist", s.backupsView(r))
 }
 
-// pluginRows lists the site's additional plugins for the Plugins page.
-func pluginRows() ([]pluginRow, error) {
+// pluginRows lists the site's additional plugins for the Plugins page. cat is
+// the Camp catalogue (nil when Camp is disabled) — used to add each plugin's
+// "Latest on Camp" link and any security advisory for its component.
+func pluginRows(cat *camp.Catalog) ([]pluginRow, error) {
 	plugins, err := moodle.ExportPlugins()
 	if err != nil {
 		return nil, err
@@ -724,7 +801,7 @@ func pluginRows() ([]pluginRow, error) {
 	sources, _ := moodle.PluginSources()
 	rows := make([]pluginRow, 0, len(plugins))
 	for _, p := range plugins {
-		rows = append(rows, pluginRow{
+		row := pluginRow{
 			Component:   p.Component,
 			Type:        p.Type,
 			DisplayName: p.DisplayName,
@@ -732,7 +809,16 @@ func pluginRows() ([]pluginRow, error) {
 			Version:     p.VersionDisk.String(),
 			Release:     p.Release,
 			SourceURL:   sourceURLFor(p.Relpath, sources),
-		})
+		}
+		if cat != nil {
+			if _, ok := cat.Get(p.Component); ok {
+				row.CampURL = cat.PluginURL(p.Component)
+			}
+			if adv := cat.AdvisoriesFor(p.Component); len(adv) > 0 {
+				row.Advisory = &adv[0]
+			}
+		}
+		rows = append(rows, row)
 	}
 	// core_plugin_manager's order is the upgrade sequence, not anything a reader
 	// cares about; sort by tree path so related plugins (and subplugins) sit
@@ -782,7 +868,7 @@ func sourceURLFor(relpath string, sources []moodle.PluginSource) string {
 func (s *Server) pluginsView(r *http.Request) view {
 	v := s.buildView(r)
 	if v.Installed {
-		rows, err := pluginRows()
+		rows, err := pluginRows(s.campCatalog())
 		if err != nil {
 			v.Error = err.Error()
 		}
@@ -799,6 +885,10 @@ func (s *Server) handlePluginsPage(w http.ResponseWriter, r *http.Request) {
 // handlePluginRefs reads a git repo's branches/tags (with a proposed default)
 // and swaps the ref picker into the Add-a-plugin form.
 func (s *Server) handlePluginRefs(w http.ResponseWriter, r *http.Request) {
+	if !urlInstallEnabled() {
+		http.NotFound(w, r)
+		return
+	}
 	v := s.buildView(r)
 	v.PluginURL = strings.TrimSpace(r.FormValue("url"))
 	refs, err := site.ListRefs(v.PluginURL)
@@ -813,6 +903,10 @@ func (s *Server) handlePluginRefs(w http.ResponseWriter, r *http.Request) {
 // handlePluginAdd starts the single-flight job that clones and installs the
 // plugin; progress streams to the Plugins page log.
 func (s *Server) handlePluginAdd(w http.ResponseWriter, r *http.Request) {
+	if !urlInstallEnabled() {
+		http.NotFound(w, r)
+		return
+	}
 	url := strings.TrimSpace(r.FormValue("url"))
 	ref := strings.TrimSpace(r.FormValue("ref"))
 	backupFirst := r.FormValue("backupfirst") != ""
@@ -849,6 +943,117 @@ func (s *Server) handlePosterPage(w http.ResponseWriter, r *http.Request) {
 	v := s.buildView(r)
 	v.Section = s.poster.Title
 	s.render(w, "poster", v)
+}
+
+// campPerPage is the browse page size (6,400 entries demand pagination).
+const campPerPage = 24
+
+// handleCampPage renders the Camp registry browse page: server-side search,
+// type/status filter and pagination over the baked community catalogue. 404 when
+// Camp is disabled — the data is never even loaded then. It doubles as the htmx
+// target: an HX-Request re-renders only the list fragment as the filter changes.
+func (s *Server) handleCampPage(w http.ResponseWriter, r *http.Request) {
+	cat := s.campCatalog()
+	if cat == nil {
+		http.NotFound(w, r)
+		return
+	}
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	tierSel := r.URL.Query().Get("tier")
+	minTier := 0
+	switch tierSel {
+	case "claimed":
+		minTier = 1
+	case "verified":
+		minTier = 2
+	}
+	q := camp.Query{
+		Text:    strings.TrimSpace(r.URL.Query().Get("q")),
+		Type:    r.URL.Query().Get("type"),
+		Status:  r.URL.Query().Get("status"),
+		MinTier: minTier,
+		Page:    page,
+		PerPage: campPerPage,
+	}
+	plugins, total := cat.Filter(q)
+
+	v := s.buildView(r)
+	v.Section = "Camp"
+	v.CampPlugins = plugins
+	v.CampTotal = total
+	v.CampPage = page
+	v.CampPages = (total + campPerPage - 1) / campPerPage
+	if page > 1 {
+		v.CampPrev = page - 1
+	}
+	if page < v.CampPages {
+		v.CampNext = page + 1
+	}
+	qs := url.Values{}
+	if q.Text != "" {
+		qs.Set("q", q.Text)
+	}
+	if q.Type != "" {
+		qs.Set("type", q.Type)
+	}
+	if q.Status != "" {
+		qs.Set("status", q.Status)
+	}
+	if tierSel != "" {
+		qs.Set("tier", tierSel)
+	}
+	v.CampQS = qs.Encode()
+	v.CampTypes = cat.Types()
+	v.CampQuery = q
+	v.CampTierSel = tierSel
+	v.CampAdvisory = map[string][]camp.Advisory{}
+	for _, p := range plugins {
+		if adv := cat.AdvisoriesFor(p.Component); len(adv) > 0 {
+			v.CampAdvisory[p.Component] = adv
+		}
+	}
+	if v.Installed {
+		v.CampInstalled = installedComponents()
+	}
+	if r.Header.Get("HX-Request") == "true" {
+		s.render(w, "camplist", v)
+		return
+	}
+	s.render(w, "camp", v)
+}
+
+// handleCampUpdate git-pulls the Camp catalogue and reloads it in place, then
+// swaps the result into the Settings page. Separate from Update catalogues (a
+// fork may want one without the other). 404 when Camp is disabled.
+func (s *Server) handleCampUpdate(w http.ResponseWriter, r *http.Request) {
+	if !campEnabled() {
+		http.NotFound(w, r)
+		return
+	}
+	res := gitPull("camp", camp.Dir)
+	if res.OK {
+		s.reloadCamp()
+	}
+	v := s.buildView(r)
+	v.CampUpdate = &res
+	s.render(w, "campresult", v)
+}
+
+// installedComponents is the set of components currently installed on the site,
+// for the Camp browse "already installed" marker.
+func installedComponents() map[string]bool {
+	m := map[string]bool{}
+	plugins, err := moodle.ExportPlugins()
+	if err != nil {
+		return m
+	}
+	for _, p := range plugins {
+		m[p.Component] = true
+	}
+	return m
 }
 
 func (s *Server) handleBackupCreate(w http.ResponseWriter, r *http.Request) {
@@ -1328,16 +1533,22 @@ func catalogues() []struct{ name, dir string } {
 func updateCatalogues() []catUpdate {
 	var out []catUpdate
 	for _, c := range catalogues() {
-		u := catUpdate{Name: c.name}
-		if _, err := execx.Output(c.dir, "git", "pull", "--ff-only"); err != nil {
-			u.Msg = err.Error()
-		} else {
-			u.OK = true
-			u.Msg = gitRev(c.dir)
-		}
-		out = append(out, u)
+		out = append(out, gitPull(c.name, c.dir))
 	}
 	return out
+}
+
+// gitPull fast-forwards one checkout and reports the outcome (the new short rev
+// on success, the error otherwise). Shared by the catalogue and Camp updates.
+func gitPull(name, dir string) catUpdate {
+	u := catUpdate{Name: name}
+	if _, err := execx.Output(dir, "git", "pull", "--ff-only"); err != nil {
+		u.Msg = err.Error()
+	} else {
+		u.OK = true
+		u.Msg = gitRev(dir)
+	}
+	return u
 }
 
 // gitRev is the short HEAD revision of a git checkout, "unknown" if unreadable.

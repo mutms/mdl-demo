@@ -179,6 +179,14 @@ RUN for c in mdl-recipes mdl-plugins; do \
     done \
     && mkdir -p /srv/projects/demo /srv/data /srv/backups /etc/mdl-demo && chmod 700 /srv/backups
 
+# Camp registry — the community plugin catalogue (camp-registry.org), an
+# ODbL-licensed git index. Cloned at build for the console's Camp browse/install
+# (internal/camp); shallow, .git kept so the Settings "Camp update" can pull.
+# Always fetched from upstream (no offline mirror by design): an offline image
+# browses this baked snapshot, but installing a Camp plugin needs network. A fork
+# that wants no Camp drops this line (or sets MDL_DEMO_NO_CAMP at runtime).
+RUN git clone --depth 1 https://github.com/camp-registry/camp-index /srv/extra/camp
+
 # Pre-bundled site backups: any *.mdb dropped into the repo's assets/backups/
 # dir ships in the image, ready to restore from the console — how a fork bakes a
 # prepared demo site into its own image (see assets/backups/README.md).

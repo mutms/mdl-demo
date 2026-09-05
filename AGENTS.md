@@ -40,11 +40,22 @@ PID 1 of the container, management web UI, and CLI.
   3×3 grid of navigation cards (each a sub-page): upstream caps it at **8** so a
   fork can drop in its own card (first or last) as the 9th and still fit the
   glanceable grid — beyond that, nest inside a card (as Settings does) rather
-  than add tiles.
+  than add tiles. The optional **poster** (an image-baked custom card, see
+  `poster.go`/`assets/poster/`) takes the first slot; the **Camp registry** card
+  the last. Both are removable, so the grid stays glanceable in every build.
 - `internal/tunnel` — the optional Cloudflare Quick Tunnel (one `cloudflared`
   child; rewrites the site's wwwroot to the public URL while it runs).
 - `internal/sso` — single-use login tokens behind the console's "Log in…"
   buttons and QR codes; only `sha256(token)` ever reaches the dataroot.
+- `internal/camp` — loads and queries the baked Camp registry catalogue
+  (camp-registry.org's `camp-index`, ~6,400 plugin YAMLs + advisories, cloned to
+  `/srv/extra/camp` at build; ODbL, credited on the Camp page). Powers the
+  `/camp` browse/install page and the installed-plugins dialog's "Latest on Camp"
+  link + advisory badge. Camp installs reuse the git-URL install path. Two
+  boot-time kill switches (no lock-in): `MDL_DEMO_NO_CAMP` removes Camp entirely
+  (card, page, links, Settings button — the data is not even loaded) and
+  `MDL_DEMO_NO_PLUGIN_URL` disables adding plugins from a URL (the git-URL box
+  *and* Camp installs); both enforced in the Go handlers, not just templates.
 - `internal/backup` — the `.mdb` backup file format (validation, safe
   extraction); the backup/restore orchestration is in `internal/site`.
   `assets/backups/*.mdb` in the repo is baked into the image at `/srv/backups`
