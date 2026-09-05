@@ -55,7 +55,7 @@
   <form hx-post="/plugins/refs" hx-target="#pluginrefs" hx-swap="innerHTML" hx-disabled-elt="find button">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
     <div class="row">
-      <input name="url" class="grow" placeholder="https://github.com/… or file://…" required>
+      <input name="url" class="grow" placeholder="https://github.com/…" required>
       <button class="secondary">{{t .Lang "Find versions"}}</button>
     </div>
   </form>
