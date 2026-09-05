@@ -67,25 +67,20 @@
 <dialog id="restoredialog" data-close="backdrop">
   <article>
   <button class="dlgclose" type="button" aria-label="Close">×</button>
-  <p class="empty">{{t .Lang "The site's code is rebuilt from the selected recipe, then the backup's data is loaded and upgraded to match. The bundled recipe restores the exact original site."}}</p>
+  <p class="empty">{{t .Lang "The backup's data is loaded and upgraded to match the code it runs on."}}</p>
   {{/* No data-confirm: this dialog, with its warning text and explicit Restore
        button, IS the confirmation — a second modal would be redundant. */}}
   <form class="stack" method="post" action="/backups/restore">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
     <input type="hidden" name="file" id="restorefile">
     <p class="m0"><code id="restorename"></code></p>
-    <div class="ff">
-      <select id="restore-recipe" name="recipe">
-        {{/* value="" = full restore from the recipe.yaml inside the backup. */}}
-        <option value="" selected>{{t .Lang "Bundled recipe (exact original)"}}</option>
-        {{/* value="keep" = reuse the code already on disk, skipping the checkout;
-             only meaningful when a site is installed. */}}
-        {{if .Installed}}<option value="keep">{{t .Lang "Keep current code (fast — no re-download)"}}</option>{{end}}
-        {{range .Recipes}}<option value="{{.ID}}">{{.ID}} — {{.Name}}</option>
-        {{end}}
-      </select>
-      <label for="restore-recipe">{{t .Lang "Site recipe"}}</label>
-    </div>
+    {{/* One toggle: checked keeps the codebase already on disk (skips the
+         checkout — the fast path, and the way to upgrade: install a newer
+         version, then restore into it); unchecked rebuilds the backup's own
+         codebase. Only an installed site has a codebase to keep. */}}
+    {{if .Installed}}
+    <label class="check"><input type="checkbox" name="keepcode" id="keepcode"> {{t .Lang "Keep current codebase"}}</label>
+    {{end}}
     <div class="row end">
       <button type="button" class="secondary outline" data-dlgcancel>{{t .Lang "Cancel"}}</button>
       <button>{{t .Lang "Restore"}}</button>

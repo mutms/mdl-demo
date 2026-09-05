@@ -203,8 +203,7 @@ type view struct {
 	// Error is a page-level failure message (the backups listing not being
 	// readable, say) — not to be confused with Job.Error, which reports the
 	// background install/restore.
-	Error   string
-	Recipes []recipes.Recipe
+	Error string
 	// Chooser name fields (prefilled defaults for the one-click install).
 	Fullname     string
 	Shortname    string
@@ -686,17 +685,7 @@ func (s *Server) backupsView(r *http.Request) view {
 }
 
 func (s *Server) handleBackupsPage(w http.ResponseWriter, r *http.Request) {
-	v := s.backupsView(r)
-	// The "Restore into…" dialog needs the recipe catalogue, ordered like the
-	// install chooser's tabs: Moodle, MuTMS, IOMAD, then any others (stable, so
-	// the within-vendor order the catalogue already sorts by is kept).
-	if list, err := recipes.List(); err == nil {
-		slices.SortStableFunc(list, func(a, b recipes.Recipe) int {
-			return vendorRank(a.Vendor) - vendorRank(b.Vendor)
-		})
-		v.Recipes = list
-	}
-	s.render(w, "backups", v)
+	s.render(w, "backups", s.backupsView(r))
 }
 
 func (s *Server) handleBackupList(w http.ResponseWriter, r *http.Request) {
@@ -834,16 +823,13 @@ func (s *Server) handleBackupRestore(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid demo site URL", http.StatusBadRequest)
 		return
 	}
-	// The recipe select's "keep" sentinel means: restore data onto the code
-	// tree already on disk, skipping the git checkout (the fast path).
-	recipe := strings.TrimSpace(r.FormValue("recipe"))
+	// The "Keep current codebase" checkbox restores data onto the code tree
+	// already on disk, skipping the git checkout (the fast path). Unchecked (or
+	// no site installed) rebuilds the backup's own codebase.
 	o := site.RestoreOptions{
 		File:     file,
 		Wwwroot:  wwwroot,
-		KeepCode: recipe == "keep",
-	}
-	if !o.KeepCode {
-		o.Recipe = recipe
+		KeepCode: r.FormValue("keepcode") != "",
 	}
 	if !s.job.startRestore(o) {
 		http.Error(w, "another operation is already running", http.StatusConflict)

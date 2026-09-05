@@ -109,11 +109,11 @@ document.addEventListener('click', function (e) {
   if (!f) return;
   f.value = b.dataset.restore;
   document.getElementById('restorename').textContent = b.dataset.restore;
-  // Default to keeping the current code when this backup's recipe matches the
-  // installed tree (data-samecode, set server-side) — it skips the checkout.
-  // Otherwise the bundled recipe (value ""), an exact rebuild. The "keep"
-  // option only exists when a site is installed, so this is a no-op otherwise.
-  document.querySelector('#restoredialog select').value = b.dataset.samecode ? 'keep' : '';
+  // Default to keeping the current codebase when this backup's recipe matches
+  // the installed tree (data-samecode, set server-side) — it skips the checkout.
+  // The checkbox exists only when a site is installed.
+  var keep = document.getElementById('keepcode');
+  if (keep) keep.checked = !!b.dataset.samecode;
   document.getElementById('restoredialog').showModal();
 });
 // Installed plugins: click an item to open the detail dialog, filled from the

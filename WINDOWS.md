@@ -22,6 +22,9 @@ In PowerShell:
 wslc run -d --name mdl-demo-8081 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 ghcr.io/mutms/mdl-demo
 ```
 
+WSL also installs `container` as an alias for `wslc`, so the same `container`
+command works on Windows and macOS.
+
 Then open <http://127.0.0.1:8081>, pick a version and click install.
 
 ## The mdl-demo.cmd helper (recommended)

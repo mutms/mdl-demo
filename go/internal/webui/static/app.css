@@ -97,14 +97,13 @@ form.stack { max-width: 26rem; }
 .ff > select ~ label { transform: scale(.78) translateY(-.62rem); }
 .ff > input:focus ~ label { color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { .ff > label { transition: none; } }
-/* The confirm dialog reuses the modal shell; its two buttons sit in a row. The
-   right padding keeps the message clear of the × close button, and the row gets
-   air above it. */
-dialog#confirmdialog .msg { margin: .3rem 0 1.4rem; padding-right: 1.5rem; }
-dialog#confirmdialog .row.end, dialog#ssodialog .row.end { gap: .5rem; }
-/* A dialog form's submit row wants a clear gap below the last field, and space
-   between its Cancel and submit buttons. */
-dialog .stack .row.end { margin-top: .6rem; gap: .5rem; }
+/* One dialog layout for every dialog (see dialog > article below for the shared
+   padding that keeps content clear of the × and lines every edge up). A form
+   fills the width so its button row aligns to the same right edge as a plain
+   one; the button row keeps a consistent gap and a clear space above it. */
+dialog .stack { max-width: none; }
+dialog .row.end { gap: .5rem; margin-top: 1rem; }
+dialog#confirmdialog .msg { margin: 0; }
 /* Pico makes buttons full-width form blocks with generous padding; this
      console uses them inline in rows, tables and headers, and quieter. */
 /* Match Pico's own button selector group, not a bare `button`: Pico sizes
@@ -174,6 +173,9 @@ header form { margin: 0; }
 #themebtn:hover { color: var(--fg); }
 /* Settings page: the catalogue-update result, one line per repo. */
 .catlist { list-style: none; padding: 0; margin: .6rem 0 0; font-size: .82rem; }
+/* A checkbox + its label on one line (the restore dialog's keep-codebase). */
+.check { display: flex; align-items: center; gap: .5rem; margin: .2rem 0 .3rem; font-size: .9rem; }
+.check input { margin: 0; flex: none; }
 /* Installed plugins: type groups, each a dense grid of clickable items, so a
    full suite fits without scrolling; details go to a dialog, not the list. */
 .pgroup { margin: 0 0 1rem; }
@@ -268,7 +270,11 @@ button.act:hover, a.act:hover { text-decoration: underline; color: var(--accent)
 /* The accounts row's login action, set a little off the name it belongs to. */
 button.act.login { margin-left: .5rem; }
 dialog > article { width: min(30rem, 92vw); min-height: 8rem;
-  position: relative; /* anchors .dlgclose */ }
+  position: relative; /* anchors .dlgclose */
+  /* Uniform padding sized so the top-right × sits in the corner gutter and no
+     content or button row ever runs under it — the one place dialog spacing is
+     set, so no dialog needs its own padding tweak. */
+  padding: 1.7rem; }
 dialog#qrdialog article { background: #fff; width: auto; min-height: 0; }
 dialog#qrdialog img { display: block; width: min(75vmin, 520px); height: auto; }
 button.dlgclose { position: absolute; top: .45rem; right: .55rem; background: none;
