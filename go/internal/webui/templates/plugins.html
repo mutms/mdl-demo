@@ -44,7 +44,7 @@
 
 {{/* Add a plugin from a git repository. While a job runs, the log replaces the
      form (and the page reloads itself when it finishes — state-signature
-     watcher); otherwise the form: paste a URL, "Find versions" swaps in the ref
+     watcher); otherwise the form: paste a URL, "Show versions" swaps in the ref
      picker, Add starts the job. */}}
 {{if and .Installed .UrlInstallEnabled}}
 {{if .Busy}}
@@ -58,7 +58,7 @@
     <input type="hidden" name="csrf" value="{{.CSRF}}">
     <div class="row">
       <input name="url" class="grow" placeholder="https://github.com/…" required>
-      <button class="secondary">{{t .Lang "Find versions"}}</button>
+      <button class="secondary">{{t .Lang "Show versions"}}</button>
     </div>
   </form>
   <div id="pluginrefs"></div>
@@ -86,7 +86,7 @@
 {{template "footer" .}}
 </html>{{end}}
 
-{{/* The ref picker, swapped in after "Find versions" (POST /plugins/refs):
+{{/* The ref picker, swapped in after "Show versions" (POST /plugins/refs):
      the repo's branches then tags, the proposed one pre-selected, and Add. */}}
 {{define "pluginrefs"}}
 {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
@@ -96,12 +96,16 @@
   <input type="hidden" name="url" value="{{.PluginURL}}">
   <div class="ff">
     <select name="ref" id="plugin-ref">
-      {{range .Refs.Branches}}<option value="{{.}}"{{if eq . $.Refs.Proposed}} selected{{end}}>{{.}}</option>{{end}}
-      {{range .Refs.Tags}}<option value="{{.}}"{{if eq . $.Refs.Proposed}} selected{{end}}>{{.}} ({{t $.Lang "tag"}})</option>{{end}}
+      {{if .Refs.Branches}}<optgroup label="{{t .Lang "Branches"}}">
+        {{range .Refs.Branches}}<option value="{{.}}"{{if eq . $.Refs.Proposed}} selected{{end}}>{{.}}</option>{{end}}
+      </optgroup>{{end}}
+      {{if .Refs.Tags}}<optgroup label="{{t .Lang "Tags"}}">
+        {{range .Refs.Tags}}<option value="{{.}}"{{if eq . $.Refs.Proposed}} selected{{end}}>{{.}}</option>{{end}}
+      </optgroup>{{end}}
     </select>
     <label for="plugin-ref">{{t .Lang "Version"}}</label>
   </div>
-  <label class="check"><input type="checkbox" name="backupfirst" checked> {{t .Lang "Back up first, so I can undo this"}}</label>
+  <label class="check"><input type="checkbox" name="backupfirst" checked> {{t .Lang "Back up first — a restore point in case of breakage"}}</label>
   <div class="row end"><button>{{t .Lang "Install plugin"}}</button></div>
 </form>
 {{end}}

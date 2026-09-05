@@ -180,7 +180,18 @@ document.addEventListener('click', function (e) {
   if (u) u.value = b.dataset.source || '';
   var refs = document.getElementById('cd-refs');
   if (refs) refs.innerHTML = '';
+  var rf = document.getElementById('cd-refform'); // restore the Show-versions button for the new plugin
+  if (rf) rf.hidden = false;
   d.showModal();
+});
+// After the ref picker loads (/plugins/refs), hide the now-redundant "Show
+// versions" form that sits just before the results — but only on success (the
+// swapped fragment has a <select>); on an error swap the button stays for retry.
+document.body.addEventListener('htmx:afterSwap', function (e) {
+  var t = e.target;
+  if (!t || (t.id !== 'pluginrefs' && t.id !== 'cd-refs')) return;
+  var prev = t.previousElementSibling;
+  if (prev && prev.tagName === 'FORM') prev.hidden = !!t.querySelector('select');
 });
 document.addEventListener('click', function (e) {
   var r = e.target.closest('button.reveal');

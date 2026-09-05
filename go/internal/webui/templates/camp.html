@@ -62,7 +62,7 @@
     <form id="cd-refform" hx-post="/plugins/refs" hx-target="#cd-refs" hx-swap="innerHTML" hx-disabled-elt="find button">
       <input type="hidden" name="csrf" value="{{.CSRF}}">
       <input type="hidden" name="url" id="cd-url" value="">
-      <div class="row end"><button class="secondary">{{t .Lang "Find versions"}}</button></div>
+      <div class="row end"><button class="secondary">{{t .Lang "Show versions"}}</button></div>
     </form>
     <div id="cd-refs"></div>
     {{else if not .UrlInstallEnabled}}
