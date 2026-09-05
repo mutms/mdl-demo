@@ -5,18 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.6.0] - 2026-09-05
 
 ### Added
 
-- Add a plugin to the demo from any git repository, with the matching version pre-selected
-- Support for offline mode
-- Support for custom poster tool card
-- Integration of CAMP plugin registry
+- Plugin installer
+- Full recipe updates
+- CAMP plugin registry
+- New logos and graphics
+- Offline mode helper script
+- Custom poster cards support
+- Build-time kill switches for feature disabling
+- New launcher option `--image`
 
 ### Changed
 
 - Restore offers two choices only: keep the current code, or rebuild the backup's code
+
+### Fixed
+
+- Cron no longer runs during install, reset, plugin add, restore or backup
+- Selecting text in a dialog field and releasing outside no longer closes the dialog
 
 ## [0.5.0] - 2026-09-05
 
