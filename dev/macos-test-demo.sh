@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Fast local test loop on macOS: pull, rebuild natively (single arch, no
-# push), run as container "mdl-demo-test", open its console. Repeat after
-# every change — cached layers make code-only rebuilds take seconds.
+#
+# I run this on my Mac to smoke-test the real image before I tag a release.
+# Native rebuild (one arch, no push), runs it as "mdl-demo-test", opens the
+# console. Poke it, and if it's good, publish with dev/github-publish.sh.
+#   --skodak
 
 set -e
 # Run against the repo root whatever the caller's cwd: the build context

@@ -1,27 +1,28 @@
 #!/usr/bin/env bash
-# Build the multi-arch release image on macOS (Apple silicon — both arches
-# build natively, no emulation) and publish it to ghcr.io.
 #
-# The version comes from git: HEAD must be exactly on a vX.Y.Z tag that is
-# already pushed to origin, and the working tree must be clean — the script
-# refuses to publish anything else, so no "dirty" or "-4-gabc1234" builds
-# can ever reach the registry.
+# This is how I build the official images. No CI, no build farm — I do it by
+# hand on my Mac. Apple silicon builds both arches natively, it's fast, and I
+# like watching it. Every ghcr.io/mutms/mdl-demo image came out of this script.
+# Want your own images? Change IMAGE, run it. That's the whole trick.
+#
+# Set up new computer:
+#
+#       cd ~/Developer
+#       git clone git@github.com:mutms/mdl-demo.git
+#       cd ~/Developer/mdl-demo
+#       container registry login ghcr.io
 #
 # Release steps:
-#   1. Move the [Unreleased] entries in CHANGELOG.md under a new
-#      [X.Y.Z] - YYYY-MM-DD heading; commit and push.
-#   2. Tag that commit and push the tag:
-#        git tag -a vX.Y.Z -m 'Release vX.Y.Z' && git push origin vX.Y.Z
-#   3. On the Mac, check out the tag, log in, and run this script:
-#        git fetch --tags && git checkout vX.Y.Z
-#        container registry login ghcr.io   # interactive; creds stay out of scripts
-#        dev/github-publish.sh
 #
-# First release only: the new package is private by default — make it public
-# in the GitHub package settings, or the README's run commands fail with an
-# authentication error.
+#   1. In mpd VM update CHANGELOG.md [Unreleased] to match actual release tag!!!
+#   2. Tag that commit and push the tag to github
+#   3. On the Mac:
+#       cd ~/Developer/mdl-demo
+#       git pull
+#       bash dev/macos-test-demo.sh
+#       bash dev/github-publish.sh
 #
-# Forks: IMAGE=ghcr.io/<owner>/<repo> dev/github-publish.sh
+#   --skodak
 
 set -euo pipefail
 # Run against the repo root whatever the caller's cwd: the build context
