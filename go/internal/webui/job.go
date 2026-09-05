@@ -167,9 +167,9 @@ func (j *job) startBackup(version, name string) bool {
 	})
 }
 
-func (j *job) startAddPlugin(url, ref string) bool {
+func (j *job) startAddPlugin(url, ref string, backupFirst bool, version string) bool {
 	return j.start("plugin", "", "", func(logf execx.Logf) error {
-		return site.AddPlugin(logf, url, ref)
+		return site.AddPlugin(logf, url, ref, backupFirst, version)
 	})
 }
 

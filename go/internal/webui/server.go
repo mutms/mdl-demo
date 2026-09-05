@@ -799,7 +799,8 @@ func (s *Server) handlePluginRefs(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handlePluginAdd(w http.ResponseWriter, r *http.Request) {
 	url := strings.TrimSpace(r.FormValue("url"))
 	ref := strings.TrimSpace(r.FormValue("ref"))
-	if !s.job.startAddPlugin(url, ref) {
+	backupFirst := r.FormValue("backupfirst") != ""
+	if !s.job.startAddPlugin(url, ref, backupFirst, s.version) {
 		http.Error(w, "another operation is already running", http.StatusConflict)
 		return
 	}

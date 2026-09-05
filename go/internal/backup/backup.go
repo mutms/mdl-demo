@@ -108,7 +108,7 @@ func cleanBase(s string) string {
 		return r
 	}, norm.NFD.String(s))
 	base = strings.ReplaceAll(base, " ", "-")
-	base = regexp.MustCompile(`[^a-zA-Z0-9-]`).ReplaceAllString(base, "")
+	base = regexp.MustCompile(`[^a-zA-Z0-9_-]`).ReplaceAllString(base, "")
 	return strings.Trim(regexp.MustCompile(`-+`).ReplaceAllString(base, "-"), "-")
 }
 

@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/mutms/mdl-demo/go/internal/execx"
 	"github.com/mutms/mdl-demo/go/internal/moodle"
@@ -121,8 +122,10 @@ func proposeRef(branches, tags []string, siteBranch string) string {
 
 // AddPlugin clones a plugin from a git repo at ref, places it in the tree at the
 // path Moodle assigns its component, records it with mudev, and upgrades. Runs
-// in the single-flight job (as root).
-func AddPlugin(logf execx.Logf, url, ref string) error {
+// in the single-flight job (as root). When backupFirst is set, it takes a
+// "prior-<component>-<time>.mdb" backup just before touching the tree, so a
+// misbehaving plugin is one restore away from undone.
+func AddPlugin(logf execx.Logf, url, ref string, backupFirst bool, version string) error {
 	if !allowedGitURL(url) {
 		return fmt.Errorf("not a git URL")
 	}
@@ -159,6 +162,15 @@ func AddPlugin(logf execx.Logf, url, ref string) error {
 	}
 	component := string(m[1])
 	logf("Plugin component: " + component)
+
+	// Undo point: back up the site as it is now (without the plugin) before the
+	// tree is touched, named for the plugin so it is easy to find.
+	if backupFirst {
+		logf("Backing up first (undo point)")
+		if _, err := Backup(logf, version, "prior-"+component+"-"+time.Now().Format("20060102-150405")); err != nil {
+			return fmt.Errorf("pre-install backup failed: %w", err)
+		}
+	}
 
 	relpath, err := moodle.PluginRelpath(component)
 	if err != nil {

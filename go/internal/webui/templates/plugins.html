@@ -51,7 +51,7 @@
 <article>
   <h2>{{t .Lang "Add a plugin"}}</h2>
   {{if .MoodleRelease}}<p class="empty">{{t .Lang "This site runs Moodle"}} <strong>{{.MoodleRelease}}</strong> — {{t .Lang "pick a matching version below."}}</p>{{end}}
-  <p class="warn">{{t .Lang "Adding a plugin runs its code on this throwaway demo — do it only with code you are willing to run."}}</p>
+  <p class="warn">{{t .Lang "Adding a plugin runs its code on this throwaway demo. If things break, reset the site; if it gets compromised, delete the container entirely."}}</p>
   <form hx-post="/plugins/refs" hx-target="#pluginrefs" hx-swap="innerHTML" hx-disabled-elt="find button">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
     <div class="row">
@@ -97,6 +97,7 @@
     </select>
     <label for="plugin-ref">{{t .Lang "Version"}}</label>
   </div>
+  <label class="check"><input type="checkbox" name="backupfirst" checked> {{t .Lang "Back up first, so I can undo this"}}</label>
   <div class="row end"><button>{{t .Lang "Add plugin"}}</button></div>
 </form>
 {{end}}
