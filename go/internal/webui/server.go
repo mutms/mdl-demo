@@ -48,6 +48,9 @@ type Server struct {
 	// poller re-checks it; when it differs the process restarted (a rebuilt
 	// container, say) and the open page — now showing stale state — reloads.
 	epoch string
+	// poster is the optional image-baked custom Tools card, loaded once at boot;
+	// nil in the stock image (see poster.go).
+	poster *poster
 }
 
 // Serve runs the UI until the process is stopped; the init supervisor owns
@@ -57,6 +60,7 @@ type Server struct {
 // the identity being there.
 func Serve(out io.Writer, version string) error {
 	s := &Server{version: version, job: &job{}, epoch: strconv.FormatInt(time.Now().UnixNano(), 36)}
+	s.poster = loadPoster()
 	logSink.Store(s.job)
 
 	if err := adoptEnv(out); err != nil {
@@ -90,6 +94,7 @@ func Serve(out io.Writer, version string) error {
 	mux.HandleFunc("POST /plugins/refs", s.csrf(s.handlePluginRefs))
 	mux.HandleFunc("POST /plugins/add", s.csrf(s.handlePluginAdd))
 	mux.HandleFunc("GET /recommends", s.handleRecommendsPage)
+	mux.HandleFunc("GET /poster", s.handlePosterPage)
 	mux.HandleFunc("GET /backups", s.handleBackupsPage)
 	mux.HandleFunc("GET /section/backuplist", s.handleBackupList)
 	mux.HandleFunc("POST /backups/create", s.csrf(s.handleBackupCreate))
@@ -235,6 +240,8 @@ type view struct {
 	VendorTabs []vendorTab
 	// Settings page: result of a catalogue git pull, rendered back into it.
 	CatUpdates []catUpdate
+	// Poster is the optional image-baked custom Tools card (nil in the stock image).
+	Poster *poster
 }
 
 // catUpdate is one catalogue's git-pull result for the Settings page.
@@ -490,6 +497,7 @@ func (s *Server) baseView(r *http.Request) view {
 			v.Title = v.ID + " · " + v.Name
 		}
 	}
+	v.Poster = s.poster
 	return v
 }
 
@@ -828,6 +836,19 @@ func (s *Server) handleRecommendsPage(w http.ResponseWriter, r *http.Request) {
 	v.Recommends = recommends()
 	v.Section = "Recommendations"
 	s.render(w, "recommends", v)
+}
+
+// handlePosterPage serves the optional poster's sub-page; 404 when the image
+// ships none. The breadcrumb shows the poster's own title (tr passes it through
+// unchanged, as it is not a translation key).
+func (s *Server) handlePosterPage(w http.ResponseWriter, r *http.Request) {
+	if s.poster == nil {
+		http.NotFound(w, r)
+		return
+	}
+	v := s.buildView(r)
+	v.Section = s.poster.Title
+	s.render(w, "poster", v)
 }
 
 func (s *Server) handleBackupCreate(w http.ResponseWriter, r *http.Request) {

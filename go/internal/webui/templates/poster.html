@@ -1,0 +1,16 @@
+{{/* Optional image-baked poster sub-page (assets/poster/page.html). The content
+     is the image builder's own trusted HTML, injected verbatim; the CSP forbids
+     inline styles, so it uses the existing classes. The topbar h1 is the page
+     heading (the poster's title), so there is no repeated in-page title — same
+     convention as recommends.html. */}}
+{{define "poster"}}<!doctype html>
+<html lang="{{.Lang}}">
+{{template "head" .}}
+{{template "topbar" .}}
+
+<article class="poster">
+  {{.Poster.Body}}
+</article>
+
+{{template "footer" .}}
+</html>{{end}}

@@ -7,6 +7,8 @@
   --line: var(--pico-muted-border-color);
   --card: var(--pico-card-background-color); --bg: var(--pico-background-color);
   --accent: var(--pico-primary);
+  /* Poster tile highlight — Moodle orange by default; a fork overrides it. */
+  --poster: #f98012;
   --ok: #15803d; --okbg: #16a34a1f; --idle: #6b7280; --idlebg: #9ca3af22;
   --err: #b91c1c; --errbg: #dc26261a;
   --pico-border-radius: 8px;
@@ -137,6 +139,14 @@ pre.log.short { max-height: 5cm; }
 a.tool { text-decoration: none; color: inherit;
   transition: border-color .12s, background .12s; }
 a.tool:hover { border-color: var(--accent); background: var(--idlebg); }
+/* The optional poster tile is a fork/presenter's card — highlight it so it
+   catches the eye first among the neutral tools: an orange (Moodle-colour)
+   border, icon and faint tint. Keyed off --poster, so a fork recolours it with
+   one variable. */
+a.tool.poster { border-color: var(--poster);
+  background: color-mix(in srgb, var(--poster) 8%, var(--card)); }
+a.tool.poster .tool-i, a.tool.poster .tool-x .arrow { color: var(--poster); }
+a.tool.poster:hover { background: color-mix(in srgb, var(--poster) 15%, var(--card)); }
 .tool-h { display: flex; align-items: center; gap: .5rem; }
 .tool-i { color: var(--dim); flex: none; }
 .tool-t { font-weight: 600; font-size: .95rem; color: var(--fg); }

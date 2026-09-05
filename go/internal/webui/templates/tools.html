@@ -9,6 +9,19 @@
 <article id="tools" hx-get="/section/tools" hx-trigger="every 5s" hx-swap="outerHTML">
   <h2>{{t .Lang "Tools"}}</h2>
   <div class="toolgrid">
+    {{/* Optional image-baked poster (assets/poster/): a fork/presenter tile in
+         the first slot. Shown whenever the image carries one, install or not;
+         the stock image has none. See poster.go / assets/poster/README.md. */}}
+    {{if .Poster}}
+    <a class="tool poster" href="/poster">
+      <div class="tool-h">
+        {{.Poster.Logo}}
+        <span class="tool-t">{{.Poster.Title}}</span>
+        <span class="tool-x arrow">&rarr;</span>
+      </div>
+      <p class="tool-d">{{.Poster.Desc}}</p>
+    </a>
+    {{end}}
     {{if .Installed}}
     {{if .TunnelEnabled}}
     {{/* Quick Tunnel: a switch, on = the site is public. The form posts to

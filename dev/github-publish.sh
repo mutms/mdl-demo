@@ -35,11 +35,17 @@ if [ -n "$(git status --porcelain)" ]; then
     exit 1
 fi
 
-# Offline mirrors are gitignored, so they slip past the check above — but an
-# image built with them is gigabytes of local git repos I must never push here.
+# Offline mirrors and a custom poster are gitignored, so they slip past the check
+# above — but baking either into the OFFICIAL image is exactly what I must never
+# do here (gigabytes of local git repos, or someone else's branding/welcome page).
 if [ -n "$(find assets/repos -mindepth 1 -not -name README.md -print -quit)" ]; then
     echo "error: assets/repos/ holds offline mirrors — this would publish an offline build" >&2
     echo "       clear them first: bash dev/prepare-offline-build.sh --clean" >&2
+    exit 1
+fi
+if [ -n "$(find assets/poster -mindepth 1 -not -name README.md -print -quit)" ]; then
+    echo "error: assets/poster/ holds a custom poster — this would publish it into the official image" >&2
+    echo "       clear it first: rm -f assets/poster/title.html (or the whole poster)" >&2
     exit 1
 fi
 

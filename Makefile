@@ -55,9 +55,14 @@ clean-podman: clean-test
 	-sudo podman image prune -f
 	-sudo podman builder prune -f
 
-# The build context is the repo root.
+# The build context is the repo root. Each build retags mdl-demo, so the
+# previous one goes dangling (<none>) — a few GB when the offline mirrors are
+# baked in. Prune just those afterwards to keep disk in check; the build-cache
+# layers are left alone so the next build stays fast. For a fuller sweep (image +
+# cache + test containers) use `make clean-podman`.
 image:
 	sudo podman build -t mdl-demo --build-arg VERSION=$(VERSION) -f container/Containerfile .
+	-sudo podman image prune -f
 
 # Test container for manual testing inside an mpd VM (see dev/README.md).
 # PORT overrides the console port (site = PORT+1) so several test containers can

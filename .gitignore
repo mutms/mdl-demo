@@ -10,3 +10,8 @@
 # that script has its own guard against publishing an offline build.
 /assets/repos/*
 !/assets/repos/README.md
+# Poster content (dev/presenter customization) - the stock repo ships only the
+# README contract; a fork drops title.html/blurb.html/page.html/logo.svg into its
+# own build. Keeps the sample out of the official image.
+/assets/poster/*
+!/assets/poster/README.md
