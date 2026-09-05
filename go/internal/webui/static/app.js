@@ -298,11 +298,18 @@ document.addEventListener('click', function (e) {
   d.showModal();
 });
 // data-close on a <dialog>: "backdrop" closes on a click outside the box,
-// "any" on any click.
+// "any" on any click. For "backdrop" the press must ALSO have started on the
+// backdrop — otherwise selecting text in a field and dragging past the edge
+// (mouseup on the backdrop) fires a click targeting the dialog and closes it.
+var downOnBackdrop = false;
+document.addEventListener('mousedown', function (e) {
+  downOnBackdrop = e.target.tagName === 'DIALOG';
+});
 document.addEventListener('click', function (e) {
   var d = e.target.closest('dialog');
   if (!d || !d.dataset.close) return;
-  if (d.dataset.close === 'any' || e.target === d) d.close();
+  if (d.dataset.close === 'any') { d.close(); return; }
+  if (e.target === d && downOnBackdrop) d.close();
 });
 // The SSO poll answers with an HX-Trigger header once the code is claimed.
 document.addEventListener('sso-done', function () {
