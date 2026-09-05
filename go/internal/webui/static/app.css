@@ -356,3 +356,6 @@ footer .tm { margin: .5rem 0 0; font-size: .72rem; opacity: .85; }
   gap: .5rem; margin: 1rem 0 0; }
 .camppage { color: var(--dim); font-size: .82rem; }
 .campcredit { color: var(--dim); font-size: .72rem; margin: 1.2rem 0 0; }
+
+/* Source repo shown above the version picker, so it's clear what's installing. */
+.refsrc { margin: 0 0 .2rem; font-size: .82rem; color: var(--dim); overflow-wrap: anywhere; }

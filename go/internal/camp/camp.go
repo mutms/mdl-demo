@@ -87,8 +87,18 @@ type Advisory struct {
 type Catalog struct {
 	plugins     []Plugin
 	byComponent map[string]*Plugin
+	bySource    map[string]*Plugin // normalized source URL → plugin
 	advisories  map[string][]Advisory
 	types       []string
+}
+
+// normalizeSource canonicalises a git URL for source lookup: no trailing slash
+// or ".git", so a pasted URL matches the catalogue's stored form.
+func normalizeSource(u string) string {
+	u = strings.TrimSpace(u)
+	u = strings.TrimSuffix(u, "/")
+	u = strings.TrimSuffix(u, ".git")
+	return u
 }
 
 // Query selects and paginates a slice of the catalogue.
@@ -104,7 +114,7 @@ type Query struct {
 // Load reads the whole catalogue from dir. Plugin files live at
 // plugins/<type>/<component>.yml; advisories at advisories/*.yml.
 func Load(dir string) (*Catalog, error) {
-	c := &Catalog{byComponent: map[string]*Plugin{}, advisories: map[string][]Advisory{}}
+	c := &Catalog{byComponent: map[string]*Plugin{}, bySource: map[string]*Plugin{}, advisories: map[string][]Advisory{}}
 
 	files, err := filepath.Glob(filepath.Join(dir, "plugins", "*", "*.yml"))
 	if err != nil {
@@ -145,6 +155,9 @@ func Load(dir string) (*Catalog, error) {
 	})
 	for i := range c.plugins {
 		c.byComponent[c.plugins[i].Component] = &c.plugins[i]
+		if src := normalizeSource(c.plugins[i].Source); src != "" {
+			c.bySource[src] = &c.plugins[i]
+		}
 	}
 	for t := range typeSet {
 		c.types = append(c.types, t)
@@ -205,6 +218,14 @@ func (c *Catalog) Filter(q Query) (page []Plugin, total int) {
 // Get returns the plugin with the given component.
 func (c *Catalog) Get(component string) (*Plugin, bool) {
 	p, ok := c.byComponent[component]
+	return p, ok
+}
+
+// GetBySource returns the catalogue plugin whose source repo is url (matched
+// scheme-and-.git-insensitively) — so the console can name a plugin from just
+// its git URL, no clone or network round trip.
+func (c *Catalog) GetBySource(url string) (*Plugin, bool) {
+	p, ok := c.bySource[normalizeSource(url)]
 	return p, ok
 }
 

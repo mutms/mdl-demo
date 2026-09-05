@@ -59,6 +59,7 @@
     </dl>
     <p><a id="cd-camp" href="#" target="_blank" rel="noopener">{{t .Lang "Latest on Camp"}} <span class="ext" aria-hidden="true">↗</span></a></p>
     {{if and .Installed .UrlInstallEnabled}}
+    <p class="warn">{{t .Lang "Adding a plugin runs its code on this throwaway demo. If things break, reset the site; if it gets compromised, delete the container entirely."}}</p>
     <form id="cd-refform" hx-post="/plugins/refs" hx-target="#cd-refs" hx-swap="innerHTML" hx-disabled-elt="find button">
       <input type="hidden" name="csrf" value="{{.CSRF}}">
       <input type="hidden" name="url" id="cd-url" value="">

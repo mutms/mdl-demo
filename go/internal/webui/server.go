@@ -265,7 +265,12 @@ type view struct {
 	PluginGroups []pluginGroup
 	// Add-a-plugin: the repo URL under consideration and its refs (/plugins/refs).
 	PluginURL string
-	Refs      site.Refs
+	// PluginCamp is the Camp catalogue entry when the URL is a known Camp source
+	// (looked up in memory, no round trip); nil for an unlisted URL. Lets the ref
+	// picker show the same detail as the Camp dialog. PluginCampAdv is its advisories.
+	PluginCamp    *camp.Plugin
+	PluginCampAdv []camp.Advisory
+	Refs          site.Refs
 	// Recommendations page.
 	Recommends []recommendRow
 	// The empty dashboard's recipe chooser: vendor tabs of version streams.
@@ -891,6 +896,14 @@ func (s *Server) handlePluginRefs(w http.ResponseWriter, r *http.Request) {
 	}
 	v := s.buildView(r)
 	v.PluginURL = strings.TrimSpace(r.FormValue("url"))
+	// Describe it from the in-memory Camp catalogue when the URL is a listed
+	// source — the same detail as the Camp dialog, with no clone or network call.
+	if cat := s.campCatalog(); cat != nil {
+		if p, ok := cat.GetBySource(v.PluginURL); ok {
+			v.PluginCamp = p
+			v.PluginCampAdv = cat.AdvisoriesFor(p.Component)
+		}
+	}
 	refs, err := site.ListRefs(v.PluginURL)
 	if err != nil {
 		v.Error = err.Error()
