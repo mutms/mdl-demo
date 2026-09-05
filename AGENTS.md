@@ -197,6 +197,10 @@ moodle/release/<version> --adminpass 'Test1234!'`, then browse the site
 (https://mdl-demo-<port>.<vm>.mpd.test, or http://127.0.0.1:<port+1> on the
 VM). `DEV.md` covers dev-environment setup; multi-arch release builds and
 the publish steps live in `dev/github-publish.sh` (run on an Apple silicon Mac).
+`dev/demo-recording/` regenerates the animated console walkthrough (the
+`demo.webp` in the mutms/www news post) — drives the console over CDP, cuts the
+install out, encodes it; see its `README.md`. The finished webp lives in the
+mutms/www repo, not here.
 
 Typical extension points: new UI feature → handler in
 `webui/server.go` + a template file in `webui/templates/` (htmx section

@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: #f7f6f4;            /* same off-white as the console */
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    height: 100vh;
+  }
+  .term {
+    width: 760px;
+    background: #1e1f22;
+    border-radius: 12px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.28), 0 4px 14px rgba(0,0,0,.18);
+    overflow: hidden;
+    font-family: "SF Mono", "JetBrains Mono", "Fira Mono", ui-monospace, "DejaVu Sans Mono", Menlo, Consolas, monospace;
+  }
+  .bar {
+    height: 40px; display: flex; align-items: center; gap: 8px;
+    padding: 0 16px; background: #2b2d31;
+    border-bottom: 1px solid rgba(255,255,255,.05);
+  }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .r { background: #ff5f57; } .y { background: #febc2e; } .g { background: #28c840; }
+  .title { color: #9a9da3; font-size: 13px; margin-left: 10px; letter-spacing: .01em;
+           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .body { padding: 22px 24px 26px; font-size: 16px; line-height: 1.9; }
+  .line { white-space: pre-wrap; word-break: break-all; }
+  .prompt { color: #ff7700; font-weight: 700; }         /* MuTMS orange */
+  .cmd { color: #eaeaea; }
+  .caret {
+    display: inline-block; width: 9px; height: 18px; margin-left: 1px;
+    background: #eaeaea; vertical-align: -3px;
+    animation: blink 1s steps(1) infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+  .out { color: #8b8e95; }
+  .ok { color: #28c840; }
+  #out .line { opacity: 0; }
+</style>
+</head>
+<body>
+  <div class="term">
+    <div class="bar">
+      <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+      <span class="title">Terminal — mdl-demo</span>
+    </div>
+    <div class="body">
+      <div class="line"><span class="prompt">$ </span><span class="cmd" id="cmd"></span><span class="caret" id="caret"></span></div>
+      <div id="out">
+        <div class="line out" id="o1">Starting mdl-demo…</div>
+        <div class="line ok" id="o2">✓ Console ready → http://127.0.0.1:6391</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

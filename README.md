@@ -26,7 +26,7 @@ gives it a temporary public link, and another click makes it private again.
 Reset the site in the console to start over with a different version, or delete
 the container when you are done testing.
 
-<!-- A short demo video / animated walkthrough will live here. -->
+![mdl-demo animation](https://www.mutms.org/news/mdl-demo/demo.webp)
 
 ## Getting started
 

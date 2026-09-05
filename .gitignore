@@ -15,3 +15,6 @@
 # own build. Keeps the sample out of the official image.
 /assets/poster/*
 !/assets/poster/README.md
+# Per-tool scratch: any dev/<tool>/ drops its regenerable junk (frames, encodes,
+# working dirs) under its own temp/. One rule so it never accumulates here.
+/dev/*/temp/
