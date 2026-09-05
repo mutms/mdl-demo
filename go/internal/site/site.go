@@ -46,6 +46,7 @@ func DefaultFullname(vendor string) string {
 // Install provisions the whole site: database, code tree, config, Apache,
 // Moodle installer, cron timer. Fails fast if a site is already present.
 func Install(logf execx.Logf, o Options) error {
+	defer state.HoldBusy()() // pause the cron ticker while the tree/DB change
 	if o.Recipe == "" || o.AdminPass == "" {
 		return fmt.Errorf("recipe and admin password are required")
 	}
@@ -166,6 +167,7 @@ func Install(logf execx.Logf, o Options) error {
 // retry, not a reason to leave the site stuck — so only those two steps can
 // fail the reset, and it stays safe to run again.
 func Reset(logf execx.Logf) error {
+	defer state.HoldBusy()() // pause the cron ticker while the tree/DB are wiped
 	warn := func(what string, err error) {
 		if err != nil {
 			logf("warning: " + what + " failed: " + err.Error())

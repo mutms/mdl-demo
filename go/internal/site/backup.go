@@ -61,6 +61,7 @@ func roleLabel(id string) string {
 // Backup snapshots the installed site into a new .mdb file in backup.Dir and
 // returns its name. version stamps the archive metadata.
 func Backup(logf execx.Logf, version, name string) (string, error) {
+	defer state.HoldBusy()() // pause cron so the DB isn't written mid-copy
 	st, err := state.Load()
 	if err != nil {
 		return "", err
@@ -214,6 +215,7 @@ type RestoreOptions struct {
 // mismatched tree by accident. Fresh passwords are generated for admin and
 // every account the backup lists.
 func Restore(logf execx.Logf, o RestoreOptions) error {
+	defer state.HoldBusy()() // pause the cron ticker while the tree/DB change
 	warn := func(what string, err error) {
 		if err != nil {
 			logf("warning: " + what + " failed: " + err.Error())

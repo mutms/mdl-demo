@@ -18,6 +18,7 @@ import (
 
 	"github.com/mutms/mdl-demo/go/internal/execx"
 	"github.com/mutms/mdl-demo/go/internal/moodle"
+	"github.com/mutms/mdl-demo/go/internal/state"
 )
 
 // reComponent pulls a plugin's frankenstyle component from its version.php
@@ -126,6 +127,7 @@ func proposeRef(branches, tags []string, siteBranch string) string {
 // "prior-<component>-<time>.mdb" backup just before touching the tree, so a
 // misbehaving plugin is one restore away from undone.
 func AddPlugin(logf execx.Logf, url, ref string, backupFirst bool, version string) error {
+	defer state.HoldBusy()() // pause the cron ticker across clone + upgrade
 	if !allowedGitURL(url) {
 		return fmt.Errorf("not a git URL")
 	}

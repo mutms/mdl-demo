@@ -13,12 +13,56 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 // Path is the state file location. The init supervisor's cron ticker reads
 // it every minute: cron runs while it records an installed site.
 const Path = "/etc/mdl-demo/state.json"
+
+// BusyPath marks a destructive site operation in progress (install, reset,
+// plugin add, restore, backup). It is a file so it works across processes — the
+// console's in-process job and a `mdl-demo …` CLI run alike — and the cron
+// ticker skips while it exists, so a per-minute cron run can never collide with
+// a schema upgrade or a half-wiped tree (which errored mid-plugin-install).
+const BusyPath = "/etc/mdl-demo/busy.lock"
+
+// busy refcounts holders in THIS process so a nested op (AddPlugin → Backup)
+// keeps the lock until the outermost releases, not the first inner one.
+var (
+	busyMu sync.Mutex
+	busyN  int
+)
+
+// HoldBusy marks the site busy and returns a release func — defer it. Nested
+// calls in one process share the lock file; it is removed when the last holder
+// releases.
+func HoldBusy() func() {
+	busyMu.Lock()
+	busyN++
+	if busyN == 1 {
+		_ = os.MkdirAll(filepath.Dir(BusyPath), 0755)
+		_ = os.WriteFile(BusyPath, []byte("1\n"), 0600)
+	}
+	busyMu.Unlock()
+	return func() {
+		busyMu.Lock()
+		if busyN--; busyN == 0 {
+			_ = os.Remove(BusyPath)
+		}
+		busyMu.Unlock()
+	}
+}
+
+// Busy reports whether a destructive site operation is in progress (any process).
+func Busy() bool {
+	_, err := os.Stat(BusyPath)
+	return err == nil
+}
+
+// ClearBusy removes a stale lock left by a crashed operation; call once at boot.
+func ClearBusy() { _ = os.Remove(BusyPath) }
 
 // Container-internal ports. They never change: the outside world maps its
 // own console port NNNN to ConsoleListen and NNNN+1 to SiteListen, so the

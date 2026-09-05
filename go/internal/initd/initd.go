@@ -138,6 +138,9 @@ func Run(version string) error {
 	for _, p := range s.procs {
 		go s.supervise(p)
 	}
+	// Clear a busy lock left by an operation that crashed in a previous process,
+	// so the cron ticker isn't wedged off after a restart.
+	state.ClearBusy()
 	go s.cronLoop()
 	go func() {
 		if err := webui.Serve(os.Stdout, version); err != nil {
@@ -313,6 +316,11 @@ func (s *Supervisor) cronLoop() {
 		}
 		st, err := state.Load()
 		if err != nil || !st.Installed() || !moodle.Detected() {
+			continue
+		}
+		// Skip while a destructive op runs (install/reset/plugin add/restore/
+		// backup): a cron run mid-upgrade hits a half-changed schema and errors.
+		if state.Busy() {
 			continue
 		}
 		// Output streams into the web UI's Site log ("cron:"-prefixed);
