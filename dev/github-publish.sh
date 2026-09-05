@@ -35,6 +35,14 @@ if [ -n "$(git status --porcelain)" ]; then
     exit 1
 fi
 
+# Offline mirrors are gitignored, so they slip past the check above — but an
+# image built with them is gigabytes of local git repos I must never push here.
+if [ -n "$(find assets/repos -mindepth 1 -not -name README.md -print -quit)" ]; then
+    echo "error: assets/repos/ holds offline mirrors — this would publish an offline build" >&2
+    echo "       clear them first: bash dev/prepare-offline-build.sh --clean" >&2
+    exit 1
+fi
+
 if ! TAG="$(git describe --tags --exact-match HEAD 2>/dev/null)"; then
     echo "error: HEAD is not tagged (got '$(git describe --tags --always)')" >&2
     echo "       tag the release commit first: git tag -a vX.Y.Z -m 'Release vX.Y.Z'" >&2

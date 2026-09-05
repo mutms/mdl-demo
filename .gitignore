@@ -4,3 +4,9 @@
 /dist/
 /assets/backups/*.mdb
 /temp/
+# Offline-demo git mirrors (dev/prepare-offline-build.sh) - gigabytes, never
+# committed. Kept out of git status so they persist between builds for fast
+# rebuilds. NB: this also hides them from github-publish.sh's dirty-tree check -
+# that script has its own guard against publishing an offline build.
+/assets/repos/*
+!/assets/repos/README.md

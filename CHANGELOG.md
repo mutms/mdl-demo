@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add a plugin to the demo from any git repository, with the matching version pre-selected
+- Support for offline mode
 
 ### Changed
 
