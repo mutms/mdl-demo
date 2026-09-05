@@ -57,7 +57,6 @@
        and vanish. Cleared when the next add starts. */}}
   {{if and .Job.Failed (eq .Job.Kind "plugin")}}<p class="error">{{.Job.Error}}</p>{{end}}
   {{if .MoodleRelease}}<p class="empty">{{t .Lang "This site runs Moodle"}} <strong>{{.MoodleRelease}}</strong> — {{t .Lang "pick a matching version below."}}</p>{{end}}
-  <p class="warn">{{t .Lang "Adding a plugin runs its code on this throwaway demo. If things break, reset the site; if it gets compromised, delete the container entirely."}}</p>
   <form hx-post="/plugins/refs" hx-target="#pluginrefs" hx-swap="innerHTML" hx-disabled-elt="find button">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
     <div class="row">
@@ -98,6 +97,15 @@
 <form method="post" action="/plugins/add" class="stack refpick">
   <input type="hidden" name="csrf" value="{{.CSRF}}">
   <input type="hidden" name="url" value="{{.PluginURL}}">
+  {{/* The mark fires here, at the clone-and-run step (shared by the git-URL and
+       CAMP flows): the sign, with the warning beside it. */}}
+  <div class="danger">
+    {{template "dangersign" .}}
+    <div class="warn">
+      <p>{{t .Lang "Adding a plugin runs its code on this throwaway demo."}}</p>
+      <p>{{t .Lang "If things break, reset the site. If it gets compromised, delete the container entirely."}}</p>
+    </div>
+  </div>
   {{/* Say what's installing. When the URL is a known Camp source, show the same
        card as the Camp dialog (component, tier, advisory, summary, Camp link) —
        all from memory, no round trip. Otherwise just the source repo. The exact
@@ -130,7 +138,10 @@
     <label for="plugin-ref">{{t .Lang "Version"}}</label>
   </div>
   <label class="check"><input type="checkbox" name="backupfirst" checked> {{t .Lang "Back up first — a restore point in case of breakage"}}</label>
-  <div class="row end"><button>{{t .Lang "Install plugin"}}</button></div>
+  <div class="row end">
+    <button type="button" class="secondary outline refcancel">{{t .Lang "Cancel"}}</button>
+    <button>{{t .Lang "Install plugin"}}</button>
+  </div>
 </form>
 {{end}}
 {{end}}

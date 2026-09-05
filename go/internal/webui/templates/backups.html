@@ -24,14 +24,9 @@
   <h2>{{t .Lang "Upload"}}</h2>
   <div class="tools">
     <p class="empty">{{t .Lang "Upload a .mdb file created here or by another demo container."}}</p>
-    {{/* The csrf input MUST stay before the file input: the streaming upload
-         handler reads the parts in form order and verifies the token before
-         it accepts a single byte of the file. */}}
-    <form method="post" action="/backups/upload" enctype="multipart/form-data" class="row">
-      <input type="hidden" name="csrf" value="{{.CSRF}}">
-      <input type="file" name="file" accept=".mdb" required>
-      <button class="secondary">{{t .Lang "Upload"}}</button>
-    </form>
+    {{/* A backup from elsewhere is untrusted material entering the demo, so the
+         upload form lives behind a dialog that leads with the danger sign. */}}
+    <div><button class="secondary" data-open="uploaddialog"{{if .Busy}} disabled{{end}}>{{t .Lang "Upload"}}</button></div>
   </div>
 </article>
 
@@ -86,6 +81,32 @@
       <button>{{t .Lang "Restore"}}</button>
     </div>
   </form>
+  </article>
+</dialog>
+
+{{/* Upload dialog — opens on the danger sign, then the file field. A .mdb from
+     another container is untrusted (its database and files run on restore), so
+     this is one of the three "foreign material entering" points that carry the
+     mark. csrf stays BEFORE the file input: the streaming handler reads the
+     parts in order and verifies the token before accepting a byte of the file. */}}
+<dialog id="uploaddialog" data-close="backdrop">
+  <article>
+    <button class="dlgclose" type="button" aria-label="Close">×</button>
+    <div class="danger">
+      {{template "dangersign" .}}
+      <div class="warn">
+        <p>{{t .Lang "A backup from another container carries its own database and files. Restoring it runs that content on this throwaway demo."}}</p>
+        <p>{{t .Lang "If things break, reset the site. If it gets compromised, delete the container entirely."}}</p>
+      </div>
+    </div>
+    <form method="post" action="/backups/upload" enctype="multipart/form-data" class="stack">
+      <input type="hidden" name="csrf" value="{{.CSRF}}">
+      <input type="file" name="file" accept=".mdb" required>
+      <div class="row end">
+        <button type="button" class="secondary outline" data-dlgcancel>{{t .Lang "Cancel"}}</button>
+        <button>{{t .Lang "Upload"}}</button>
+      </div>
+    </form>
   </article>
 </dialog>
 

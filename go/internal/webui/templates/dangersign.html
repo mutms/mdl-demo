@@ -1,0 +1,29 @@
+{{/* Shared "untrusted material entering" mark — the mdl-demo logo itself, reused
+     verbatim (same layout/proportions) at the points where foreign code/data is
+     introduced: a git clone (plugin / CAMP install) and a backup upload. Not on
+     restore, recipe install or baked backups — the signal only means something
+     if it is reserved for genuinely untrusted input.
+
+     The banner word localises (CAUTION / POZOR / ACHTUNG) via {{t}}, so a new
+     language is one string, not a new asset; textLength keeps any word inside
+     the banner. The wrapper carries the localised word as its aria-label so
+     screen readers hear the warning; the SVG is aria-hidden. Callers place a
+     warning paragraph beside it (see .danger in app.css). */}}
+{{define "dangersign"}}
+<div class="dangersign" role="img" aria-label="{{t .Lang "CAUTION"}}">
+  <svg viewBox="0 0 120 148" aria-hidden="true">
+    <defs><clipPath id="dsclip"><rect x="5.5" y="5.5" width="109" height="137" rx="15.5"/></clipPath></defs>
+    <rect x="4" y="4" width="112" height="140" rx="18" fill="#f98012" stroke="#201408" stroke-width="3"/>
+    <g clip-path="url(#dsclip)"><rect x="4" y="4" width="112" height="36" fill="#201408"/></g>
+    <text x="60" y="29" text-anchor="middle" fill="#f98012" textLength="96" lengthAdjust="spacingAndGlyphs"
+          font-family="system-ui,-apple-system,'Segoe UI',Arial,sans-serif" font-weight="800" font-size="18" letter-spacing="2">{{t .Lang "CAUTION"}}</text>
+    <g fill="none" stroke="#201408" stroke-width="6.5">
+      <circle cx="60" cy="64" r="12"/><circle cx="49" cy="86" r="12"/><circle cx="71" cy="86" r="12"/>
+    </g>
+    <circle cx="60" cy="78" r="7" fill="#f98012" stroke="#201408" stroke-width="5.5"/>
+    <line x1="22" y1="114" x2="98" y2="114" stroke="#201408" stroke-width="2"/>
+    <text x="60" y="133" text-anchor="middle" fill="#201408"
+          font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-weight="700" font-size="16">mdl-demo</text>
+  </svg>
+</div>
+{{end}}

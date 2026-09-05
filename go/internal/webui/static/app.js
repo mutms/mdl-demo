@@ -35,9 +35,21 @@ document.addEventListener('click', function (e) {
   }
 });
 document.addEventListener('click', function (e) {
-  // The × corner button and a form dialog's Cancel button both just close it.
-  var c = e.target.closest('button.dlgclose, [data-dlgcancel]');
-  if (c) c.closest('dialog').close();
+  // The × corner button, a dialog's Cancel, and the add-plugin flow's Cancel all
+  // close the enclosing dialog. .refcancel also appears on the (non-dialog)
+  // Installed-plugins page — there it resets the inline flow instead of closing.
+  var c = e.target.closest('button.dlgclose, [data-dlgcancel], .refcancel');
+  if (!c) return;
+  var d = c.closest('dialog');
+  if (d) { d.close(); return; }
+  if (c.classList.contains('refcancel')) {
+    var box = document.getElementById('pluginrefs');
+    if (box) {
+      var f = box.previousElementSibling; // the URL / Show-versions form
+      if (f && f.tagName === 'FORM') { f.hidden = false; f.reset(); }
+      box.innerHTML = '';
+    }
+  }
 });
 // Theme toggle: auto → light → dark. Auto = no data-theme, no stored value.
 document.addEventListener('click', function (e) {
