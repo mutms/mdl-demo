@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="mdl-demo">
+  <!-- Biohazard trefoil, black on Moodle orange (matches logo.svg) — untrusted
+       plugin code is dangerous material, run in a throwaway container. Three
+       overlapping dark rings + a centre dot; the trefoil is a free public
+       hazard symbol, not a brand mark. -->
+  <rect x="2" y="2" width="28" height="28" rx="6.5" fill="#ff8c1a"/>
+  <g fill="none" stroke="#201408" stroke-width="3">
+    <circle cx="16" cy="9.5" r="6"/>
+    <circle cx="10" cy="20" r="6"/>
+    <circle cx="22" cy="20" r="6"/>
+  </g>
+  <circle cx="16" cy="16" r="2.3" fill="#201408"/>
+</svg>

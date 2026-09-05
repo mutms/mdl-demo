@@ -1,6 +1,7 @@
 {{define "head"}}<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{.Title}}</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 {{/* Everything is a same-origin file: the Content-Security-Policy (auth.go)
      allows no inline script or style. theme.js loads synchronously so the
      stored theme lands on <html> before first paint. htmx is told not to

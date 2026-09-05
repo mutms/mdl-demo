@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 148" role="img" aria-label="mdl-demo — caution">
+  <!-- mdl-demo logo: a biohazard CAUTION placard, top to bottom — an inverse
+       CAUTION banner (white on dark), the trefoil sign, then mdl-demo. Untrusted
+       plugin code is dangerous material, run safely in a throwaway container.
+       Moodle orange ground, dark marks. Trefoil = free public hazard symbol. -->
+  <defs>
+    <clipPath id="mdlbadge"><rect x="5.5" y="5.5" width="109" height="137" rx="15.5"/></clipPath>
+  </defs>
+  <rect x="4" y="4" width="112" height="140" rx="18" fill="#f98012" stroke="#201408" stroke-width="3"/>
+  <!-- inverse CAUTION banner, clipped to the rounded top -->
+  <g clip-path="url(#mdlbadge)">
+    <rect x="4" y="4" width="112" height="36" fill="#201408"/>
+  </g>
+  <text x="60" y="29" text-anchor="middle" fill="#f98012"
+        font-family="system-ui,-apple-system,'Segoe UI',Arial,sans-serif"
+        font-weight="800" font-size="18" letter-spacing="2">CAUTION</text>
+  <!-- trefoil: three overlapping thick rings + a central hole -->
+  <g fill="none" stroke="#201408" stroke-width="6.5">
+    <circle cx="60" cy="64" r="12"/>
+    <circle cx="49" cy="86" r="12"/>
+    <circle cx="71" cy="86" r="12"/>
+  </g>
+  <circle cx="60" cy="78" r="7" fill="#f98012" stroke="#201408" stroke-width="5.5"/>
+  <line x1="22" y1="114" x2="98" y2="114" stroke="#201408" stroke-width="2"/>
+  <text x="60" y="133" text-anchor="middle" fill="#201408"
+        font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace"
+        font-weight="700" font-size="16">mdl-demo</text>
+</svg>

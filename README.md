@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo.svg" alt="mdl-demo — caution, handle in a container" width="132">
+</p>
+
 # mdl-demo
 
 Try Moodle™ or MuTMS on your own computer. One command, no web server,
