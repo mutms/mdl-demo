@@ -58,6 +58,13 @@ site a temporary public link (with a QR code for phones) that anyone can open
 until you switch it off. While it is on the site is public, so do not put
 anything private in it. The console always stays private to your computer.
 
+## Community
+
+Questions, ideas, or just to show what you demoed: join
+**[#mdl-demo:matrix.org](https://matrix.to/#/#mdl-demo:matrix.org)** on Matrix.
+Bugs and feature requests go to
+[GitHub issues](https://github.com/mutms/mdl-demo/issues).
+
 ## Contributing
 
 Forks and contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md);
