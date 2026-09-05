@@ -150,25 +150,40 @@ RUN printf 'synchronous_commit = off\n' \
 
 COPY --from=build /out/mudev /out/mdl-demo /usr/bin/
 
+# Local git repos a fork bakes in (bare or plain checkouts dropped into
+# assets/repos/) land at /srv/extra/repos FIRST, so the catalogue clone below can
+# source from them. Empty by default. Hidden by design; see assets/repos/README.md.
+COPY assets/repos/ /srv/extra/repos/
+RUN rm -f /srv/extra/repos/README.md
+
 # Recipe + plugin catalogues at mudev's default paths. Shallow, but with .git
-# kept so a running container can `git pull` fresh recipes.
-RUN git clone --depth 1 https://github.com/mutms/mdl-plugins /srv/extra/mdl-plugins \
-    && git clone --depth 1 https://github.com/mutms/mdl-recipes /srv/extra/mdl-recipes \
+# kept so a running container can `git pull` fresh recipes. Each catalogue is
+# cloned from a baked local mirror when a fork provides one under assets/repos/
+# at the full git URL path minus scheme (assets/repos/github.com/mutms/mdl-recipes
+# ↔ https://github.com/mutms/mdl-recipes), so a fully offline image can keep every
+# git clone/pull on the local fs; else from the public GitHub catalogue.
+RUN for c in mdl-recipes mdl-plugins; do \
+        if [ -d "/srv/extra/repos/github.com/mutms/$c" ]; then \
+            git clone "/srv/extra/repos/github.com/mutms/$c" "/srv/extra/$c"; \
+        else \
+            git clone --depth 1 "https://github.com/mutms/$c" "/srv/extra/$c"; \
+        fi; \
+    done \
     && mkdir -p /srv/projects/demo /srv/data /srv/backups /etc/mdl-demo && chmod 700 /srv/backups
 
-# Pre-bundled site backups: any *.mdb dropped into the repo's backups/ dir
-# ships in the image, ready to restore from the console — how a fork bakes a
-# prepared demo site into its own image (see backups/README.md). Deliberately
-# one of the last layers: a fork refreshing its bundled demo rebuilds almost
-# nothing.
-COPY backups/ /srv/backups/
+# Pre-bundled site backups: any *.mdb dropped into the repo's assets/backups/
+# dir ships in the image, ready to restore from the console — how a fork bakes a
+# prepared demo site into its own image (see assets/backups/README.md).
+# Deliberately one of the last layers: a fork refreshing its bundled demo
+# rebuilds almost nothing.
+COPY assets/backups/ /srv/backups/
 RUN chmod 700 /srv/backups && find /srv/backups -type f -exec chmod 600 {} +
 
 # Recipe overlay: <vendor>/<stream>/<version>.yaml files in the repo's
-# recipes/ dir are merged into the catalogue checkout — forks ship their own
-# recipes in the image (see recipes/README.md). The README is stripped so the
-# checkout stays clean for `git pull`.
-COPY recipes/ /srv/extra/recipes-overlay/
+# assets/recipes/ dir are merged into the catalogue checkout — forks ship their
+# own recipes in the image (see assets/recipes/README.md). The README is
+# stripped so the checkout stays clean for `git pull`.
+COPY assets/recipes/ /srv/extra/recipes-overlay/
 RUN rm -f /srv/extra/recipes-overlay/README.md \
     && cp -r /srv/extra/recipes-overlay/. /srv/extra/mdl-recipes/ \
     && rm -rf /srv/extra/recipes-overlay

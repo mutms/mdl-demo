@@ -2,5 +2,5 @@
 .idea/
 /bin/
 /dist/
-/backups/*.mdb
+/assets/backups/*.mdb
 /temp/

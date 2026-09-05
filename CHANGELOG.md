@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add a plugin to the demo from any git repository, with the matching version pre-selected
+
 ### Changed
 
 - Restore offers two choices only: keep the current code, or rebuild the backup's code

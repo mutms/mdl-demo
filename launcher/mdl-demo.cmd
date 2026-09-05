@@ -4,7 +4,7 @@ rem mdl-demo.cmd - run Moodle/MuTMS demo containers on Windows 11 (WSL container
 rem Project, docs and the latest version of this script:
 rem   https://github.com/mutms/mdl-demo   (see WINDOWS.md)
 rem
-rem   mdl-demo create [NNNN] [--name="Fancy demo"] [--tag=v0.1.2] [--open]
+rem   mdl-demo create [NNNN] [--name="Fancy demo"] [--image=REF] [--open]
 rem   mdl-demo start|stop|delete [NNNN]
 rem   mdl-demo list
 rem   mdl-demo gc
@@ -19,11 +19,10 @@ rem Inside the container the ports are fixed (8081 console, 8082 site); this
 rem script maps NNNN and NNNN+1 onto them and passes the number in as
 rem MDL_DEMO_PORT, so the console knows its own address.
 
-set "IMAGE=ghcr.io/mutms/mdl-demo"
+set "IMAGE=ghcr.io/mutms/mdl-demo:latest"
 if defined MDL_DEMO_IMAGE set "IMAGE=%MDL_DEMO_IMAGE%"
 set "PORT=8081"
 set "NAME="
-set "TAG=latest"
 set "OPEN="
 set "ALL="
 set "POSITIONAL=0"
@@ -52,8 +51,8 @@ rem arrives as two arguments: --name and "Fancy demo" (quotes stripped by %~2).
 :parse
 if "%~1"=="" goto parsed
 set "ARG=%~1"
-if /i "%ARG%"=="--name" ( set "NAME=%~2" & shift & shift & goto parse )
-if /i "%ARG%"=="--tag"  ( set "TAG=%~2" & shift & shift & goto parse )
+if /i "%ARG%"=="--name"  ( set "NAME=%~2" & shift & shift & goto parse )
+if /i "%ARG%"=="--image" ( set "IMAGE=%~2" & shift & shift & goto parse )
 if /i "%ARG%"=="--open" ( set "OPEN=1" & shift & goto parse )
 if /i "%ARG%"=="--all"  ( set "ALL=1" & shift & goto parse )
 if /i "%ARG%"=="--help" goto usage
@@ -95,7 +94,7 @@ if not errorlevel 1 (
 )
 set "ENVS=-e MDL_DEMO_PORT=%PORT%"
 if defined NAME set "ENVS=%ENVS% -e "MDL_DEMO_NAME=%NAME%""
-wslc run -d --name %CNAME% %ENVS% -p 127.0.0.1:%PORT%:8081 -p 127.0.0.1:%SITE%:8082 %IMAGE%:%TAG% >nul
+wslc run -d --name %CNAME% %ENVS% -p 127.0.0.1:%PORT%:8081 -p 127.0.0.1:%SITE%:8082 %IMAGE% >nul
 if errorlevel 1 exit /b 1
 if defined NAME (echo created %CNAME% ^(%NAME%^)) else (echo created %CNAME%)
 echo set up your demo site in the console: http://127.0.0.1:%PORT%
@@ -239,7 +238,8 @@ echo   uninstall       print how to remove mdl-demo from this system (changes no
 echo.
 echo Options for create:
 echo   --name="..."    label shown in the console heading, also the Moodle site name
-echo   --tag=...       image version, e.g. --tag=v0.1.2 (default: latest)
+echo   --image=REF     use a specific image, e.g. a custom offline build
+echo                   (default: ghcr.io/mutms/mdl-demo:latest, or %%MDL_DEMO_IMAGE%%)
 echo.
 echo Options for create and start:
 echo   --open          open the console in your browser once it answers

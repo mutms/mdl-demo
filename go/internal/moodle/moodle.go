@@ -23,18 +23,24 @@ import (
 var (
 	reRelease = regexp.MustCompile(`\$release\s*=\s*['"]([^'"]+)['"]`)
 	reVersion = regexp.MustCompile(`\$version\s*=\s*([0-9.]+)`)
+	reBranch  = regexp.MustCompile(`\$branch\s*=\s*['"]?([0-9]+)`)
 )
+
+// versionPath is the tree's version.php (root, or public/ for the 5.1+ split).
+func versionPath() string {
+	p := filepath.Join(Root, "version.php")
+	if !exists(p) {
+		p = filepath.Join(Root, "public", "version.php")
+	}
+	return p
+}
 
 // Version returns the tree's Moodle release and numeric version, read straight
 // from version.php — the same $release/$version that become $CFG->release and
 // $CFG->version, and what an upgrade rewrites. "Build: " is dropped from the
 // release so it reads "4.5.13 (20250109)". Empty strings if unreadable.
 func Version() (release, version string) {
-	path := filepath.Join(Root, "version.php")
-	if !exists(path) {
-		path = filepath.Join(Root, "public", "version.php")
-	}
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(versionPath())
 	if err != nil {
 		return "", ""
 	}
@@ -45,6 +51,19 @@ func Version() (release, version string) {
 		version = string(m[1])
 	}
 	return release, version
+}
+
+// Branch returns the tree's Moodle $branch code (e.g. "502"), used to propose a
+// plugin's matching MOODLE_<branch>_STABLE branch. "" if unreadable.
+func Branch() string {
+	data, err := os.ReadFile(versionPath())
+	if err != nil {
+		return ""
+	}
+	if m := reBranch.FindSubmatch(data); m != nil {
+		return string(m[1])
+	}
+	return ""
 }
 
 const (
@@ -276,6 +295,33 @@ type Plugin struct {
 // ExportPlugins lists the site's additional plugins by running the read-only
 // export_plugins.php as www-data and parsing its JSON. Returns nil on an empty
 // site; an error only when the script cannot run or its output is not JSON.
+// PluginRelpath returns the tree-relative install path for a plugin component
+// (e.g. "mod_foo" → "public/mod/foo" on a 5.1+ split, "mod/foo" before it),
+// resolved by Moodle's own core_component so every plugin type and the public/
+// split are handled correctly. Used to place a plugin added from a git repo.
+func PluginRelpath(component string) (string, error) {
+	const rel = "mdl-demo/cli/plugin_relpath.php"
+	dir, err := resolveDir(rel)
+	if err != nil {
+		return "", err
+	}
+	out, err := execx.Output(dir, "runuser", "-u", "www-data", "--", "php", rel, "--component="+component)
+	if err != nil {
+		return "", err
+	}
+	relpath := strings.TrimSpace(out)
+	if relpath == "" {
+		return "", fmt.Errorf("could not resolve an install path for %s", component)
+	}
+	// core_component paths are dirroot-relative; on a split tree dirroot is
+	// public/, so prepend it for the tree-root-relative path mudev and the
+	// filesystem move use.
+	if Docroot() != Root {
+		relpath = "public/" + relpath
+	}
+	return relpath, nil
+}
+
 func ExportPlugins() ([]Plugin, error) {
 	const rel = "mdl-demo/cli/export_plugins.php"
 	dir, err := resolveDir(rel)

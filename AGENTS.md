@@ -42,10 +42,13 @@ PID 1 of the container, management web UI, and CLI.
   buttons and QR codes; only `sha256(token)` ever reaches the dataroot.
 - `internal/backup` — the `.mdb` backup file format (validation, safe
   extraction); the backup/restore orchestration is in `internal/site`.
-  `backups/*.mdb` in the repo is baked into the image at `/srv/backups`
-  (pre-bundled demo sites for forks; see `backups/README.md`), and
-  `recipes/<vendor>/<stream>/<version>.yaml` overlays merge into the recipe
-  catalogue at image build (see `recipes/README.md`).
+  `assets/backups/*.mdb` in the repo is baked into the image at `/srv/backups`
+  (pre-bundled demo sites for forks; see `assets/backups/README.md`),
+  `assets/recipes/<vendor>/<stream>/<version>.yaml` overlays merge into the
+  recipe catalogue at image build (see `assets/recipes/README.md`), and bare git
+  repos in `assets/repos/` bake to `/srv/extra/repos` as `file://` recipe sources
+  for private/offline demos (see `assets/repos/README.md`). The three fork-asset
+  dirs live under `assets/`.
 - `internal/moodle`, `internal/apache`, `internal/pgdb`, `internal/recipes`,
   `internal/state`, `internal/execx` — Moodle tree handling, vhost
   generation, DB provisioning, recipe catalogue scan, `/etc/mdl-demo/state.json`

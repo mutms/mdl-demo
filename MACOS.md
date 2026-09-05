@@ -51,13 +51,14 @@ number. Give each demo its own number to run several at once (also handy when
 
 ```sh
 mdl-demo create 7777 --name="Moodle 5.2 workshop"
-mdl-demo create 7800 --tag=v0.1.2
+mdl-demo create 7800 --image=my-mdl-demo-offline
 mdl-demo list
 mdl-demo delete 7800
 ```
 
 - `--name` sets the site name and the console heading.
-- `--tag` picks a released image version (default: latest).
+- `--image` uses a specific image, e.g. a custom offline build (default:
+  `ghcr.io/mutms/mdl-demo:latest`).
 - `--open` opens the console once it is ready (works with create and start).
 
 ## Managing demos by hand

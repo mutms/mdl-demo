@@ -3,7 +3,7 @@
 # Project, docs and the latest version of this script:
 #   https://github.com/mutms/mdl-demo   (see MACOS.md)
 #
-#   mdl-demo create [NNNN] [--name="Fancy demo"] [--tag=v0.1.2] [--open]
+#   mdl-demo create [NNNN] [--name="Fancy demo"] [--image=REF] [--open]
 #   mdl-demo start|stop|delete [NNNN]
 #   mdl-demo list
 #   mdl-demo gc
@@ -19,7 +19,7 @@
 # MDL_DEMO_PORT, so the console knows its own address.
 set -euo pipefail
 
-IMAGE="${MDL_DEMO_IMAGE:-ghcr.io/mutms/mdl-demo}"
+IMAGE="${MDL_DEMO_IMAGE:-ghcr.io/mutms/mdl-demo:latest}"
 
 usage() {
     cat <<EOF
@@ -40,7 +40,8 @@ Commands:
 
 Options for create:
   --name="..."    label shown in the console heading, also the Moodle site name
-  --tag=...       image version, e.g. --tag=v0.1.2 (default: latest)
+  --image=REF     use a specific image, e.g. a custom offline build
+                  (default: ghcr.io/mutms/mdl-demo:latest, or $MDL_DEMO_IMAGE)
 
 Options for create and start:
   --open          open the console in your browser once it answers
@@ -131,15 +132,15 @@ EOF
 fi
 
 
-port=8081 name="" tag="latest" open=0 all=0 positional=0
+port=8081 name="" image="$IMAGE" open=0 all=0 positional=0
 for arg in "$@"; do
     case "$arg" in
         --name=*)  name="${arg#--name=}" ;;
-        --tag=*)   tag="${arg#--tag=}" ;;
+        --image=*) image="${arg#--image=}" ;;
         --open)    open=1 ;;
         --all)     all=1 ;;
         --help|-h) usage; exit 0 ;;
-        --name|--tag)
+        --name|--image)
             die "$arg needs a value with '=': $arg=..." ;;
         -*)           die "unknown option '$arg' (see 'mdl-demo help')" ;;
         *)
@@ -183,7 +184,7 @@ case "$cmd" in
         exists && die "$cname already exists - 'mdl-demo start $port' starts it, 'mdl-demo delete $port' removes it"
         args=(run -d --name "$cname" -e "MDL_DEMO_PORT=$port")
         [ -n "$name" ] && args+=(-e "MDL_DEMO_NAME=$name")
-        args+=(-p "127.0.0.1:$port:8081" -p "127.0.0.1:$site:8082" "$IMAGE:$tag")
+        args+=(-p "127.0.0.1:$port:8081" -p "127.0.0.1:$site:8082" "$image")
         container "${args[@]}" >/dev/null
         echo "created $cname${name:+ ($name)}"
         echo "set up your demo site in the console: http://127.0.0.1:$port"

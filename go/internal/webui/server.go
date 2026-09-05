@@ -87,6 +87,8 @@ func Serve(out io.Writer, version string) error {
 	mux.HandleFunc("POST /users/create", s.csrf(s.handleUserCreate))
 	mux.HandleFunc("POST /settings/update-catalogues", s.csrf(s.handleSettingsUpdate))
 	mux.HandleFunc("GET /plugins", s.handlePluginsPage)
+	mux.HandleFunc("POST /plugins/refs", s.csrf(s.handlePluginRefs))
+	mux.HandleFunc("POST /plugins/add", s.csrf(s.handlePluginAdd))
 	mux.HandleFunc("GET /recommends", s.handleRecommendsPage)
 	mux.HandleFunc("GET /backups", s.handleBackupsPage)
 	mux.HandleFunc("GET /section/backuplist", s.handleBackupList)
@@ -221,6 +223,9 @@ type view struct {
 	BackupName string
 	// Plugins page: additional plugins bucketed by type.
 	PluginGroups []pluginGroup
+	// Add-a-plugin: the repo URL under consideration and its refs (/plugins/refs).
+	PluginURL string
+	Refs      site.Refs
 	// Recommendations page.
 	Recommends []recommendRow
 	// The empty dashboard's recipe chooser: vendor tabs of version streams.
@@ -769,6 +774,32 @@ func (s *Server) pluginsView(r *http.Request) view {
 
 func (s *Server) handlePluginsPage(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "plugins", s.pluginsView(r))
+}
+
+// handlePluginRefs reads a git repo's branches/tags (with a proposed default)
+// and swaps the ref picker into the Add-a-plugin form.
+func (s *Server) handlePluginRefs(w http.ResponseWriter, r *http.Request) {
+	v := s.buildView(r)
+	v.PluginURL = strings.TrimSpace(r.FormValue("url"))
+	refs, err := site.ListRefs(v.PluginURL)
+	if err != nil {
+		v.Error = err.Error()
+	} else {
+		v.Refs = refs
+	}
+	s.render(w, "pluginrefs", v)
+}
+
+// handlePluginAdd starts the single-flight job that clones and installs the
+// plugin; progress streams to the Plugins page log.
+func (s *Server) handlePluginAdd(w http.ResponseWriter, r *http.Request) {
+	url := strings.TrimSpace(r.FormValue("url"))
+	ref := strings.TrimSpace(r.FormValue("ref"))
+	if !s.job.startAddPlugin(url, ref) {
+		http.Error(w, "another operation is already running", http.StatusConflict)
+		return
+	}
+	http.Redirect(w, r, "/plugins", http.StatusSeeOther)
 }
 
 // handleSettingsUpdate git-pulls the catalogues and swaps the result back into

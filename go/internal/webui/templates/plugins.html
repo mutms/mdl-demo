@@ -40,6 +40,29 @@
   {{end}}
 </article>
 
+{{/* Add a plugin from a git repository. While a job runs, the log replaces the
+     form (and the page reloads itself when it finishes — state-signature
+     watcher); otherwise the form: paste a URL, "Find versions" swaps in the ref
+     picker, Add starts the job. */}}
+{{if .Installed}}
+{{if .Busy}}
+{{template "progress" .}}
+{{else}}
+<article>
+  <h2>{{t .Lang "Add a plugin"}}</h2>
+  <p class="warn">{{t .Lang "Adding a plugin runs its code on this throwaway demo — do it only with code you are willing to run."}}</p>
+  <form hx-post="/plugins/refs" hx-target="#pluginrefs" hx-swap="innerHTML" hx-disabled-elt="find button">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <div class="row">
+      <input name="url" class="grow" placeholder="https://github.com/… or file://…" required>
+      <button class="secondary">{{t .Lang "Find versions"}}</button>
+    </div>
+  </form>
+  <div id="pluginrefs"></div>
+</article>
+{{end}}
+{{end}}
+
 {{/* Plugin detail dialog, filled by app.js from the clicked item's data-*. */}}
 <dialog id="plugindialog" data-close="backdrop">
   <article>
@@ -57,3 +80,23 @@
 
 {{template "footer" .}}
 </html>{{end}}
+
+{{/* The ref picker, swapped in after "Find versions" (POST /plugins/refs):
+     the repo's branches then tags, the proposed one pre-selected, and Add. */}}
+{{define "pluginrefs"}}
+{{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+{{if or .Refs.Branches .Refs.Tags}}
+<form method="post" action="/plugins/add" class="stack refpick">
+  <input type="hidden" name="csrf" value="{{.CSRF}}">
+  <input type="hidden" name="url" value="{{.PluginURL}}">
+  <div class="ff">
+    <select name="ref" id="plugin-ref">
+      {{range .Refs.Branches}}<option value="{{.}}"{{if eq . $.Refs.Proposed}} selected{{end}}>{{.}}</option>{{end}}
+      {{range .Refs.Tags}}<option value="{{.}}"{{if eq . $.Refs.Proposed}} selected{{end}}>{{.}} ({{t $.Lang "tag"}})</option>{{end}}
+    </select>
+    <label for="plugin-ref">{{t .Lang "Version"}}</label>
+  </div>
+  <div class="row end"><button>{{t .Lang "Add plugin"}}</button></div>
+</form>
+{{end}}
+{{end}}
