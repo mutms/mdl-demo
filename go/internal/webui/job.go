@@ -105,6 +105,7 @@ var jobLabels = map[string]string{
 	"backup":  "backing up",
 	"restore": "restoring",
 	"plugin":  "adding plugin",
+	"update":  "updating",
 }
 
 // logTailLimit bounds how many trailing lines a full render carries; the
@@ -170,6 +171,12 @@ func (j *job) startBackup(version, name string) bool {
 func (j *job) startAddPlugin(url, ref string, backupFirst bool, version string) bool {
 	return j.start("plugin", "", "", func(logf execx.Logf) error {
 		return site.AddPlugin(logf, url, ref, backupFirst, version)
+	})
+}
+
+func (j *job) startPullUpdates(backupFirst bool, version string) bool {
+	return j.start("update", "", "", func(logf execx.Logf) error {
+		return site.PullUpdates(logf, backupFirst, version)
 	})
 }
 

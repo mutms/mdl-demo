@@ -121,6 +121,39 @@ func proposeRef(branches, tags []string, siteBranch string) string {
 	return ""
 }
 
+// PullUpdates fast-forwards every branch-tracked checkout in the tree (core and
+// plugins) to its latest commit via mudev, then upgrades — the site-wide "minor
+// update" for anything installed from a branch. Tag-pinned checkouts cannot
+// fast-forward and are left as they are (that is what pinning is for). Recipe
+// refs are branch names, unchanged by a pull, so there is nothing to re-record;
+// a later restore re-clones the branch at whatever is latest then. With
+// backupFirst, a "prior-update-<time>.mdb" undo point is taken first.
+func PullUpdates(logf execx.Logf, backupFirst bool, version string) error {
+	defer state.HoldBusy()() // pause the cron ticker across pull + upgrade
+	if !moodle.Detected() {
+		return fmt.Errorf("no demo site installed")
+	}
+	if backupFirst {
+		logf("Backing up first (undo point)")
+		if _, err := Backup(logf, version, "prior-update-"+time.Now().Format("20060102-150405")); err != nil {
+			return fmt.Errorf("pre-update backup failed: %w", err)
+		}
+	}
+	logf("Fetching updates for every checkout")
+	if err := execx.Run(logf, moodle.Root, "mudev", "fetch"); err != nil {
+		return fmt.Errorf("mudev fetch: %w", err)
+	}
+	logf("Fast-forwarding branch-tracked checkouts")
+	if err := execx.Run(logf, moodle.Root, "mudev", "pull"); err != nil {
+		return fmt.Errorf("mudev pull: %w", err)
+	}
+	logf("Upgrading the site")
+	if err := moodle.Upgrade(logf); err != nil {
+		return err
+	}
+	return moodle.PurgeCaches(logf)
+}
+
 // AddPlugin clones a plugin from a git repo at ref, places it in the tree at the
 // path Moodle assigns its component, records it with mudev, and upgrades. Runs
 // in the single-flight job (as root). If that component is already installed it

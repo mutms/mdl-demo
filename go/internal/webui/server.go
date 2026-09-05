@@ -127,6 +127,7 @@ func Serve(out io.Writer, version string) error {
 	mux.HandleFunc("GET /poster", s.handlePosterPage)
 	mux.HandleFunc("GET /camp", s.handleCampPage)
 	mux.HandleFunc("POST /settings/update-camp", s.csrf(s.handleCampUpdate))
+	mux.HandleFunc("POST /settings/pull-updates", s.csrf(s.handlePullUpdates))
 	mux.HandleFunc("GET /backups", s.handleBackupsPage)
 	mux.HandleFunc("GET /section/backuplist", s.handleBackupList)
 	mux.HandleFunc("POST /backups/create", s.csrf(s.handleBackupCreate))
@@ -936,6 +937,18 @@ func (s *Server) handleSettingsUpdate(w http.ResponseWriter, r *http.Request) {
 	v := s.buildView(r)
 	v.CatUpdates = updateCatalogues()
 	s.render(w, "catresult", v)
+}
+
+// handlePullUpdates starts the site-wide minor update (fast-forward every
+// branch-tracked checkout, then upgrade). Single-flight job; progress streams to
+// the dashboard's Site log, so it redirects there rather than back to Settings.
+func (s *Server) handlePullUpdates(w http.ResponseWriter, r *http.Request) {
+	backupFirst := r.FormValue("backupfirst") != ""
+	if !s.job.startPullUpdates(backupFirst, s.version) {
+		http.Error(w, "another operation is already running", http.StatusConflict)
+		return
+	}
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func (s *Server) handleRecommendsPage(w http.ResponseWriter, r *http.Request) {

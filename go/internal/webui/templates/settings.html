@@ -20,6 +20,22 @@
   <div id="catresult">{{template "catresult" .}}</div>
 </article>
 
+{{/* Site-wide minor update: fast-forward every branch-tracked checkout (core +
+     plugins installed from a branch) and upgrade. Only meaningful with a site
+     installed. A plain POST that redirects to the dashboard, where the job log
+     streams. Backup-first is the undo point. */}}
+{{if .Installed}}
+<article>
+  <h2>{{t .Lang "Update installed code"}}</h2>
+  <p class="empty">{{t .Lang "Fast-forward every branch-tracked plugin (and core) to its latest, then upgrade. Pinned versions are left as they are."}}</p>
+  <form method="post" action="/settings/pull-updates" class="stack">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <label class="check"><input type="checkbox" name="backupfirst" checked> {{t .Lang "Back up first — a restore point in case of breakage"}}</label>
+    <div><button{{if .Busy}} disabled{{end}}>{{t .Lang "Pull updates"}}</button></div>
+  </form>
+</article>
+{{end}}
+
 {{/* Camp registry: a separate update button (a fork may ship Camp without the
      recipe catalogues, or vice versa). Absent when MDL_DEMO_NO_CAMP. */}}
 {{if .CampEnabled}}

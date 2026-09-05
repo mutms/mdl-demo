@@ -131,9 +131,13 @@ var messages = map[string]map[string]string{
 
 		"Theme": "Vzhled",
 
-		"Settings":          "Nastavení",
-		"Catalogues":        "Katalogy",
-		"Update catalogues": "Aktualizovat katalogy",
+		"Settings":              "Nastavení",
+		"Catalogues":            "Katalogy",
+		"Update catalogues":     "Aktualizovat katalogy",
+		"updating":              "aktualizuje se",
+		"Update installed code": "Aktualizovat nainstalovaný kód",
+		"Fast-forward every branch-tracked plugin (and core) to its latest, then upgrade. Pinned versions are left as they are.": "Posune každý plugin (a jádro) sledující větev na jeho nejnovější verzi a provede upgrade. Připnuté verze zůstanou beze změny.",
+		"Pull updates": "Stáhnout aktualizace",
 		"Pull the latest plugins and site recipes from git — new versions appear in the installer.": "Stáhne nejnovější pluginy a recepty z gitu – nové verze se objeví v instalátoru.",
 
 		"When you report a problem, copy the whole block below into your issue at":                                     "Když hlásíte problém, zkopírujte celý blok níže do hlášení na",
@@ -300,9 +304,13 @@ var messages = map[string]map[string]string{
 
 		"Theme": "Darstellung",
 
-		"Settings":          "Einstellungen",
-		"Catalogues":        "Kataloge",
-		"Update catalogues": "Kataloge aktualisieren",
+		"Settings":              "Einstellungen",
+		"Catalogues":            "Kataloge",
+		"Update catalogues":     "Kataloge aktualisieren",
+		"updating":              "wird aktualisiert",
+		"Update installed code": "Installierten Code aktualisieren",
+		"Fast-forward every branch-tracked plugin (and core) to its latest, then upgrade. Pinned versions are left as they are.": "Bringt jedes Plugin (und den Kern), das einem Branch folgt, auf den neuesten Stand und führt ein Upgrade durch. Angepinnte Versionen bleiben unverändert.",
+		"Pull updates": "Aktualisierungen abrufen",
 		"Pull the latest plugins and site recipes from git — new versions appear in the installer.": "Holt die neuesten Plugins und Rezepte aus Git – neue Versionen erscheinen im Installer.",
 
 		"When you report a problem, copy the whole block below into your issue at":                                     "Wenn Sie ein Problem melden, kopieren Sie den ganzen Block unten in Ihre Meldung auf",
