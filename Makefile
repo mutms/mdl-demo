@@ -75,10 +75,10 @@ VM_ID     := $(shell jq -r .vmId /srv/meta/vm.json 2>/dev/null || hostname | sed
 BRIDGE_IP := 10.163.$(VM_ID).1
 ifeq ($(PORT),6381)
 TEST_NAME ?= mpd-test-mdl-demo
-SITE_URL  ?= https://site.mdl-demo.$(VM_ID).mpd.test
+SITE_URL  ?= https://mdl-demo.$(VM_ID).mpd.test
 else
 TEST_NAME ?= mpd-test-mdl-demo-$(PORT)
-SITE_URL  ?= https://site-$(PORT).mdl-demo.$(VM_ID).mpd.test
+SITE_URL  ?= https://mdl-demo-$(PORT).$(VM_ID).mpd.test
 endif
 run:
 	sudo podman rm -f --ignore $(TEST_NAME)

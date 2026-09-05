@@ -165,7 +165,7 @@ make build test vet fmt-check   # native binary + checks
 make image                      # sudo podman build (run from repo root)
 make run                        # mpd-VM test container mpd-test-mdl-demo on 6381/6382;
                                 # console at http://<vm-ip>:6381, site published by
-                                # mpd's caddy as https://site.mdl-demo.<vm>.mpd.test
+                                # mpd's caddy as https://mdl-demo.<vm>.mpd.test
 make hotpatch                   # rebuild the Go binary, swap it into the running
                                 # test container and restart — seconds, no image rebuild
 ```
@@ -194,7 +194,7 @@ interactive/visual checks (htmx swaps, spinners, the epoch reload) to a human.
 
 End-to-end: `sudo podman exec mpd-test-mdl-demo-<port> mdl-demo install --recipe
 moodle/release/<version> --adminpass 'Test1234!'`, then browse the site
-(https://site-<port>.mdl-demo.<vm>.mpd.test, or http://127.0.0.1:<port+1> on the
+(https://mdl-demo-<port>.<vm>.mpd.test, or http://127.0.0.1:<port+1> on the
 VM). `DEV.md` covers dev-environment setup; multi-arch release builds and
 the publish steps live in `dev/github-publish.sh` (run on an Apple silicon Mac).
 
