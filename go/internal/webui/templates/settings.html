@@ -24,11 +24,11 @@
      recipe catalogues, or vice versa). Absent when MDL_DEMO_NO_CAMP. */}}
 {{if .CampEnabled}}
 <article>
-  <h2>{{t .Lang "Camp registry"}}</h2>
+  <h2>{{t .Lang "CAMP"}}</h2>
   <p class="empty">{{t .Lang "Pull the latest community plugin catalogue from camp-registry.org."}}</p>
   <form hx-post="/settings/update-camp" hx-target="#campresult" hx-swap="innerHTML" hx-disabled-elt="find button">
     <input type="hidden" name="csrf" value="{{.CSRF}}">
-    <div><button>{{t .Lang "Camp update"}}</button></div>
+    <div><button>{{t .Lang "CAMP update"}}</button></div>
   </form>
   <div id="campresult">{{template "campresult" .}}</div>
 </article>

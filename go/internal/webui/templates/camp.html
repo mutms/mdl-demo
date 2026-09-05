@@ -11,8 +11,8 @@
 {{template "topbar" .}}
 
 <article>
-  <h2>{{t .Lang "Camp registry"}}</h2>
-  <p class="empty">{{t .Lang "The community plugin catalogue from camp-registry.org. Search, then test one in this demo site."}}</p>
+  <h2>{{t .Lang "CAMP"}}</h2>
+  <p class="empty">{{t .Lang "CAMP — the Community Archive of Moodle Plugins. Search, then test one in this demo site."}}</p>
 
   <form class="camptools" hx-get="/camp" hx-target="#camplist" hx-swap="innerHTML"
         hx-trigger="submit, input from:#camp-q delay:300ms, change from:#camp-type, change from:#camp-status, change from:#camp-tier">
@@ -38,7 +38,7 @@
 
   <div id="camplist">{{template "camplist" .}}</div>
 
-  <p class="campcredit">{{t .Lang "Data from the camp registry"}} (<a href="https://camp-registry.org" target="_blank" rel="noopener">camp-registry.org</a>), ODbL.</p>
+  <p class="campcredit">{{t .Lang "Data from CAMP"}} (<a href="https://camp-registry.org" target="_blank" rel="noopener">camp-registry.org</a>), ODbL.</p>
 </article>
 
 {{/* Camp plugin detail + add dialog, filled by app.js from the clicked row. Add
@@ -57,7 +57,7 @@
       <dt id="cd-license-dt">{{t .Lang "License"}}</dt><dd id="cd-license"></dd>
       <dt id="cd-tier-dt">{{t .Lang "Tier"}}</dt><dd id="cd-tier"></dd>
     </dl>
-    <p><a id="cd-camp" href="#" target="_blank" rel="noopener">{{t .Lang "Latest on Camp"}} <span class="ext" aria-hidden="true">↗</span></a></p>
+    <p><a id="cd-camp" href="#" target="_blank" rel="noopener">{{t .Lang "Latest on CAMP"}} <span class="ext" aria-hidden="true">↗</span></a></p>
     {{if and .Installed .UrlInstallEnabled}}
     <p class="warn">{{t .Lang "Adding a plugin runs its code on this throwaway demo. If things break, reset the site; if it gets compromised, delete the container entirely."}}</p>
     <form id="cd-refform" hx-post="/plugins/refs" hx-target="#cd-refs" hx-swap="innerHTML" hx-disabled-elt="find button">
