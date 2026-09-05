@@ -123,9 +123,12 @@ func proposeRef(branches, tags []string, siteBranch string) string {
 
 // AddPlugin clones a plugin from a git repo at ref, places it in the tree at the
 // path Moodle assigns its component, records it with mudev, and upgrades. Runs
-// in the single-flight job (as root). When backupFirst is set, it takes a
+// in the single-flight job (as root). If that component is already installed it
+// is an update, not an error: the checkout is replaced with the chosen ref (the
+// same branch pulls its latest, a different version/tag switches to it) and the
+// recipe is re-recorded either way. When backupFirst is set, it takes a
 // "prior-<component>-<time>.mdb" backup just before touching the tree, so a
-// misbehaving plugin is one restore away from undone.
+// misbehaving plugin (or a bad switch) is one restore away from undone.
 func AddPlugin(logf execx.Logf, url, ref string, backupFirst bool, version string) error {
 	defer state.HoldBusy()() // pause the cron ticker across clone + upgrade
 	if !allowedGitURL(url) {
@@ -183,11 +186,21 @@ func AddPlugin(logf execx.Logf, url, ref string, backupFirst bool, version strin
 	if !strings.HasPrefix(dest+string(os.PathSeparator), moodle.Root+string(os.PathSeparator)) {
 		return fmt.Errorf("unsafe install path %q", relpath)
 	}
+	// Already installed? Then this is an update/switch, not an error. The user
+	// picked a ref — the same branch (→ its latest, like a pull) or a different
+	// version/tag (→ switched) — so swap the checkout to it by replacing the old
+	// one with the freshly-cloned ref. The upgrade below applies any schema
+	// change. (Picking an OLDER version is the user's call; Moodle may refuse a
+	// downgrade — reset the site if so. The whole thing is disposable.)
+	action := "Installing into "
 	if _, err := os.Stat(dest); err == nil {
-		return fmt.Errorf("%s already exists — %s is already installed", relpath, component)
+		action = "Updating "
+		if err := os.RemoveAll(dest); err != nil {
+			return fmt.Errorf("replacing the existing plugin: %w", err)
+		}
 	}
 
-	logf("Installing into " + relpath)
+	logf(action + relpath + " (" + ref + ")")
 	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
 		return err
 	}
