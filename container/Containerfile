@@ -134,8 +134,8 @@ RUN for sapi in fpm cli; do \
 # (8081 is the Go console; both numbers are fixed inside the container).
 # The placeholder vhost is swapped for the real Moodle vhost by mdl-demo at
 # install time (the docroot depends on the Moodle version's tree layout).
-COPY container/assets/placeholder/ /var/www/placeholder/
-COPY container/assets/000-placeholder.conf /etc/apache2/sites-available/
+COPY container/apache/placeholder/ /var/www/placeholder/
+COPY container/apache/000-placeholder.conf /etc/apache2/sites-available/
 RUN a2enmod proxy_fcgi rewrite setenvif \
     && a2dissite 000-default \
     && a2ensite 000-placeholder \
