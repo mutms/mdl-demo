@@ -6,9 +6,7 @@
 #   --skodak
 
 set -e
-# Run against the repo root whatever the caller's cwd: the build context
-# "." and the Containerfile path below are repo-root-relative, and this
-# script now lives one level down in dev/.
+# Paths are relative the mdl-demo/
 cd "$(dirname "$0")/.."
 
 container stop mdl-demo-test 2>/dev/null || true

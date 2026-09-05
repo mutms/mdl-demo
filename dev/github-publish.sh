@@ -25,8 +25,7 @@
 #   --skodak
 
 set -euo pipefail
-# Run against the repo root whatever the caller's cwd: the build context
-# "." and the Containerfile path below are repo-root-relative.
+# Paths are relative the mdl-demo/
 cd "$(dirname "$0")/.."
 
 IMAGE="${IMAGE:-ghcr.io/mutms/mdl-demo}"
@@ -58,8 +57,7 @@ fi
 
 echo "publishing $IMAGE:$TAG (and :latest)"
 
-# --pull --no-cache: a release is always built on the freshly pulled base
-# with current packages, never from stale local layers.
+# --pull --no-cache: I do not trust the clever caching tricks in builder and want the latest debian
 container build --pull --no-cache --arch arm64 --arch amd64 --build-arg VERSION="$TAG" -t "$IMAGE:$TAG" -f container/Containerfile .
 container image push "$IMAGE:$TAG"
 container image tag "$IMAGE:$TAG" "$IMAGE:latest"
