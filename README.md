@@ -62,6 +62,21 @@ site a temporary public link (with a QR code for phones) that anyone can open
 until you switch it off. While it is on the site is public, so do not put
 anything private in it. The console always stays private to your computer.
 
+## Trying plugins
+
+The demo site is a throwaway, which makes it a good place to try a plugin you
+would never install on a live server. The console has two ways in:
+
+* **CAMP** — the Community Archive of Moodle Plugins from
+  [camp-registry.org](https://camp-registry.org), baked into the image. Search
+  it, check the version and any advisories, and install straight into the demo
+  site. No account, no download, nothing to unzip.
+* **Add a plugin** — paste the git URL of any plugin repository, including your
+  own work in progress or a colleague's branch. It is fetched and installed the
+  same way.
+
+Install it, click through it, then reset the site and it is gone.
+
 ## Community
 
 Questions, ideas, or just to show what you demoed: join
