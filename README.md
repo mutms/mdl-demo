@@ -7,15 +7,15 @@
 Try Moodle™ or MuTMS on your own computer. One command, no web server,
 database or PHP to set up, and no online registration.
 
-mdl-demo is a container image - think of a small computer inside your own,
+mdl-demo is a container image — think of a small computer inside your own,
 with its own files and programs, that cannot touch the rest of your machine.
 This one has everything a Moodle site needs, plus a web console that sets up
-and manages the demo site for you - effortlessly.
+and manages the demo site for you.
 
 ## How it works
 
-1. Install container support in your OS - Apple's `container` on
-   macOS, Microsoft's `wslc` on Windows.
+1. Install container support in your OS — Apple's `container` on
+   macOS, Microsoft's `wslc` on Windows, or in a Linux VM.
 2. Run one command for your system.
 3. Open the console at <http://127.0.0.1:8081>.
 4. Pick a Moodle version and click install.
@@ -45,7 +45,8 @@ For named commands like `create`, `start`, `stop` and `delete`, use the
 ### Windows 11
 
 You need the [WSL containers](https://devblogs.microsoft.com/commandline/wsl-container-is-now-available-for-public-preview/)
-preview (`wsl --update --pre-release`). In PowerShell:
+preview (`wsl --update --pre-release`). Close and reopen your terminal afterwards so
+`wslc` is on your PATH. In PowerShell:
 
 ```powershell
 wslc run -d --name mdl-demo-8081 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 ghcr.io/mutms/mdl-demo
@@ -53,6 +54,15 @@ wslc run -d --name mdl-demo-8081 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 g
 
 Then open <http://127.0.0.1:8081>. To manage demos more easily, use the
 `mdl-demo.cmd` helper described in the **[full Windows guide](WINDOWS.md)**.
+
+### Linux
+
+Running mdl-demo straight on your Linux workstation with Podman or Docker isn't
+recommended — it shares your host kernel, so keep it off the machine with your real work.
+
+But if you are on Linux you already know that — and the container engines all share
+pretty much the same `run` command. mdl-demo itself was built entirely inside a throwaway
+Linux VM, never on the host — read [DEV.md](DEV.md) for how it was done.
 
 ## Sharing your demo
 
