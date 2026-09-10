@@ -73,6 +73,10 @@ PORT      ?= 6381
 SITEPORT  := $(shell expr $(PORT) + 1)
 VM_ID     := $(shell jq -r .vmId /srv/meta/vm.json 2>/dev/null || hostname | sed 's/^mpd-//')
 BRIDGE_IP := 10.163.$(VM_ID).1
+# Host address the test ports publish on. Defaults to the VM bridge (a Mac
+# reaches it over the mpd overlay); override to 127.0.0.1 for a canonical
+# localhost console, e.g. `make run PORT=8081 HOST_IP=127.0.0.1`.
+HOST_IP   ?= $(BRIDGE_IP)
 ifeq ($(PORT),6381)
 TEST_NAME ?= mpd-test-mdl-demo
 SITE_URL  ?= https://mdl-demo.$(VM_ID).mpd.test
@@ -84,12 +88,12 @@ run:
 	sudo podman rm -f --ignore $(TEST_NAME)
 	sudo podman run -d --name $(TEST_NAME) \
 		-e MDL_DEMO_PORT=$(PORT) \
-		-p $(BRIDGE_IP):$(PORT):8081 -p $(BRIDGE_IP):$(SITEPORT):8082 mdl-demo
-	@until curl -fs -o /dev/null http://$(BRIDGE_IP):$(PORT)/; do sleep 0.2; done
+		-p $(HOST_IP):$(PORT):8081 -p $(HOST_IP):$(SITEPORT):8082 mdl-demo
+	@until curl -fs -o /dev/null http://$(HOST_IP):$(PORT)/; do sleep 0.2; done
 	sudo podman exec $(TEST_NAME) mdl-demo url --site $(SITE_URL)
 
 	@echo ""
-	@echo "test console: http://$(BRIDGE_IP):$(PORT)  ($(TEST_NAME))"
+	@echo "test console: http://$(HOST_IP):$(PORT)  ($(TEST_NAME))"
 	@echo ""
 
 # Hot-patch the running test container with a freshly built binary — far faster
@@ -109,5 +113,5 @@ hotpatch:
 	@echo "hot-patched $(TEST_NAME) with $(VERSION)"
 
 	@echo ""
-	@echo "test console: http://$(BRIDGE_IP):$(PORT)  ($(TEST_NAME))"
+	@echo "test console: http://$(HOST_IP):$(PORT)  ($(TEST_NAME))"
 	@echo ""

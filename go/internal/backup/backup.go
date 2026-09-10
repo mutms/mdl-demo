@@ -1,8 +1,11 @@
 // Package backup knows the .mdb backup file format — one gzipped tar holding
 // the whole demo site: meta.json (always the FIRST entry, so listings read it
 // without scanning the archive), recipe.yaml (the tree's live recipe from
-// `mudev recipe export`, catalogue-independent), db.sql (plain pg_dump) and
-// the dataroot as demo/. Orchestration (what to dump, when to wipe) lives in
+// `mudev recipe export`, catalogue-independent), db.sql (a plain dump) and
+// the dataroot. Revision 2 stores the dataroot as dataroot/; revision 1 (still
+// restorable) used demo/. The format is shared with mpd, so db.sql may be any
+// engine mpd supports and meta.db records which; this image restores only
+// postgres 17 or older. Orchestration (what to dump, when to wipe) lives in
 // internal/site; this package only reads, validates and extracts archives.
 package backup
 
@@ -18,6 +21,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -32,15 +36,25 @@ const Dir = "/srv/backups"
 
 // Archive member names. MetaName must be the first tar entry.
 const (
-	MetaName   = "meta.json"
-	RecipeName = "recipe.yaml"
-	DBName     = "db.sql"
-	DataPrefix = "demo" // the dataroot, stored as demo/…
+	MetaName     = "meta.json"
+	RecipeName   = "recipe.yaml"
+	DBName       = "db.sql"
+	DataPrefixV1 = "demo"     // revision 1 dataroot prefix
+	DataPrefix   = "dataroot" // revision 2 dataroot prefix (also mpd's on-disk name)
 )
 
 // Revision is the format revision this build writes and the newest it
-// restores.
-const Revision = 1
+// restores. Revision 2 renamed the dataroot member from demo/ to dataroot/;
+// revision 1 archives (mdl-demo's own, in the wild) still restore.
+const Revision = 2
+
+// dataPrefix is the dataroot member prefix for a given format revision.
+func dataPrefix(rev int) string {
+	if rev <= 1 {
+		return DataPrefixV1
+	}
+	return DataPrefix
+}
 
 // Meta is the archive's first entry: everything the console needs to list a
 // backup and rebuild the site around the restored data. Users carries names
@@ -51,6 +65,7 @@ type Meta struct {
 	Fullname string     `json:"fullname,omitempty"` // Moodle site full name
 	Created  time.Time  `json:"created"`
 	Version  string     `json:"version,omitempty"` // mdl-demo version that wrote it
+	DB       string     `json:"db,omitempty"`      // source database "<engine>:<version>"; empty means postgres:17
 	Users    []MetaUser `json:"users,omitempty"`
 }
 
@@ -58,6 +73,48 @@ type Meta struct {
 type MetaUser struct {
 	Username string `json:"username"`
 	Role     string `json:"role"`
+}
+
+// SourceDB parses the db field ("<engine>:<version>") into the source engine
+// and major version. An empty field is a revision-1 archive, always postgres
+// 17. A malformed version yields major 0.
+func (m Meta) SourceDB() (engine string, major int) {
+	if m.DB == "" {
+		return "postgres", 17
+	}
+	engine, ver, _ := strings.Cut(m.DB, ":")
+	i := 0
+	for i < len(ver) && ver[i] >= '0' && ver[i] <= '9' {
+		i++
+	}
+	if i > 0 {
+		major, _ = strconv.Atoi(ver[:i])
+	}
+	return engine, major
+}
+
+// publicRelinkRules rewrite github.com/gitlab.com remotes to public https://.
+// Only those two hosts, so a private forge or LAN mirror is left alone (and,
+// being a non-origin remote, stepped over by mudev clone).
+var publicRelinkRules = []struct {
+	re   *regexp.Regexp
+	repl string
+}{
+	{regexp.MustCompile(`git@(github\.com|gitlab\.com):`), `https://${1}/`},
+	{regexp.MustCompile(`ssh://(?:git@)?(github\.com|gitlab\.com)/`), `https://${1}/`},
+	{regexp.MustCompile(`file://[^\s"]*?/(github\.com|gitlab\.com)/`), `https://${1}/`},
+}
+
+// RelinkPublic rewrites a recipe's github.com/gitlab.com remotes to public
+// https:// URLs: SSH/scp forms (git@host:…, ssh://…), which a keyless
+// container cannot authenticate, and offline file:// mirror paths
+// (file://…/github.com/…), which another image may not carry. It is the
+// restore "make the code public" option; see internal/site.
+func RelinkPublic(recipe []byte) []byte {
+	for _, r := range publicRelinkRules {
+		recipe = r.re.ReplaceAll(recipe, []byte(r.repl))
+	}
+	return recipe
 }
 
 // EnsureDir creates the backups directory (idempotent; also covers containers
@@ -229,6 +286,7 @@ func Validate(path string) (Meta, error) {
 	defer f.Close()
 
 	var meta Meta
+	var prefix string
 	seen := map[string]bool{}
 	for i := 0; ; i++ {
 		hdr, err := tr.Next()
@@ -254,11 +312,12 @@ func Validate(path string) (Meta, error) {
 			if meta, err = decodeMeta(tr); err != nil {
 				return Meta{}, err
 			}
+			prefix = dataPrefix(meta.Revision)
 		}
 		switch {
 		case name == MetaName || name == RecipeName || name == DBName:
 			seen[name] = true
-		case name == DataPrefix || strings.HasPrefix(name, DataPrefix+"/"):
+		case name == prefix || strings.HasPrefix(name, prefix+"/"):
 		default:
 			return Meta{}, fmt.Errorf("unexpected entry %q in archive", hdr.Name)
 		}
@@ -332,18 +391,26 @@ func RecipeHash(path string) (string, error) {
 	}
 }
 
-// ExtractData unpacks the demo/ dataroot entries into dataParent (the
-// directory that will contain demo/). Extraction is done in Go inside an
-// os.Root so no archive entry can escape dataParent, whatever its name says;
-// Validate has already rejected non-file/dir entry types.
-func ExtractData(path, dataParent string) error {
+// ExtractData unpacks the archive's dataroot entries straight into destDir
+// (which must already exist), stripping the archive's dataroot prefix. The
+// prefix depends on the archive revision (revision 1 uses demo/, revision 2
+// dataroot/), so a backup restores whatever the destination dataroot is named.
+// Extraction is done in Go inside an os.Root so no archive entry can escape
+// destDir; Validate has already rejected non-file/dir entry types.
+func ExtractData(path, destDir string) error {
+	meta, err := ReadMeta(path)
+	if err != nil {
+		return err
+	}
+	prefix := dataPrefix(meta.Revision)
+
 	f, tr, err := open(path)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	root, err := os.OpenRoot(dataParent)
+	root, err := os.OpenRoot(destDir)
 	if err != nil {
 		return err
 	}
@@ -361,20 +428,29 @@ func ExtractData(path, dataParent string) error {
 		if !filepath.IsLocal(name) {
 			return fmt.Errorf("unsafe path %q in archive", hdr.Name)
 		}
-		if name != DataPrefix && !strings.HasPrefix(name, DataPrefix+"/") {
+		if name != prefix && !strings.HasPrefix(name, prefix+"/") {
+			continue
+		}
+		// Re-root the entry under destDir: strip the prefix, so demo/x and
+		// dataroot/x both land at destDir/x. The bare prefix dir is destDir
+		// itself, already created by the caller.
+		rel := strings.TrimPrefix(strings.TrimPrefix(name, prefix), "/")
+		if rel == "" {
 			continue
 		}
 		mode := os.FileMode(hdr.Mode).Perm()
 		switch hdr.Typeflag {
 		case tar.TypeDir:
-			if err := root.MkdirAll(name, mode); err != nil {
+			if err := root.MkdirAll(rel, mode); err != nil {
 				return err
 			}
 		case tar.TypeReg:
-			if err := root.MkdirAll(filepath.Dir(name), 0755); err != nil {
-				return err
+			if dir := filepath.Dir(rel); dir != "." {
+				if err := root.MkdirAll(dir, 0755); err != nil {
+					return err
+				}
 			}
-			out, err := root.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
+			out, err := root.OpenFile(rel, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
 			if err != nil {
 				return err
 			}

@@ -122,6 +122,8 @@ func Backup(logf execx.Logf, version, name string) (string, error) {
 		Fullname: fullname,
 		Created:  time.Now().UTC(),
 		Version:  version,
+		DB:       "postgres:17", // the container ships postgres 17
+
 		// The full console account list, admin included — names and roles
 		// only, never passwords (restore generates fresh ones).
 		Users: []backup.MetaUser{{Username: "admin", Role: "admin"}},
@@ -208,6 +210,11 @@ type RestoreOptions struct {
 	// upgrade.php still bridges the data to whatever version the tree carries.
 	// Overrides Recipe.
 	KeepCode bool
+	// PublicGit rewrites the backup's recipe github.com/gitlab.com remotes to
+	// public https:// before cloning — for a keyless container, or one without
+	// the offline mirror the recipe's file:// URLs point at. Only applies when
+	// cloning the backup's own recipe (not KeepCode, not a catalogue Recipe).
+	PublicGit bool
 }
 
 // Restore replaces the demo site with a backup's content. It always wipes and
@@ -231,6 +238,11 @@ func Restore(logf execx.Logf, o RestoreOptions) error {
 	meta, err := backup.Validate(path)
 	if err != nil {
 		return err
+	}
+	// The container ships postgres 17: it can load a plain dump from postgres 17
+	// or older, but not another engine or a newer major.
+	if engine, major := meta.SourceDB(); engine != "postgres" || major > 17 {
+		return fmt.Errorf("this backup is %s; this mdl-demo image ships postgres 17 and cannot restore it", meta.DB)
 	}
 	st, err := state.Load()
 	if err != nil {
@@ -305,6 +317,16 @@ func Restore(logf execx.Logf, o RestoreOptions) error {
 		if err := backup.ExtractFile(path, backup.RecipeName, recipeFile); err != nil {
 			return err
 		}
+		if o.PublicGit {
+			logf("Relinking github.com/gitlab.com remotes to public https://")
+			data, err := os.ReadFile(recipeFile)
+			if err != nil {
+				return err
+			}
+			if err := os.WriteFile(recipeFile, backup.RelinkPublic(data), 0600); err != nil {
+				return err
+			}
+		}
 		if err := execx.Run(logf, moodle.Root, "mudev", "clone", "--shallow", recipeFile); err != nil {
 			return err
 		}
@@ -339,7 +361,7 @@ func Restore(logf execx.Logf, o RestoreOptions) error {
 	if err := makeDataroot(logf); err != nil {
 		return err
 	}
-	if err := backup.ExtractData(path, filepath.Dir(moodle.Dataroot)); err != nil {
+	if err := backup.ExtractData(path, moodle.Dataroot); err != nil {
 		return err
 	}
 	if err := execx.Run(logf, "", "chown", "-R", "www-data:www-data", moodle.Dataroot); err != nil {

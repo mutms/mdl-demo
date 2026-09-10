@@ -57,7 +57,14 @@ PID 1 of the container, management web UI, and CLI.
   `MDL_DEMO_NO_PLUGIN_URL` disables adding plugins from a URL (the git-URL box
   *and* Camp installs); both enforced in the Go handlers, not just templates.
 - `internal/backup` — the `.mdb` backup file format (validation, safe
-  extraction); the backup/restore orchestration is in `internal/site`.
+  extraction); the backup/restore orchestration is in `internal/site`. The
+  format is shared with mpd (`mdl-data-backup`/`mdl-data-restore`): revision 2
+  stores the dataroot as `dataroot/` (revision 1's `demo/` still restores),
+  `meta.db` records the source `"<engine>:<version>"`, and restore here accepts
+  only postgres ≤ 17. Restore has a "make the code public" option
+  (`restore -public`, or the console checkbox) that rewrites the recipe's
+  github.com/gitlab.com SSH and offline `file://` remotes to `https://` — this
+  container has no SSH keys and may lack the offline mirror.
   `assets/backups/*.mdb` in the repo is baked into the image at `/srv/backups`
   (pre-bundled demo sites for forks; see `assets/backups/README.md`),
   `assets/recipes/<vendor>/<stream>/<version>.yaml` overlays merge into the
@@ -96,7 +103,7 @@ PID 1 of the container, management web UI, and CLI.
    optional sugar, every feature must stay reachable from a plain one-line
    `run` command (env vars + port mappings), which the README always shows.
 2. **One demo site per container.** Fixed paths: tree `/srv/projects/demo`,
-   dataroot `/srv/data/demo`, database/user/password `demo`. No multi-site.
+   dataroot `/srv/data/dataroot`, database/user/password `demo`. No multi-site.
    Container-internal ports are fixed too (console 8081, site 8082); the
    outside console port is the demo's identity and the site is always
    console+1 — never add a second port knob. A site URL behind a

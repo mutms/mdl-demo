@@ -69,8 +69,10 @@ func Branch() string {
 const (
 	// Root is where mudev assembles the code tree.
 	Root = "/srv/projects/demo"
-	// Dataroot lives outside the webroot and is owned by www-data.
-	Dataroot = "/srv/data/demo"
+	// Dataroot lives outside the webroot and is owned by www-data. Its basename
+	// matches the .mdb archive's dataroot member, so backup/restore need no
+	// name mapping (see internal/backup).
+	Dataroot = "/srv/data/dataroot"
 )
 
 // Detected reports whether a Moodle tree is present.

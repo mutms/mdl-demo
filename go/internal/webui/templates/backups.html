@@ -76,6 +76,11 @@
     {{if .Installed}}
     <label class="check"><input type="checkbox" name="keepcode" id="keepcode"> {{t .Lang "Keep current codebase"}}</label>
     {{end}}
+    {{/* When rebuilding the backup's own codebase, relink its github.com/gitlab.com
+         remotes to public https:// — this container has no SSH keys and may not
+         carry the offline mirror the recipe's file:// URLs point at. Ignored when
+         the codebase is kept. */}}
+    <label class="check"><input type="checkbox" name="publicgit" id="publicgit"> {{t .Lang "Relink code to public GitHub/GitLab"}}</label>
     <div class="row end">
       <button type="button" class="secondary outline" data-dlgcancel>{{t .Lang "Cancel"}}</button>
       <button>{{t .Lang "Restore"}}</button>

@@ -63,6 +63,11 @@ for c in mdl-recipes mdl-plugins; do
     git clone "https://github.com/mutms/$c" "$TEMP/$c"
 done
 
+# Skip the iomad vendor: its repos are huge and useless for the demo. Dropping
+# it here excludes iomad from both the mirror list (step 2) and the offline
+# branch (steps 3-4), so no dangling file:// remote is left behind.
+rm -rf "$TEMP/mdl-recipes/iomad" "$TEMP/mdl-plugins/iomad"
+
 # --- 2. mirror every git remote the catalogues point at ---
 # Remotes live under source.git.remotes.* (core in mdl-recipes, plugins in
 # mdl-plugins) and they ALL end in .git - homepage/$schema URLs don't, so a
@@ -72,6 +77,7 @@ done
 # gigabytes - that's the price of a truly offline demo!!! Trim it by hand if you
 # only ever show a couple of versions.
 grep -rhoE 'https?://[^ "#]+\.git\b' "$TEMP/mdl-recipes" "$TEMP/mdl-plugins" assets/recipes 2>/dev/null \
+    | grep -vE '://[^/]+/iomad/' \
     | sort -u > "$TEMP/urls.txt" || true
 
 while IFS= read -r url; do

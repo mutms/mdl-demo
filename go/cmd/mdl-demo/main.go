@@ -5,8 +5,8 @@
 //     run in-process by `mdl-demo init`, the container's PID 1.
 //
 // One demo site per container: a different Moodle version means a new
-// container. All paths are therefore fixed (/srv/projects/demo, /srv/data/demo,
-// database "demo").
+// container. All paths are therefore fixed (/srv/projects/demo,
+// /srv/data/dataroot, database "demo").
 package main
 
 import (
@@ -137,6 +137,7 @@ func cmdRestore(args []string) error {
 	var o site.RestoreOptions
 	fs.StringVar(&o.Recipe, "recipe", "", "restore into this catalogue recipe instead of the backup's own (the upgrade path)")
 	fs.StringVar(&o.Wwwroot, "wwwroot", "", "site URL as the browser sees it (default: the site URL from `mdl-demo url` for 127.0.0.1)")
+	fs.BoolVar(&o.PublicGit, "public", false, "relink the backup's github.com/gitlab.com remotes to public https:// (for a keyless container or one without the offline mirror)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}

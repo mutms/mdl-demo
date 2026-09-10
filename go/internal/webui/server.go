@@ -1123,9 +1123,10 @@ func (s *Server) handleBackupRestore(w http.ResponseWriter, r *http.Request) {
 	// already on disk, skipping the git checkout (the fast path). Unchecked (or
 	// no site installed) rebuilds the backup's own codebase.
 	o := site.RestoreOptions{
-		File:     file,
-		Wwwroot:  wwwroot,
-		KeepCode: r.FormValue("keepcode") != "",
+		File:      file,
+		Wwwroot:   wwwroot,
+		KeepCode:  r.FormValue("keepcode") != "",
+		PublicGit: r.FormValue("publicgit") != "",
 	}
 	if !s.job.startRestore(o) {
 		http.Error(w, "another operation is already running", http.StatusConflict)
