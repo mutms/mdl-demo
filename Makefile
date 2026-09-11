@@ -64,11 +64,17 @@ image:
 	sudo podman build -t mdl-demo --build-arg VERSION=$(VERSION) -f container/Containerfile .
 	-sudo podman image prune -f
 
-# Test container for manual testing inside an mpd VM (see dev/README.md).
+# Test container for manual testing inside an mpd VM (see DEV.md).
 # PORT overrides the console port (site = PORT+1) so several test containers can
 # run side by side — a separate one per person/agent. The default 6381 keeps the
 # bare name for back-compat; any other port suffixes it. `make run PORT=6391`,
 # then `make hotpatch PORT=6391` targets that same container.
+#
+# The canonical test setup is `make run PORT=8081 HOST_IP=127.0.0.1`: the very
+# addresses the README shows users (console 127.0.0.1:8081, site 127.0.0.1:8082),
+# so what an agent tests — and what a screen recording captures — matches the
+# documented experience. On a loopback HOST_IP the site keeps its 127.0.0.1
+# wwwroot; only a bridge-published container gets the caddy URL below.
 PORT      ?= 6381
 SITEPORT  := $(shell expr $(PORT) + 1)
 VM_ID     := $(shell jq -r .vmId /srv/meta/vm.json 2>/dev/null || hostname | sed 's/^mpd-//')
@@ -90,7 +96,9 @@ run:
 		-e MDL_DEMO_PORT=$(PORT) \
 		-p $(HOST_IP):$(PORT):8081 -p $(HOST_IP):$(SITEPORT):8082 mdl-demo
 	@until curl -fs -o /dev/null http://$(HOST_IP):$(PORT)/; do sleep 0.2; done
+ifneq ($(HOST_IP),127.0.0.1)
 	sudo podman exec $(TEST_NAME) mdl-demo url --site $(SITE_URL)
+endif
 
 	@echo ""
 	@echo "test console: http://$(HOST_IP):$(PORT)  ($(TEST_NAME))"
@@ -105,9 +113,12 @@ run:
 # The binary is swapped via a temp name + mv: the old file is the running PID 1,
 # so it cannot be truncated in place (ETXTBSY), but renaming over it is fine.
 .PHONY: hotpatch
+# Built for the VM's own architecture (the container runs natively on it):
+# amd64 or arm64 mpd VMs both work.
+VM_ARCH := $(shell uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')
 hotpatch:
-	cd $(GODIR) && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "$(LDFLAGS)" -o ../dist/$(BINARY)-linux-amd64 $(PKG)
-	sudo podman cp dist/$(BINARY)-linux-amd64 $(TEST_NAME):/usr/bin/mdl-demo.new
+	cd $(GODIR) && CGO_ENABLED=0 GOOS=linux GOARCH=$(VM_ARCH) go build -trimpath -ldflags "$(LDFLAGS)" -o ../dist/$(BINARY)-linux-$(VM_ARCH) $(PKG)
+	sudo podman cp dist/$(BINARY)-linux-$(VM_ARCH) $(TEST_NAME):/usr/bin/mdl-demo.new
 	sudo podman exec $(TEST_NAME) mv -f /usr/bin/mdl-demo.new /usr/bin/mdl-demo
 	sudo podman restart $(TEST_NAME)
 	@echo "hot-patched $(TEST_NAME) with $(VERSION)"

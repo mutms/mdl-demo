@@ -50,13 +50,7 @@
 </article>
 {{end}}
 
-{{if .ServiceProblems}}
-<article>
-  <h2>{{t .Lang "Service problems"}}</h2>
-  <p class="error">{{t .Lang "These services are not running:"}}
-     {{range $i, $s := .ServiceProblems}}{{if $i}}, {{end}}{{$s.Name}}{{end}}</p>
-</article>
-{{end}}
+{{template "svcproblems" .}}
 
 <article>
   <h2>{{t .Lang "Diagnostics"}}</h2>
@@ -96,3 +90,16 @@
 </ul>
 {{end}}
 {{end}}
+
+{{/* Supervised services that are down — live (the services event), even on this
+     snapshot page: the wrapper is always in the DOM so the card can appear and
+     go away as a service crashes and comes back. */}}
+{{define "svcproblems"}}<div id="svcproblems" hx-get="/section/svcproblems" hx-trigger="mdl:services from:body" hx-sync="this:replace" hx-swap="outerHTML">
+{{if .ServiceProblems}}
+<article>
+  <h2>{{t .Lang "Service problems"}}</h2>
+  <p class="error">{{t .Lang "These services are not running:"}}
+     {{range $i, $s := .ServiceProblems}}{{if $i}}, {{end}}{{$s.Name}}{{end}}</p>
+</article>
+{{end}}
+</div>{{end}}

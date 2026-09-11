@@ -25,11 +25,12 @@
 {{end}}
 
 {{/* The job status pill: spinner + activity while a job runs (install, restore,
-     reset, backup), quiet otherwise. It polls and swaps only itself, so it stays
-     live even on the diagnostics page — which opts out of the whole-page reload
-     watcher — without disturbing the report being read. */}}
+     reset, backup), quiet otherwise. Refreshed on the job event and swapping
+     only itself, it stays live even on the diagnostics page — which ignores
+     reloads — without disturbing the report being read. A job run from the CLI
+     has no label here (its busy.lock is all the console sees): plain "busy". */}}
 {{define "statuspill"}}
-<div id="statuspill" class="statuspill" hx-get="/section/statuspill" hx-trigger="every {{if .Busy}}1.5s{{else}}5s{{end}}" hx-swap="outerHTML" aria-live="polite">
-  {{if .Busy}}<span class="jobstate"><span class="spin"></span>{{t .Lang .Job.Label}}</span>{{end}}
+<div id="statuspill" class="statuspill" hx-get="/section/statuspill" hx-trigger="mdl:job from:body" hx-sync="this:replace" hx-swap="outerHTML" aria-live="polite">
+  {{if .Busy}}<span class="jobstate"><span class="spin"></span>{{if .Job.Running}}{{t .Lang .Job.Label}}{{else}}{{t .Lang "busy"}}{{end}}</span>{{end}}
 </div>
 {{end}}

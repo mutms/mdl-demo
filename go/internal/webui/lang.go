@@ -100,6 +100,7 @@ var messages = map[string]map[string]string{
 
 		"Site log":   "Záznam stránek",
 		"installing": "instaluje se",
+		"busy":       "pracuje se",
 		"resetting":  "maže se",
 		"backing up": "zálohuje se",
 		"restoring":  "obnovuje se",
@@ -273,6 +274,7 @@ var messages = map[string]map[string]string{
 
 		"Site log":   "Website-Protokoll",
 		"installing": "wird installiert",
+		"busy":       "beschäftigt",
 		"resetting":  "wird zurückgesetzt",
 		"backing up": "wird gesichert",
 		"restoring":  "wird wiederhergestellt",

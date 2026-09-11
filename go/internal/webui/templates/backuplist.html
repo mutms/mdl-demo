@@ -1,9 +1,9 @@
-{{/* The backups listing, its own fragment so it can refresh while a backup
-     or restore job runs (the finished backup appears without a reload) and go
-     quiet when idle. Restore always wipes and rebuilds the whole site from
-     the archive — never mixes restored data with the current tree. */}}
+{{/* The backups listing, its own fragment so it refreshes when a backup or
+     restore job starts or ends (the finished backup appears without a reload).
+     Restore always wipes and rebuilds the whole site from the archive — never
+     mixes restored data with the current tree. */}}
 {{define "backuplist"}}
-<article id="backuplist"{{if .Busy}} hx-get="/section/backuplist" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
+<article id="backuplist" hx-get="/section/backuplist" hx-trigger="mdl:job from:body" hx-sync="this:replace" hx-swap="outerHTML">
   <h2>{{t .Lang "Backups"}}</h2>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   {{if .Backups}}

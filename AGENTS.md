@@ -35,7 +35,16 @@ PID 1 of the container, management web UI, and CLI.
   same-origin files, beside the CSRF cookie, the Origin and Fetch Metadata
   checks and the Host allow-list (see invariant 10);
   single-flight background job in
-  `job.go`; en/cs/de UI strings in `lang.go`; diagnostics on the Settings page
+  `job.go`; **live updates in `events.go`**: every page holds one `GET /events`
+  server-sent-event stream, and nothing in the console runs on a timer — a
+  section carries `hx-trigger="mdl:<topic> from:body"` and refetches itself
+  when the hub pushes that topic (`job`, `log`, `state`, `tunnel`, `services`,
+  `sso`; `reload` when the process, the site identity or the code changed).
+  In-process facts are emitted where they happen (`job.go`, initd via
+  `webui.Notify`); what other processes change (state.json, busy.lock, the
+  tunnel, SSO token files) is seen by the one 1-second watcher there. New live
+  UI listens to a hub event (or adds one) — never `every`;
+  en/cs/de UI strings in `lang.go`; diagnostics on the Settings page
   (`/settings`; `/debug` redirects there). The dashboard's **Tools card** is a
   3×3 grid of navigation cards (each a sub-page): upstream caps it at **8** so a
   fork can drop in its own card (first or last) as the 9th and still fit the
@@ -165,33 +174,37 @@ PID 1 of the container, management web UI, and CLI.
     not: both sides are disposable, and an attacker holding one already holds
     everything of value in the other.
 
+    Say it plainly, because it is easy to over-read the checks above: they are
+    browser-side, and a plain HTTP client on the port walks past them (one
+    `GET /` yields the cookie and the token both). Inside the container there
+    is no defence — a compromised site (PHP as www-data on 8082) can drive the
+    console, whose jobs run as root on the root-owned tree (git clone of any
+    URL, mudev); the console is root-level control of the container. And
+    publishing the console port on anything but loopback (mpd's `make run` on
+    the VM bridge) hands that control to whoever can reach the address. There
+    is no login by design; the answer to both is where the port is published.
+
 ## Working on it
 
 ```sh
 make build test vet fmt-check   # native binary + checks
 make image                      # sudo podman build (run from repo root)
-make run                        # mpd-VM test container mpd-test-mdl-demo on 6381/6382;
-                                # console at http://<vm-ip>:6381, site published by
-                                # mpd's caddy as https://mdl-demo.<vm>.mpd.test
-make hotpatch                   # rebuild the Go binary, swap it into the running
+make run PORT=8081 HOST_IP=127.0.0.1   # mpd-VM test container mpd-test-mdl-demo-8081:
+                                # console http://127.0.0.1:8081, site http://127.0.0.1:8082
+                                # — the README's own addresses
+make hotpatch PORT=8081         # rebuild the Go binary, swap it into the running
                                 # test container and restart — seconds, no image rebuild
 ```
 
-**Agents: get your own container, don't share.** `make run`/`hotpatch` take a
-`PORT` override so several test containers coexist — always work on your own so
-you never disturb a human's `mpd-test-mdl-demo` (which may be mid-install).
-`PORT=6381` (the default) keeps the bare name; any other port suffixes it:
-
-```sh
-make run PORT=6391        # → mpd-test-mdl-demo-6391 on 6391/6392 (uses current image)
-make hotpatch PORT=6391   # rebuild + inject + restart THAT container
-```
+Always use those two commands as written: the test container then lives at
+the addresses the README gives users. Other `PORT`/`HOST_IP` values exist only
+so several containers can share one VM.
 
 `hotpatch` covers Go/template/CSS/JS (all embedded in the binary); it does NOT
 update `container/php/` — rebuild the image (`make image`) for PHP changes. The site, DB
 and dataroot survive the restart, and the console's epoch bumps so open browser
-tabs reload themselves. Requires the image to exist (`make image`) and an amd64
-mpd VM (the target the cp'd binary is built for).
+tabs reload themselves. Requires the image to exist (`make image`); the binary
+is built for the VM's own architecture (amd64 or arm64).
 
 Driving the console from an agent: `curl` via `podman exec` for GET pages
 (console binds :8081 inside; the Host allow-list accepts 127.0.0.1), and the
@@ -204,10 +217,10 @@ moodle/release/<version> --adminpass 'Test1234!'`, then browse the site
 (https://mdl-demo-<port>.<vm>.mpd.test, or http://127.0.0.1:<port+1> on the
 VM). `DEV.md` covers dev-environment setup; multi-arch release builds and
 the publish steps live in `dev/github-publish.sh` (run on an Apple silicon Mac).
-`dev/demo-recording/` regenerates the animated console walkthrough (the
-`demo.webp` in the mutms/www news post) — drives the console over CDP, cuts the
-install out, encodes it; see its `README.md`. The finished webp lives in the
-mutms/www repo, not here.
+The animated console walkthrough (the `demo.webp` in the mutms/www news post)
+is regenerated from the separate `dev-recordings` repo (`mdl-demo/` there:
+drives the console over CDP, cuts the install out, encodes it); the finished
+webp lives in the mutms/www repo, not here.
 
 Typical extension points: new UI feature → handler in
 `webui/server.go` + a template file in `webui/templates/` (htmx section

@@ -43,9 +43,9 @@
 </article>
 
 {{/* Add a plugin from a git repository. While a job runs, the log replaces the
-     form (and the page reloads itself when it finishes — state-signature
-     watcher); otherwise the form: paste a URL, "Show versions" swaps in the ref
-     picker, Add starts the job. */}}
+     form (and the page reloads itself when it finishes — the reload event);
+     otherwise the form: paste a URL, "Show versions" swaps in the ref picker,
+     Add starts the job. */}}
 {{if and .Installed .UrlInstallEnabled}}
 {{if .Busy}}
 {{template "progress" .}}

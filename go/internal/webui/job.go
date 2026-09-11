@@ -12,6 +12,7 @@ import (
 // a time, with its log kept for the progress section. Single-flight: a demo
 // container has exactly one site, so there is never a queue.
 type job struct {
+	hub      *hub // told when the job starts/ends and when lines arrive (nil in tests)
 	mu       sync.Mutex
 	kind     string // "install" | "reset"
 	recipe   string // the recipe being installed, so the busy card can name it
@@ -33,6 +34,7 @@ func (j *job) logf(line string) {
 		j.dropped += drop
 	}
 	j.mu.Unlock()
+	j.hub.notifyLog()
 }
 
 // logSink is the running server's job: anything noteworthy outside the
@@ -69,12 +71,24 @@ func (j *job) start(kind, recipe, name string, fn func(execx.Logf) error) bool {
 	j.kind, j.recipe, j.siteName, j.running, j.err = kind, recipe, name, true, nil
 	j.lines, j.dropped = nil, 0
 	j.mu.Unlock()
+	j.hub.notify(ev(evJob))
 
 	go func() {
 		err := fn(j.logf)
 		j.mu.Lock()
 		j.running, j.err = false, err
 		j.mu.Unlock()
+		// The sections refresh first; then the watcher looks at what the job
+		// left on disk (state.json, busy.lock) and emits the reload when the
+		// site identity changed — install, reset, restore. A job that only
+		// changed the tree must say so itself (a failed plugin add relies on
+		// that reload too: its error persists on the reloaded plugins page).
+		// A backup only changes the list it is on.
+		j.hub.notify(ev(evJob))
+		j.hub.settle()
+		if treeOnly(kind) {
+			j.hub.notify(event{evReload, "job"})
+		}
 	}()
 	return true
 }
@@ -90,10 +104,11 @@ type jobView struct {
 	Failed   bool
 	Error    string
 	// Log is the batch of log lines to render — the recent tail on a full
-	// section render, or just the new lines on an incremental /joblog poll.
+	// section render, or just the new lines on an incremental /joblog fetch.
 	Log []string
 	// Next is the absolute number of the first not-yet-sent line: the cursor
-	// the log tail passes back so the next poll asks only for what came after.
+	// the log tail carries so the next fetch (on a log event) asks only for
+	// what came after.
 	Next int
 }
 
@@ -109,7 +124,7 @@ var jobLabels = map[string]string{
 }
 
 // logTailLimit bounds how many trailing lines a full render carries; the
-// incremental poll streams in everything after that.
+// incremental fetches bring in everything after that.
 const logTailLimit = 400
 
 func (j *job) view() jobView {
@@ -130,7 +145,7 @@ func (j *job) view() jobView {
 }
 
 // logSince returns only the log lines at or after absolute line number from,
-// plus the new cursor — what the incremental log tail polls for. A from that
+// plus the new cursor — what the incremental log tail fetches. A from that
 // predates the retained window (evicted lines) simply starts at the oldest
 // line still held.
 func (j *job) logSince(from int) jobView {

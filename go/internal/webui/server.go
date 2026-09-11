@@ -46,9 +46,11 @@ var static embed.FS
 type Server struct {
 	version string
 	job     *job
-	// epoch identifies this process instance. A page embeds it and a tiny
-	// poller re-checks it; when it differs the process restarted (a rebuilt
-	// container, say) and the open page — now showing stale state — reloads.
+	hub     *hub // the live-update hub (events.go); the job and initd feed it
+	// epoch identifies this process instance. A page embeds it and opens its
+	// event stream with it; when it differs the process restarted (a rebuilt
+	// container, say) and the open page — now showing stale state — is told
+	// to reload.
 	epoch string
 	// poster is the optional image-baked custom Tools card, loaded once at boot;
 	// nil in the stock image (see poster.go).
@@ -89,19 +91,38 @@ func (s *Server) reloadCamp() {
 // into the container after this point (the CLI, `mdl-demo url`) can rely on
 // the identity being there.
 func Serve(out io.Writer, version string) error {
-	s := &Server{version: version, job: &job{}, epoch: strconv.FormatInt(time.Now().UnixNano(), 36)}
+	s := &Server{version: version, job: &job{hub: events}, hub: events, epoch: strconv.FormatInt(time.Now().UnixNano(), 36)}
 	s.poster = loadPoster()
 	logSink.Store(s.job)
 
 	if err := adoptEnv(out); err != nil {
 		return err
 	}
+	// The watcher turns what other processes change (state.json, busy.lock,
+	// the tunnel, SSO tokens) into events; see events.go.
+	go newWatcher(s.hub).run()
 
-	// No route is behind a login — there is none. s.guard wraps the whole mux
-	// below (host check + CSRF cookie); s.csrf gates the state-changing ones.
+	handler, err := s.routes()
+	if err != nil {
+		return err
+	}
+	server := &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: 5 * time.Second,
+		// No WriteTimeout on purpose: /events is a response that never ends.
+	}
+	fmt.Fprintf(out, "mdl-demo web UI listening on %s\n", addr)
+	return server.ListenAndServe()
+}
+
+// routes builds the whole handler: the mux under the two middleware layers.
+// No route is behind a login — there is none. s.guard wraps the whole mux
+// (host check + CSRF cookie); s.csrf gates the state-changing ones.
+func (s *Server) routes() (http.Handler, error) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", s.handleHome)
-	for _, name := range []string{"site", "install", "users", "tools", "progress", "jobstatus", "statuspill"} {
+	for _, name := range []string{"site", "install", "users", "tools", "progress", "jobstatus", "statuspill", "svcproblems"} {
 		section := name
 		mux.HandleFunc("GET /section/"+section, func(w http.ResponseWriter, r *http.Request) {
 			s.renderFragment(w, r, section)
@@ -143,7 +164,7 @@ func Serve(out io.Writer, version string) error {
 	mux.HandleFunc("POST /sso/qr", s.csrf(s.handleSSOQR))
 	mux.HandleFunc("GET /sso/status", s.handleSSOStatus)
 	mux.HandleFunc("GET /lang", s.handleLang)
-	mux.HandleFunc("GET /alive", s.handleAlive)
+	mux.HandleFunc("GET /events", s.handleEvents)
 
 	// Mailpit's UI (all the site's outgoing mail) proxied under /mail — the
 	// presenter's tool, reachable on the same terms as the rest of the
@@ -156,17 +177,10 @@ func Serve(out io.Writer, version string) error {
 
 	assets, err := fs.Sub(static, "static")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(assets))))
-
-	server := &http.Server{
-		Addr:              addr,
-		Handler:           secureHeaders(s.guard(mux)),
-		ReadHeaderTimeout: 5 * time.Second,
-	}
-	fmt.Fprintf(out, "mdl-demo web UI listening on %s\n", addr)
-	return server.ListenAndServe()
+	return secureHeaders(s.guard(mux)), nil
 }
 
 func adoptEnv(out io.Writer) error {
@@ -208,12 +222,12 @@ type view struct {
 	Name  string
 	Title string
 	Lang  string
-	// StateSig captures the coarse state the page was rendered for (process
-	// instance + installed/busy/recipe). The page's watcher reloads when it
-	// changes — a reset (web or CLI), an install finishing, a rebuilt container.
-	StateSig string
+	// Epoch is the process instance that rendered the page; the page opens
+	// /events with it, and a mismatch (a rebuilt or restarted container) is
+	// answered with a reload.
+	Epoch string
 	// Snapshot marks a point-in-time page (the diagnostics report) that must
-	// hold still — it opts out of the live-reload watcher.
+	// hold still — it ignores the reload event (its sections stay live).
 	Snapshot bool
 	// Path is the current request path, so the language switcher can return
 	// here (the console sends no Referer).
@@ -547,7 +561,7 @@ type userRow struct {
 // baseView is the view every page starts from, logged in or not: version,
 // the demo identity, and the display language.
 func (s *Server) baseView(r *http.Request) view {
-	v := view{Version: s.version, Lang: requestLang(r), Path: r.URL.Path}
+	v := view{Version: s.version, Epoch: s.epoch, Lang: requestLang(r), Path: r.URL.Path}
 	st, err := state.Load()
 	if err != nil {
 		st = &state.State{}
@@ -595,7 +609,10 @@ func urlInstallEnabled() bool { return !boolEnv("MDL_DEMO_NO_PLUGIN_URL") }
 
 func (s *Server) buildView(r *http.Request) view {
 	v := s.baseView(r)
-	v.Job, v.Busy = s.job.view(), !s.job.idle()
+	// Busy also while a CLI run (`mdl-demo install` exec'd into the container)
+	// holds busy.lock: the dashboard then shows the busy card and keeps the
+	// Reset/Backup/Restore buttons disabled for it, as for its own job.
+	v.Job, v.Busy = s.job.view(), !s.job.idle() || state.Busy()
 	v.CSRF = csrfToken(r)
 	v.TunnelEnabled = tunnelEnabled()
 	v.CampEnabled = campEnabled()
@@ -632,25 +649,7 @@ func (s *Server) buildView(r *http.Request) view {
 			v.ServiceProblems = append(v.ServiceProblems, serviceRow{Name: s.Name, Status: s.State})
 		}
 	}
-	v.StateSig = sigString(s.epoch, v.Installed, v.Busy, v.Recipe)
 	return v
-}
-
-// sigString is the coarse page-state signature the liveness watcher compares
-// (see handleAlive). Deliberately excludes tunnel state — that changes through
-// smooth section swaps and should not force a full reload.
-func sigString(epoch string, installed, busy bool, recipe string) string {
-	return fmt.Sprintf("%s|%t|%t|%s", epoch, installed, busy, recipe)
-}
-
-// stateSig recomputes the current signature from live state, for handleAlive to
-// compare against the one the page was rendered with.
-func (s *Server) stateSig() string {
-	installed, recipe := false, ""
-	if st, err := state.Load(); err == nil && st.Installed() {
-		installed, recipe = true, st.Recipe
-	}
-	return sigString(s.epoch, installed, !s.job.idle(), recipe)
 }
 
 func (s *Server) render(w http.ResponseWriter, name string, v view) {
@@ -665,21 +664,60 @@ func (s *Server) handleHome(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "page", s.buildView(r))
 }
 
-// handleAlive is the open-page liveness check: the page polls it with the state
-// signature it was rendered against; a mismatch means the coarse state changed
-// under it — a reset (web or CLI), an install/backup finishing, or a rebuilt
-// container (new process) — so the page is stale and wants reloading.
+// heartbeat is how often an idle stream sends a comment, so nothing between
+// the browser and this process takes it for dead. A var so a test can hurry it.
+var heartbeat = 20 * time.Second
+
+// handleEvents is the push channel behind every live section (see events.go):
+// one long-lived text/event-stream per open page. The page sends the epoch it
+// was rendered by; a different one means this is a new process (a rebuilt or
+// restarted container), and the first event tells the page to reload — which
+// also covers the browser's own reconnect after a restart.
 //
-// It fires a "stale-page" event rather than htmx's own HX-Refresh: app.js holds
-// the reload back while a modal <dialog> is open, so a job finishing (busy flips
-// in the signature) can never yank a dialog out from under the user mid-action.
-func (s *Server) handleAlive(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Query().Get("s") != s.stateSig() {
-		w.Header().Set("HX-Trigger", "stale-page")
+// Host-guarded like every GET. It carries no CORS headers, so a page on
+// another origin — the site on 8082, say — cannot read it with an EventSource.
+func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
+	sub, ok := s.hub.subscribe()
+	if !ok {
+		http.Error(w, "too many event streams open", http.StatusServiceUnavailable)
+		return
 	}
-	// 200 with an empty body (hx-swap="none" changes nothing); htmx dispatches
-	// the HX-Trigger event on a 200.
+	defer s.hub.unsubscribe(sub)
+	h := w.Header()
+	h.Set("Content-Type", "text/event-stream; charset=utf-8")
+	h.Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusOK)
+	rc := http.NewResponseController(w)
+	fmt.Fprint(w, "retry: 2000\n\n")
+	if r.URL.Query().Get("e") != s.epoch {
+		writeEvent(w, event{evReload, "epoch"})
+	}
+	if rc.Flush() != nil {
+		return
+	}
+	tick := time.NewTicker(heartbeat)
+	defer tick.Stop()
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case <-tick.C:
+			fmt.Fprint(w, ": ping\n\n")
+		case <-sub.wake:
+			for _, e := range sub.drain() {
+				writeEvent(w, e)
+			}
+		}
+		// A wedged socket drops this client, never the hub.
+		_ = rc.SetWriteDeadline(time.Now().Add(10 * time.Second))
+		if rc.Flush() != nil {
+			return
+		}
+	}
+}
+
+func writeEvent(w io.Writer, e event) {
+	fmt.Fprintf(w, "event: %s\ndata: %s\n\n", e.Topic, e.Data)
 }
 
 func (s *Server) renderFragment(w http.ResponseWriter, r *http.Request, section string) {
@@ -689,7 +727,8 @@ func (s *Server) renderFragment(w http.ResponseWriter, r *http.Request, section 
 // handleJobLog streams the log incrementally: given the caller's last line
 // number (?from=N), it renders only the lines after it plus a fresh cursor, so
 // the browser appends rather than reflowing the whole log. The "logtail"
-// template ends in a self-replacing poller carrying the new line number.
+// template ends in a self-replacing cursor carrying the new line number,
+// fetched again on the next log event.
 func (s *Server) handleJobLog(w http.ResponseWriter, r *http.Request) {
 	from, _ := strconv.Atoi(r.URL.Query().Get("from"))
 	s.render(w, "logtail", view{Job: s.job.logSince(from)})
@@ -1326,6 +1365,7 @@ func (s *Server) handleUserCreate(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	// No event: the watcher sees the saved state.json and refreshes other tabs.
 	redirect(w, r, "/")
 }
 
@@ -1387,6 +1427,9 @@ func (s *Server) handleSSOQR(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token, id, err := sso.Mint(user)
+	if err == nil {
+		s.hub.watchSSO(id) // the watcher fires the sso event once the site claims it
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -1416,8 +1459,8 @@ func (s *Server) handleSSOStatus(w http.ResponseWriter, r *http.Request) {
 		s.render(w, "ssopoll", v)
 		return
 	}
-	// Claimed (or expired): stop the poll and tell the page, which closes
-	// the dialog on the event (app.js). Not a script in the response — the
+	// Claimed (or expired): tell the page, which closes the dialog on the
+	// event (app.js). Not a script in the response — the
 	// CSP forbids it, and htmx is configured not to run one anyway.
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("HX-Trigger", "sso-done")
@@ -1426,7 +1469,9 @@ func (s *Server) handleSSOStatus(w http.ResponseWriter, r *http.Request) {
 
 // The tunnel handlers run synchronously: cloudflared announces its URL in a
 // few seconds, so a plain form POST + redirect beats wiring them into the
-// single-flight job. The captured log tail makes a failure diagnosable.
+// single-flight job. The captured log tail makes a failure diagnosable. They
+// emit no event: the redirect refreshes this tab, and the watcher tells every
+// other one (it sees the tunnel change, like cloudflared dying on its own).
 func (s *Server) handleTunnelStart(w http.ResponseWriter, r *http.Request) {
 	if !tunnelEnabled() {
 		http.NotFound(w, r)

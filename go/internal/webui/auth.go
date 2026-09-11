@@ -22,6 +22,27 @@ package webui
 // run command publishes it on 127.0.0.1 only. That port binding — not
 // anything in this file — is what decides who can talk to it.
 //
+// Be clear about what that means. There is no login, and everything above is
+// a browser-side defence: it keeps a *web page* the user happens to have open
+// from driving the console. Any plain HTTP client that can reach the port is
+// not kept from anything — it fetches / once, receives the cookie and the
+// token rendered into the page, and posts them back. So:
+//
+//   - inside the container there is no defence at all. The site on 8082 runs
+//     PHP as www-data, and a compromised site can reach 127.0.0.1:8081 and do
+//     everything the console does — reset, install, add a plugin from any git
+//     URL, open a tunnel, download backups — and the console's jobs run as
+//     root (git, mudev on the root-owned tree). The console is root-level
+//     control of the container, and www-data can hold it. Invariant 10 accepts
+//     this: both sides are throwaway, and nothing of value lives in one that
+//     is not in the other.
+//   - publishing the port on anything but loopback (mpd's `make run` on the VM
+//     bridge, say) hands that same control to whoever can reach the address.
+//
+// What the checks defend is the user's own machine against the wider web: a
+// hostile page rebinding a name to 127.0.0.1, or posting a form at the console
+// from another tab. That is the perimeter that matters, and it holds.
+//
 // secureHeaders adds the browser-side layer: a Content-Security-Policy that
 // allows nothing inline and no origin but this one, so an injected script
 // or style could not run even if a template escape were ever wrong.
@@ -217,7 +238,8 @@ func sameOriginOK(r *http.Request) bool {
 		return check(ref)
 	}
 	// Same-origin form posts always carry at least one of the two in every
-	// current browser; a bare request is a non-browser client that already
-	// holds the cookie, so there is nothing left to protect.
+	// current browser. A bare request is not a browser at all — and a plain
+	// HTTP client on the port needs no help: one GET / hands it the cookie and
+	// the token both. Nothing here guards against that; see the header comment.
 	return true
 }

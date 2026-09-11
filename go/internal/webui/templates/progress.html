@@ -1,9 +1,9 @@
 {{/* The progress section is split so the two halves refresh independently:
-     the status header polls itself and swaps whole (it is tiny), while the log
-     below it is never re-rendered wholesale — it only grows. jobstatus and
+     the status header re-renders whole on the job event (it is tiny), while the
+     log below it is never re-rendered wholesale — it only grows. jobstatus and
      logtail are both addressable fragments (/section/jobstatus and /joblog). */}}
 {{define "jobstatus"}}
-<div id="jobstatus"{{if .Job.Running}} hx-get="/section/jobstatus" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
+<div id="jobstatus" hx-get="/section/jobstatus" hx-trigger="mdl:job from:body" hx-sync="this:replace" hx-swap="outerHTML">
   {{/* No "done" badge: cron streams in here after the job, so the log is
        never really finished — only running and failed say anything. */}}
   {{/* Just the spinner while running (the Demo-site card names the activity);
@@ -15,14 +15,15 @@
 </div>
 {{end}}
 
-{{/* logtail is both the initial log body and every incremental poll response:
-     the batch of lines, then a self-replacing cursor that fetches only what
-     comes after .Job.Next. While the job runs it polls fast and pins the log
-     to the bottom; afterwards it keeps polling slowly (per-minute cron output
-     streams into the same log) without the scroll pin, so reading the log is
-     never yanked away. */}}
+{{/* logtail is both the initial log body and every incremental response: the
+     batch of lines, then a self-replacing cursor that fetches only what comes
+     after .Job.Next — on the log event (new lines: the job's, or per-minute cron
+     output streaming into the same log) and on the job event (the final lines
+     of a job that just ended). Following the tail is app.js's job: it scrolls
+     down only when the reader was already at the bottom, so reading up the log
+     is never yanked away. */}}
 {{define "logtail"}}{{range .Job.Log}}{{.}}
-{{end}}{{if .Job.Running}}<span id="logcursor" hx-get="/joblog?from={{.Job.Next}}" hx-trigger="every 500ms" hx-target="this" hx-swap="outerHTML scroll:#joblog:bottom"></span>{{else if .Job.Kind}}<span id="logcursor" hx-get="/joblog?from={{.Job.Next}}" hx-trigger="every 5s" hx-target="this" hx-swap="outerHTML"></span>{{end}}{{end}}
+{{end}}{{if .Job.Kind}}<span id="logcursor" hx-get="/joblog?from={{.Job.Next}}" hx-trigger="mdl:log from:body, mdl:job from:body" hx-sync="this:replace" hx-target="this" hx-swap="outerHTML"></span>{{end}}{{end}}
 
 {{define "progress"}}
 {{if .Job.Kind}}

@@ -2,13 +2,13 @@
 {{/* The Install card: the empty dashboard's chooser — pick a version package,
      then the one Install button submits (selection = confirmation, no dialog),
      or restore a backup. The stable #install wrapper is always in the DOM so
-     htmx can swap it; it polls only while a job runs, so the card reappears the
+     htmx can swap it; it re-renders on the job event, so the card reappears the
      moment a reset finishes. It renders the chooser only when no site is
      installed and nothing is running — the mirror image of the Demo-site card.
-     Vendor tabs toggle via a delegated data-tab handler (app.js); the chooser
-     itself never polls, so the choice survives. With JS off every panel shows
-     and the button is enabled — harmless. */}}
-<div id="install"{{if .Busy}} hx-get="/section/install" hx-trigger="every 5s" hx-swap="outerHTML"{{end}}>
+     Vendor tabs toggle via a delegated data-tab handler (app.js); nothing
+     re-renders the chooser while idle, so the choice survives. With JS off
+     every panel shows and the button is enabled — harmless. */}}
+<div id="install" hx-get="/section/install" hx-trigger="mdl:job from:body" hx-sync="this:replace" hx-swap="outerHTML">
 {{if and (not .Installed) (not .Busy)}}
 <article>
   <h2>{{t .Lang "Pick a version to install a demo"}}</h2>

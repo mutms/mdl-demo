@@ -3,10 +3,10 @@
      is one big link (→ goes to a console page, ↗ opens a new tab); the Quick
      Tunnel card carries an on/off switch instead — it flips state, it does not
      navigate. Its live status (URL, QR, badge) stays on the site card, since
-     the tunnel IS the site's URL while it runs. Polled like the site card so
-     the switch follows state changes made in another tab. */}}
+     the tunnel IS the site's URL while it runs. Refreshed on the tunnel event
+     so the switch follows a change made in another tab, or cloudflared dying. */}}
 {{define "tools"}}
-<article id="tools" hx-get="/section/tools" hx-trigger="every 5s" hx-swap="outerHTML">
+<article id="tools" hx-get="/section/tools" hx-trigger="mdl:tunnel from:body" hx-sync="this:replace" hx-swap="outerHTML">
   <h2>{{t .Lang "Tools"}}</h2>
   <div class="toolgrid">
     {{/* Optional image-baked poster (assets/poster/): a fork/presenter tile in

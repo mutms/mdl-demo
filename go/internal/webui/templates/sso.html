@@ -1,7 +1,7 @@
 {{/* The two-stage "Log in" dialog: stage 1 offers a direct new-tab login and,
      only when a tunnel is up, a QR code (the site is reachable off this
      machine only through the public URL); stage 2 shows a single-use QR and
-     polls until the code is claimed, then closes the dialog — the presenter
+     waits for the sso event (the code was claimed), then closes the dialog — the presenter
      clicks Log in → QR code again for the next person, one fresh token each. */}}
 {{define "ssodialog"}}
 <p class="empty">{{t .Lang "Open the demo site as"}} <code>{{.SSOUser}}</code>
@@ -26,4 +26,4 @@
 {{template "ssopoll" .}}
 {{end}}
 
-{{define "ssopoll"}}<div id="ssopoll" hx-get="/sso/status?id={{.SSOTokenID}}" hx-trigger="every 2s" hx-swap="outerHTML"></div>{{end}}
+{{define "ssopoll"}}<div id="ssopoll" hx-get="/sso/status?id={{.SSOTokenID}}" hx-trigger="mdl:sso from:body" hx-sync="this:replace" hx-swap="outerHTML"></div>{{end}}

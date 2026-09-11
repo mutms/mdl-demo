@@ -1,13 +1,13 @@
 {{/* The accounts section sits between the site summary and the log — its own
      space to grow as teachers and students are seeded, and the home for the
-     per-user login links. Deliberately NOT polled: it holds revealable
-     passwords, and a periodic swap would re-mask one the moment you showed it.
-     A bare wrapper div polls only while a job runs, so the section appears the
-     moment the site is ready, then goes quiet — a revealed password is never
-     re-masked out from under you. The card itself renders only when a site is
-     installed. */}}
+     per-user login links. Never on a timer: it holds revealable passwords,
+     and a periodic swap would re-mask one the moment you showed it. It
+     re-renders only when the accounts can actually have changed — a job
+     starting or ending (the section appears the moment the site is ready) or
+     state.json changing (a user created in another tab). The card itself
+     renders only when a site is installed. */}}
 {{define "users"}}
-<div id="users"{{if .Busy}} hx-get="/section/users" hx-trigger="every 2s" hx-swap="outerHTML"{{end}}>
+<div id="users" hx-get="/section/users" hx-trigger="mdl:job from:body, mdl:state from:body" hx-sync="this:replace" hx-swap="outerHTML">
 {{if .Installed}}
 <article>
   <h2>{{t .Lang "Accounts"}}</h2>

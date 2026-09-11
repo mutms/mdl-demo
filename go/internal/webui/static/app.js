@@ -66,10 +66,11 @@ document.addEventListener('click', function (e) {
   b.textContent = next === 'auto' ? '◐' : next === 'light' ? '☀' : '☾';
 });
 // Progressive enhancement for the install chooser. Runs on first load AND
-// after every htmx swap: the empty-state chooser reappears via the site card's
-// poll when a reset/restore job ends, without a full page load — so this must
-// re-init the swapped-in markup, or the tabs and Install button stay inert
-// until a manual reload. Idempotent, so re-running over old nodes is harmless.
+// after every htmx swap: the empty-state chooser reappears via the install
+// card's job-event refresh when a reset/restore job ends, without a full page
+// load — so this must re-init the swapped-in markup, or the tabs and Install
+// button stay inert until a manual reload. Idempotent, so re-running over old
+// nodes is harmless.
 function initChooser() {
   // Enable tab hiding only now that JS runs (see .tabs.js in the stylesheet).
   document.querySelectorAll('.tabs').forEach(function (t) { t.classList.add('js'); });
@@ -88,7 +89,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var t = document.documentElement.dataset.theme || 'auto';
   b.textContent = t === 'light' ? '☀' : t === 'dark' ? '☾' : '◐';
 });
-// The QR dialog lives outside the polled #site section, so a 5s refresh swap
+// The QR dialog lives outside the event-refreshed #site section, so a swap
 // cannot close it mid-presentation; any click (or Esc) dismisses it.
 document.addEventListener('click', function (e) {
   var q = e.target.closest('button.qr');
@@ -215,8 +216,9 @@ document.addEventListener('click', function (e) {
   r.title = shown ? 'Hide' : 'Reveal';
 });
 
-// data-tab: switch the active vendor tab in the install chooser. The chooser
-// never polls, so the chosen tab sticks; with JS off every panel just shows.
+// data-tab: switch the active vendor tab in the install chooser. Nothing
+// re-renders the chooser while idle, so the chosen tab sticks; with JS off
+// every panel just shows.
 document.addEventListener('click', function (e) {
   var t = e.target.closest('[data-tab]');
   if (!t) return;
@@ -232,16 +234,15 @@ document.addEventListener('click', function (e) {
 });
 // Tunnel switch: starting cloudflared takes a few seconds and the request is a
 // full navigation, so show the spinner and disable the switch immediately —
-// otherwise the wait looks frozen. Also stop the tools card's poll so it can't
-// swap the spinner away mid-wait; the redirect reloads the page regardless.
+// otherwise the wait looks frozen. A tunnel event mid-wait re-renders the card
+// in the server's own "starting" state, which looks the same; the redirect
+// reloads the page regardless.
 document.addEventListener('submit', function (e) {
   var f = e.target;
   if (!f.classList || !f.classList.contains('tunnelform')) return;
   f.classList.add('busy');
   var b = f.querySelector('button');
   if (b) b.disabled = true;
-  var card = f.closest('#tools');
-  if (card) card.removeAttribute('hx-trigger');
 });
 // data-confirm: ask before a destructive form submits, using the console's own
 // confirm dialog (never the browser's native confirm popup). The submit is held
@@ -294,11 +295,52 @@ document.addEventListener('close', function (e) {
   if (e.target.id === 'confirmdialog') pendingConfirm = null;
 }, true);
 
-// Liveness reload (see handleAlive): the /alive poll fires "stale-page" when the
-// coarse state changed under the open page. Reload — but NOT while a modal is
-// open, or a job finishing (backup, install, reset) would yank the dialog out
-// from under the user. Defer to the next dialog close instead; the poll keeps
-// re-firing meanwhile, so the flag just stays set until nothing is open.
+// Live updates (events.go): one EventSource per page, opened with the epoch
+// the page was rendered by. Every server event is re-dispatched as
+// "mdl:<topic>" on <body>; the sections listen with
+// hx-trigger="mdl:<topic> from:body" and refetch themselves. Nothing in the
+// console runs on a timer — new live UI must listen to a hub event.
+var TOPICS = ['job', 'log', 'state', 'tunnel', 'services', 'sso'];
+var es = null, esOpened = false, esRetry = null;
+function fire(topic, data) {
+  document.body.dispatchEvent(new CustomEvent('mdl:' + topic, { detail: { data: data || '' } }));
+}
+function connectEvents() {
+  var m = document.querySelector('meta[name="mdl-epoch"]');
+  if (es || !m || !window.EventSource) return;
+  es = new EventSource('/events?e=' + encodeURIComponent(m.content));
+  TOPICS.forEach(function (t) { es.addEventListener(t, function (e) { fire(t, e.data); }); });
+  es.addEventListener('reload', function () {
+    // The diagnostics page is a snapshot: it holds still (its sections stay live).
+    if (document.querySelector('meta[name="mdl-snapshot"]')) return;
+    document.body.dispatchEvent(new Event('stale-page'));
+  });
+  es.onopen = function () {
+    // A reconnect (restart, laptop sleep, a tab shown again) may have missed
+    // events; every fetch is idempotent, so replay them all. A new process
+    // announces itself with its own reload event.
+    if (esOpened) TOPICS.forEach(function (t) { fire(t); });
+    esOpened = true;
+  };
+  es.onerror = function () {
+    // CONNECTING: the browser retries by itself (retry: from the server).
+    // CLOSED: it gave up (a non-200, e.g. the stream cap) — try once more later.
+    if (es && es.readyState === EventSource.CLOSED) { es = null; esRetry = setTimeout(connectEvents, 5000); }
+  };
+}
+function disconnectEvents() { clearTimeout(esRetry); if (es) { es.close(); es = null; } }
+document.addEventListener('DOMContentLoaded', connectEvents);
+// A hidden tab drops its stream (browsers cap connections per origin over
+// HTTP/1.1) and picks up where it left off on return, via the onopen replay.
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden) disconnectEvents(); else connectEvents();
+});
+
+// Reload on "stale-page" (the reload event: a new process, the site identity
+// changed, a job rebuilt the site) — but NOT while a modal is open, or a job
+// finishing (install, reset, restore) would yank the dialog out from under the
+// user. Defer to the next dialog close instead: the flag stays set until
+// nothing is open.
 var pendingReload = false;
 document.body.addEventListener('stale-page', function () {
   if (document.querySelector('dialog[open]')) pendingReload = true;
@@ -307,6 +349,25 @@ document.body.addEventListener('stale-page', function () {
 document.addEventListener('close', function () {
   if (pendingReload && !document.querySelector('dialog[open]')) location.reload();
 }, true);
+
+// Site log: follow the tail only while the reader is at the bottom, so
+// scrolling up to read is never yanked back down. beforeSwap fires on the old
+// cursor (still in the log), afterSwap on the swapped-in one.
+var logAtBottom = true;
+document.body.addEventListener('htmx:beforeSwap', function (e) {
+  if (!e.detail.target || e.detail.target.id !== 'logcursor') return;
+  var pre = document.getElementById('joblog');
+  logAtBottom = !!pre && pre.scrollHeight - pre.scrollTop - pre.clientHeight < 24;
+});
+document.body.addEventListener('htmx:afterSwap', function (e) {
+  if (!e.target || e.target.id !== 'logcursor' || !logAtBottom) return;
+  var pre = document.getElementById('joblog');
+  if (pre) pre.scrollTop = pre.scrollHeight;
+});
+document.addEventListener('DOMContentLoaded', function () {
+  var pre = document.getElementById('joblog'); // newest line last: start at the bottom
+  if (pre) pre.scrollTop = pre.scrollHeight;
+});
 // data-open: open that dialog; data-clear empties an element first (the SSO
 // dialog body, so a stale stage never shows while htmx fetches the new one).
 document.addEventListener('click', function (e) {
@@ -334,7 +395,8 @@ document.addEventListener('click', function (e) {
   if (d.dataset.close === 'any') { d.close(); return; }
   if (e.target === d && downOnBackdrop) d.close();
 });
-// The SSO poll answers with an HX-Trigger header once the code is claimed.
+// The sso event refetches /sso/status, which answers with an HX-Trigger header
+// once the code is claimed.
 document.addEventListener('sso-done', function () {
   var d = document.getElementById('ssodialog');
   if (d && d.open) d.close();

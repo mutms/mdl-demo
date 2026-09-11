@@ -278,6 +278,9 @@ func (s *Supervisor) supervise(p *proc) {
 			p.mu.Lock()
 			p.pid, p.running = cmd.Process.Pid, true
 			p.mu.Unlock()
+			// Up/down transitions reach the console's live pages the way cron
+			// output reaches its log (webui.SiteLog).
+			webui.Notify("services")
 
 			ws := <-p.exitCh
 			_ = cmd.Process.Release()
@@ -286,6 +289,7 @@ func (s *Supervisor) supervise(p *proc) {
 			p.lastExit = exitString(ws)
 			p.restarts++
 			p.mu.Unlock()
+			webui.Notify("services")
 			if s.stopping.Load() {
 				return
 			}

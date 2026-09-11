@@ -7,6 +7,10 @@
      stored theme lands on <html> before first paint. htmx is told not to
      evaluate anything, in line with the policy. */}}
 <meta name="htmx-config" content='{"allowEval":false,"allowScriptTags":false,"includeIndicatorStyles":false,"selfRequestsOnly":true}'>
+{{/* app.js opens the live-update stream (/events) with the epoch this page was
+     rendered by, so a restarted process can tell it to reload. A snapshot page
+     (the diagnostics report) ignores that reload and holds still. */}}
+<meta name="mdl-epoch" content="{{.Epoch}}">{{if .Snapshot}}<meta name="mdl-snapshot" content="1">{{end}}
 <script src="/static/theme.js"></script>
 <script src="/static/htmx.min.js"></script>
 <script src="/static/app.js" defer></script>

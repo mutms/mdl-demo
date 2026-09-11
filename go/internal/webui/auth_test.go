@@ -182,3 +182,19 @@ func TestSecureHeaders(t *testing.T) {
 		t.Error("CSP set on the Mailpit proxy")
 	}
 }
+
+// The event stream is a GET like any other: the host allow-list turns a
+// rebinding page away before the streaming handler ever runs.
+func TestEventsHostGuarded(t *testing.T) {
+	s := &Server{hub: newHub(), job: &job{}, epoch: "e1"}
+	h, err := s.routes()
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := httptest.NewRequest("GET", "http://evil.example:8081/events?e=e1", nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want 403", w.Code)
+	}
+}
