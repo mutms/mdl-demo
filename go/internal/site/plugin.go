@@ -57,15 +57,16 @@ type Refs struct {
 // ListRefs runs `git ls-remote` (with a hard timeout so an unreachable host
 // cannot hang the console) and proposes a ref: the highest MOODLE_<n>_STABLE
 // branch the repo offers that still serves this site's Moodle branch, else a
-// default branch, else the first tag.
+// default branch, else the newest tag.
 func ListRefs(url string) (Refs, error) {
 	var r Refs
 	if !allowedGitURL(url) {
 		return r, fmt.Errorf("not a git URL")
 	}
 	// `timeout` caps a stuck fetch; execx.Output routes the wait through PID 1's
-	// reaper and keeps stdout clean.
-	out, err := execx.Output("", "timeout", "20", "git", "ls-remote", "--heads", "--tags", url)
+	// reaper and keeps stdout clean. Newest first, version-aware (v1.10 above
+	// v1.9), as GitHub lists them — ls-remote's own order is plain byte order.
+	out, err := execx.Output("", "timeout", "20", "git", "ls-remote", "--sort=-version:refname", "--heads", "--tags", url)
 	if err != nil {
 		return r, fmt.Errorf("could not read the repository: %w", err)
 	}

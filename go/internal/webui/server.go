@@ -285,7 +285,10 @@ type view struct {
 	// picker show the same detail as the Camp dialog. PluginCampAdv is its advisories.
 	PluginCamp    *camp.Plugin
 	PluginCampAdv []camp.Advisory
-	Refs          site.Refs
+	// RefsInDialog: the ref picker is loading into the Camp dialog, which
+	// already names the plugin — the picker then skips its own card.
+	RefsInDialog bool
+	Refs         site.Refs
 	// Recommendations page.
 	Recommends []recommendRow
 	// The empty dashboard's recipe chooser: vendor tabs of version streams.
@@ -936,9 +939,12 @@ func (s *Server) handlePluginRefs(w http.ResponseWriter, r *http.Request) {
 	}
 	v := s.buildView(r)
 	v.PluginURL = strings.TrimSpace(r.FormValue("url"))
+	// The Camp dialog (target #cd-refs) already shows the plugin's card above
+	// the picker; only the git-URL box on the plugins page needs one.
+	v.RefsInDialog = r.Header.Get("HX-Target") == "cd-refs"
 	// Describe it from the in-memory Camp catalogue when the URL is a listed
 	// source — the same detail as the Camp dialog, with no clone or network call.
-	if cat := s.campCatalog(); cat != nil {
+	if cat := s.campCatalog(); cat != nil && !v.RefsInDialog {
 		if p, ok := cat.GetBySource(v.PluginURL); ok {
 			v.PluginCamp = p
 			v.PluginCampAdv = cat.AdvisoriesFor(p.Component)

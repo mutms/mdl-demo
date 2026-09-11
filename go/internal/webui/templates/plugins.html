@@ -97,20 +97,12 @@
 <form method="post" action="/plugins/add" class="stack refpick">
   <input type="hidden" name="csrf" value="{{.CSRF}}">
   <input type="hidden" name="url" value="{{.PluginURL}}">
-  {{/* The mark fires here, at the clone-and-run step (shared by the git-URL and
-       CAMP flows): the sign, with the warning beside it. */}}
-  <div class="danger">
-    {{template "dangersign" .}}
-    <div class="warn">
-      <p>{{t .Lang "Adding a plugin runs its code on this throwaway demo."}}</p>
-      <p>{{t .Lang "If things break, reset the site. If it gets compromised, delete the container entirely."}}</p>
-    </div>
-  </div>
-  {{/* Say what's installing. When the URL is a known Camp source, show the same
-       card as the Camp dialog (component, tier, advisory, summary, Camp link) —
-       all from memory, no round trip. Otherwise just the source repo. The exact
-       component is confirmed from version.php at install time. */}}
-  {{if .PluginCamp}}{{with .PluginCamp}}
+  {{/* Say what's installing — unless this is the Camp dialog, which already
+       does. When the URL is a known Camp source, show the same card as the Camp
+       dialog (component, tier, advisory, summary, Camp link) — all from memory,
+       no round trip. Otherwise just the source repo. The exact component is
+       confirmed from version.php at install time. */}}
+  {{if .RefsInDialog}}{{else if .PluginCamp}}{{with .PluginCamp}}
   <div class="camp-detail">
     <p class="refsrc">{{t $.Lang "Installing"}} <strong>{{.Component}}</strong>
       {{if ge .Tier 2}}<span class="cr-tier tier2">{{t $.Lang "Verified"}}</span>{{else if ge .Tier 1}}<span class="cr-tier tier1">{{t $.Lang "Claimed"}}</span>{{end}}</p>
@@ -126,6 +118,15 @@
   {{else}}
   <p class="refsrc">{{t .Lang "Installing from"}} <a href="{{.PluginURL}}" target="_blank" rel="noopener">{{.PluginURL}}</a></p>
   {{end}}
+  {{/* The mark fires here, at the clone-and-run step (shared by the git-URL and
+       CAMP flows): the sign, with the warning beside it. */}}
+  <div class="danger">
+    {{template "dangersign" .}}
+    <div class="warn">
+      <p>{{t .Lang "Adding a plugin runs its code on this throwaway demo."}}</p>
+      <p>{{t .Lang "If things break, reset the site. If it gets compromised, delete the container entirely."}}</p>
+    </div>
+  </div>
   <div class="ff">
     <select name="ref" id="plugin-ref">
       {{if .Refs.Branches}}<optgroup label="{{t .Lang "Branches"}}">
