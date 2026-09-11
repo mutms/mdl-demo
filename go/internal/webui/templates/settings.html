@@ -58,14 +58,15 @@
      <a href="https://github.com/mutms/mdl-demo/issues">github.com/mutms/mdl-demo/issues</a>.
      {{t .Lang "It contains service states and recent log lines, no passwords."}}</p>
   <pre class="log cred">{{.DebugReport}}</pre>
-  {{if .RecipeExport}}
-  <details class="mt">
-    <summary>{{t .Lang "Site recipe"}}</summary>
-    <p class="empty">{{t .Lang "The exact code tree — plugins and their git sources. Share it only if your problem is about the code itself."}}</p>
-    <pre class="log cred">{{.RecipeExport}}</pre>
-  </details>
-  {{end}}
 </article>
+
+{{if .RecipeExport}}
+<article>
+  <h2>{{t .Lang "Site recipe"}}</h2>
+  <p class="empty">{{t .Lang "The exact code tree — plugins and their git sources. Share it only if your problem is about the code itself."}}</p>
+  <pre class="log cred">{{.RecipeExport}}</pre>
+</article>
+{{end}}
 
 {{template "footer" .}}
 </html>{{end}}

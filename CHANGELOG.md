@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Live console updates via server-sent events instead of polling
 - Page reloads only on process, site or code change
 - Improved mdb backup format compatible with mpd vms
+- Site recipe on the Settings page is visible by default
 
 ## [0.6.0] - 2026-09-05
 
