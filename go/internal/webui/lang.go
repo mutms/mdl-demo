@@ -172,7 +172,7 @@ var messages = map[string]map[string]string{
 		"pick a matching version below.": "níže vyberte odpovídající verzi.",
 		"Show versions":                  "Zobrazit verze",
 		"Install plugin":                 "Nainstalovat plugin",
-		"Back up first — a restore point in case of breakage": "Nejprve zálohovat — bod obnovení pro případ potíží",
+		"Back up first — a restore point in case of breakage": "Nejprve zálohovat – bod obnovení pro případ potíží",
 		"Installing from": "Instaluje se z",
 		"Installing":      "Instaluje se",
 		"Branches":        "Větve",
@@ -217,7 +217,7 @@ var messages = map[string]map[string]string{
 
 		"CAMP": "CAMP",
 		"Browse the community catalogue and test plugins in this demo site.":                       "Procházejte komunitní katalog a testujte pluginy na těchto demo stránkách.",
-		"CAMP — the Community Archive of Moodle Plugins. Search, then test one in this demo site.": "CAMP — Komunitní archiv pluginů Moodle. Vyhledejte a otestujte plugin na těchto demo stránkách.",
+		"CAMP — the Community Archive of Moodle Plugins. Search, then test one in this demo site.": "CAMP – Komunitní archiv pluginů Moodle. Vyhledejte a otestujte plugin na těchto demo stránkách.",
 		"Search plugins…":   "Hledat pluginy…",
 		"All types":         "Všechny typy",
 		"Any status":        "Libovolný stav",
