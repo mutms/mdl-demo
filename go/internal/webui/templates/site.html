@@ -4,7 +4,7 @@
      The stable #site wrapper is always in the DOM so htmx can swap it: it
      re-renders on the job, state (URL, users) and tunnel events, and renders
      nothing at all when the dashboard is empty and idle. */}}
-<div id="site" hx-get="/section/site" hx-trigger="mdl:job from:body, mdl:state from:body, mdl:tunnel from:body" hx-sync="this:replace" hx-swap="outerHTML">
+<div id="site" hx-get="/section/site" hx-trigger="mdl:job from:body, mdl:state from:body, mdl:tunnel from:body" hx-sync="this:replace" hx-disinherit="*" hx-swap="outerHTML">
 {{if .Installed}}
 <article>
   <h2>{{t .Lang "Demo site"}}</h2>

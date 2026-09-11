@@ -94,7 +94,7 @@
 {{/* Supervised services that are down — live (the services event), even on this
      snapshot page: the wrapper is always in the DOM so the card can appear and
      go away as a service crashes and comes back. */}}
-{{define "svcproblems"}}<div id="svcproblems" hx-get="/section/svcproblems" hx-trigger="mdl:services from:body" hx-sync="this:replace" hx-swap="outerHTML">
+{{define "svcproblems"}}<div id="svcproblems" hx-get="/section/svcproblems" hx-trigger="mdl:services from:body" hx-sync="this:replace" hx-disinherit="*" hx-swap="outerHTML">
 {{if .ServiceProblems}}
 <article>
   <h2>{{t .Lang "Service problems"}}</h2>

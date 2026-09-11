@@ -26,4 +26,4 @@
 {{template "ssopoll" .}}
 {{end}}
 
-{{define "ssopoll"}}<div id="ssopoll" hx-get="/sso/status?id={{.SSOTokenID}}" hx-trigger="mdl:sso from:body" hx-sync="this:replace" hx-swap="outerHTML"></div>{{end}}
+{{define "ssopoll"}}<div id="ssopoll" hx-get="/sso/status?id={{.SSOTokenID}}" hx-trigger="mdl:sso from:body" hx-sync="this:replace" hx-disinherit="*" hx-swap="outerHTML"></div>{{end}}

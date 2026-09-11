@@ -8,7 +8,7 @@
      Vendor tabs toggle via a delegated data-tab handler (app.js); nothing
      re-renders the chooser while idle, so the choice survives. With JS off
      every panel shows and the button is enabled — harmless. */}}
-<div id="install" hx-get="/section/install" hx-trigger="mdl:job from:body" hx-sync="this:replace" hx-swap="outerHTML">
+<div id="install" hx-get="/section/install" hx-trigger="mdl:job from:body" hx-sync="this:replace" hx-disinherit="*" hx-swap="outerHTML">
 {{if and (not .Installed) (not .Busy)}}
 <article>
   <h2>{{t .Lang "Pick a version to install a demo"}}</h2>

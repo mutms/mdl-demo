@@ -3,7 +3,7 @@
      log below it is never re-rendered wholesale — it only grows. jobstatus and
      logtail are both addressable fragments (/section/jobstatus and /joblog). */}}
 {{define "jobstatus"}}
-<div id="jobstatus" hx-get="/section/jobstatus" hx-trigger="mdl:job from:body" hx-sync="this:replace" hx-swap="outerHTML">
+<div id="jobstatus" hx-get="/section/jobstatus" hx-trigger="mdl:job from:body" hx-sync="this:replace" hx-disinherit="*" hx-swap="outerHTML">
   {{/* No "done" badge: cron streams in here after the job, so the log is
        never really finished — only running and failed say anything. */}}
   {{/* Just the spinner while running (the Demo-site card names the activity);
@@ -23,7 +23,7 @@
      down only when the reader was already at the bottom, so reading up the log
      is never yanked away. */}}
 {{define "logtail"}}{{range .Job.Log}}{{.}}
-{{end}}{{if .Job.Kind}}<span id="logcursor" hx-get="/joblog?from={{.Job.Next}}" hx-trigger="mdl:log from:body, mdl:job from:body" hx-sync="this:replace" hx-target="this" hx-swap="outerHTML"></span>{{end}}{{end}}
+{{end}}{{if .Job.Kind}}<span id="logcursor" hx-get="/joblog?from={{.Job.Next}}" hx-trigger="mdl:log from:body, mdl:job from:body" hx-sync="this:replace" hx-disinherit="*" hx-target="this" hx-swap="outerHTML"></span>{{end}}{{end}}
 
 {{define "progress"}}
 {{if .Job.Kind}}

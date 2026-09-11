@@ -30,7 +30,7 @@
      reloads — without disturbing the report being read. A job run from the CLI
      has no label here (its busy.lock is all the console sees): plain "busy". */}}
 {{define "statuspill"}}
-<div id="statuspill" class="statuspill" hx-get="/section/statuspill" hx-trigger="mdl:job from:body" hx-sync="this:replace" hx-swap="outerHTML" aria-live="polite">
+<div id="statuspill" class="statuspill" hx-get="/section/statuspill" hx-trigger="mdl:job from:body" hx-sync="this:replace" hx-disinherit="*" hx-swap="outerHTML" aria-live="polite">
   {{if .Busy}}<span class="jobstate"><span class="spin"></span>{{if .Job.Running}}{{t .Lang .Job.Label}}{{else}}{{t .Lang "busy"}}{{end}}</span>{{end}}
 </div>
 {{end}}

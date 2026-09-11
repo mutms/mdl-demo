@@ -5,9 +5,12 @@
      re-renders only when the accounts can actually have changed — a job
      starting or ending (the section appears the moment the site is ready) or
      state.json changing (a user created in another tab). The card itself
-     renders only when a site is installed. */}}
+     renders only when a site is installed. hx-disinherit keeps the wrapper's
+     swap/sync settings from leaking into the Log in buttons inside (htmx
+     inherits hx-swap and hx-sync): every event wrapper carries it, so a
+     button's own hx-target/hx-swap always mean what they say. */}}
 {{define "users"}}
-<div id="users" hx-get="/section/users" hx-trigger="mdl:job from:body, mdl:state from:body" hx-sync="this:replace" hx-swap="outerHTML">
+<div id="users" hx-get="/section/users" hx-trigger="mdl:job from:body, mdl:state from:body" hx-sync="this:replace" hx-disinherit="*" hx-swap="outerHTML">
 {{if .Installed}}
 <article>
   <h2>{{t .Lang "Accounts"}}</h2>

@@ -43,7 +43,9 @@ PID 1 of the container, management web UI, and CLI.
   In-process facts are emitted where they happen (`job.go`, initd via
   `webui.Notify`); what other processes change (state.json, busy.lock, the
   tunnel, SSO token files) is seen by the one 1-second watcher there. New live
-  UI listens to a hub event (or adds one) — never `every`;
+  UI listens to a hub event (or adds one) — never `every` — and its wrapper
+  carries `hx-disinherit="*"` (htmx inherits `hx-swap`/`hx-sync` into
+  descendants, which would break buttons inside the card);
   en/cs/de UI strings in `lang.go`; diagnostics on the Settings page
   (`/settings`; `/debug` redirects there). The dashboard's **Tools card** is a
   3×3 grid of navigation cards (each a sub-page): upstream caps it at **8** so a

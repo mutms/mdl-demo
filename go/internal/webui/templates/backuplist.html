@@ -3,7 +3,7 @@
      Restore always wipes and rebuilds the whole site from the archive — never
      mixes restored data with the current tree. */}}
 {{define "backuplist"}}
-<article id="backuplist" hx-get="/section/backuplist" hx-trigger="mdl:job from:body" hx-sync="this:replace" hx-swap="outerHTML">
+<article id="backuplist" hx-get="/section/backuplist" hx-trigger="mdl:job from:body" hx-sync="this:replace" hx-disinherit="*" hx-swap="outerHTML">
   <h2>{{t .Lang "Backups"}}</h2>
   {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
   {{if .Backups}}
