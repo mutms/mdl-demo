@@ -152,9 +152,11 @@ func Cron(logf execx.Logf) error {
 }
 
 // Upgrade runs Moodle's CLI upgrade — after a restore it brings the data up
-// to whatever version the code tree is.
+// to whatever version the code tree is. --allow-unstable: a development branch
+// (5.3dev, say) is alpha code, and upgrade.php refuses it without the flag;
+// on a throwaway demo that is exactly what was asked for.
 func Upgrade(logf execx.Logf) error {
-	return RunCLI(logf, "admin/cli/upgrade.php", "--non-interactive")
+	return RunCLI(logf, "admin/cli/upgrade.php", "--non-interactive", "--allow-unstable")
 }
 
 // PurgeCaches purges all Moodle caches, which hold absolute URLs and schema
