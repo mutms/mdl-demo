@@ -1,2 +1,5 @@
-# cmd.exe mis-parses labels/goto in LF-only batch files; keep CRLF everywhere.
-launcher/mdl-demo.cmd text eol=crlf
+# cmd.exe mis-parses labels/goto in LF-only batch files, so the launcher is
+# stored with CRLF in the repo itself (-text: no EOL conversion). "text
+# eol=crlf" is not enough: it normalises the blob to LF and only converts on
+# checkout, so raw.githubusercontent.com (the WINDOWS.md download) serves LF.
+launcher/mdl-demo.cmd -text
