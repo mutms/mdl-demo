@@ -6,10 +6,8 @@
 # identity (MDL_DEMO_PORT, default 8081) and the site is always on the next
 # one, so the mapping is NNNN:8081 and NNNN+1:8082. No systemd on purpose —
 # a standard OCI runtime gives PID 1 no CAP_SYS_ADMIN and often a read-only
-# cgroup tree,
-# which systemd cannot boot under (the WSL containers preview proved this
-# terminally), while the Go init needs no capabilities, no cgroups and no
-# tmpfs. The SAME run command therefore works on rootful podman,
+# cgroup tree, which systemd cannot easily boot under.
+#
 # Apple `container` and WSL containers:
 #
 #   <runtime> run -d --name mdl-demo-8081 \

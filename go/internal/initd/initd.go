@@ -1,6 +1,5 @@
 // Package initd is mdl-demo's own init: PID 1 for container runtimes that
-// cannot boot systemd (the WSL containers preview mounts cgroup2 read-only
-// and grants no CAP_SYS_ADMIN, so systemd dies before its manager starts).
+// cannot boot systemd.
 //
 // Started with `mdl-demo init` as the container entrypoint, typically with
 // the runtime pre-mounting a tmpfs on /run (e.g. wslc's --tmpfs /run). It

@@ -44,8 +44,8 @@ For named commands like `create`, `start`, `stop` and `delete`, use the
 
 ### Windows 11
 
-You need the [WSL containers](https://devblogs.microsoft.com/commandline/wsl-container-is-now-available-for-public-preview/)
-preview (`wsl --update --pre-release`). Close and reopen your terminal afterwards so
+You need the latest [WSL 3.x](https://learn.microsoft.com/en-gb/windows/wsl/)
+(`wsl --update`). Close and reopen your terminal afterwards so
 `wslc` is on your PATH. In PowerShell:
 
 ```powershell

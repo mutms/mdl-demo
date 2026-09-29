@@ -1,15 +1,14 @@
 # mdl-demo on Windows 11
 
 Run throwaway Moodle/MuTMS demo sites on Windows with the
-[WSL containers](https://devblogs.microsoft.com/commandline/wsl-container-is-now-available-for-public-preview/)
-preview (`wslc`).
+[WSL](https://learn.microsoft.com/en-gb/windows/wsl/) containers (`wslc`).
 
 ## Requirements
 
-- Windows 11 with the WSL containers preview. Install it with:
+- Windows 11 with the latest WSL with containers. Install it with:
 
   ```powershell
-  wsl --update --pre-release
+  wsl --update
   ```
 
   then open a new terminal window.
@@ -116,5 +115,5 @@ sites and data are never touched):
 
 Delete your demos (`mdl-demo.cmd delete NNNN` for each in `mdl-demo.cmd list`),
 remove the demo image (`wslc image remove ghcr.io/mutms/mdl-demo`), delete
-`mdl-demo.cmd`, and - if you use it for nothing else - remove the WSL containers
-preview. `mdl-demo.cmd uninstall` prints these steps too.
+`mdl-demo.cmd`, and - if you use it for nothing else - remove the WSL.
+`mdl-demo.cmd uninstall` prints these steps too.
