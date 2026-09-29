@@ -155,7 +155,7 @@ exit /b 0
 echo Setting up mdl-demo on Windows 11 - just the steps, nothing is changed.
 echo.
 echo   1. Install the WSL containers:
-echo          wsl --update
+echo          wsl --install --no-distribution
 echo      then open a NEW terminal window. Details:
 echo          https://learn.microsoft.com/en-gb/windows/wsl/
 echo.
@@ -179,7 +179,8 @@ echo          wslc image remove ghcr.io/mutms/mdl-demo
 echo.
 echo   3. Delete mdl-demo.cmd.
 echo.
-echo   4. Optional: remove the WSL if you use it for nothing else.
+echo   4. Optional: remove the WSL if you use it for nothing else:
+echo          wsl --uninstall
 exit /b 0
 
 rem Waits for the console to answer, then hands it to the default browser.

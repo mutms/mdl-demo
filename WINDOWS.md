@@ -8,7 +8,7 @@ Run throwaway Moodle/MuTMS demo sites on Windows with the
 - Windows 11 with the latest WSL with containers. Install it with:
 
   ```powershell
-  wsl --update
+  wsl --install --no-distribution
   ```
 
   then open a new terminal window.
@@ -115,5 +115,5 @@ sites and data are never touched):
 
 Delete your demos (`mdl-demo.cmd delete NNNN` for each in `mdl-demo.cmd list`),
 remove the demo image (`wslc image remove ghcr.io/mutms/mdl-demo`), delete
-`mdl-demo.cmd`, and - if you use it for nothing else - remove the WSL.
+`mdl-demo.cmd`, and - if you use it for nothing else - remove the WSL (`wsl --uninstall`).
 `mdl-demo.cmd uninstall` prints these steps too.
