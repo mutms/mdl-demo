@@ -44,16 +44,17 @@ For named commands like `create`, `start`, `stop` and `delete`, use the
 
 ### Windows 11
 
-You need the latest [WSL 3.x](https://learn.microsoft.com/en-gb/windows/wsl/)
-(`wsl --install --no-distribution`). Close and reopen your terminal afterwards so
-`wslc` is on your PATH. In PowerShell:
+You need [WSL](https://learn.microsoft.com/en-gb/windows/wsl/) with containers
+(`wsl --install --no-distribution` in an administrator Terminal, then restart).
+The easiest way in is the **[MDL Demo app](https://github.com/mutms/mdl-demo-app)**,
+which creates and manages demos for you. Or, in PowerShell:
 
 ```powershell
 wslc run -d --name mdl-demo-8081 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 ghcr.io/mutms/mdl-demo
 ```
 
-Then open <http://127.0.0.1:8081>. To manage demos more easily, use the
-`mdl-demo.cmd` helper described in the **[full Windows guide](WINDOWS.md)**.
+Then open <http://127.0.0.1:8081>. See the **[full Windows guide](WINDOWS.md)**
+for more.
 
 ### Linux
 

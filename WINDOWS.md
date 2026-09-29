@@ -5,115 +5,53 @@ Run throwaway Moodle/MuTMS demo sites on Windows with the
 
 ## Requirements
 
-- Windows 11 with the latest WSL with containers. Install it with:
+- Windows 11, 64-bit.
+- WSL with containers. Open Terminal as administrator and run:
 
   ```powershell
   wsl --install --no-distribution
   ```
 
-  then open a new terminal window.
+  then restart the computer. If you already have WSL, run `wsl --update`
+  instead.
 
-## One command
+## The MDL Demo app (recommended)
 
-In PowerShell:
+[MDL Demo](https://github.com/mutms/mdl-demo-app) is a small Windows app that
+creates, starts, stops and deletes demos for you, with no commands to type.
+Download it from its
+[latest release](https://github.com/mutms/mdl-demo-app/releases/latest). It is
+not code-signed yet, so the first time you run it, Windows shows "Windows
+protected your PC": click **More info**, then **Run anyway**.
+
+## Command line
+
+The same demo in one PowerShell command:
 
 ```powershell
 wslc run -d --name mdl-demo-8081 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 ghcr.io/mutms/mdl-demo
 ```
 
-WSL also installs `container` as an alias for `wslc`, so the same `container`
-command works on Windows and macOS.
+Then open <http://127.0.0.1:8081>, pick a version and click install. Manage it
+with `wslc ps -a`, `wslc stop mdl-demo-8081`, `wslc start mdl-demo-8081` and
+`wslc rm mdl-demo-8081` (which also deletes the site and its data).
 
-Then open <http://127.0.0.1:8081>, pick a version and click install.
-
-## The mdl-demo.cmd helper (recommended)
-
-A small script that fills in the container name and ports for you. Download it
-into a folder and open PowerShell in that folder:
-
-```powershell
-curl.exe -fsSLO https://raw.githubusercontent.com/mutms/mdl-demo/main/launcher/mdl-demo.cmd
-.\mdl-demo.cmd create
-```
-
-Type `curl.exe`, not `curl` - in PowerShell `curl` is a different command.
-
-Then:
-
-```powershell
-.\mdl-demo.cmd create        # create a demo
-.\mdl-demo.cmd list          # show your demos
-.\mdl-demo.cmd stop 8081     # stop one (its site and data are kept)
-.\mdl-demo.cmd start 8081    # start it again
-.\mdl-demo.cmd delete 8081   # remove it, including its site and data
-```
-
-`mdl-demo.cmd help` lists every command. `mdl-demo.cmd install` and
-`mdl-demo.cmd uninstall` print these setup and removal steps at any time. Put
-the folder on your PATH to run `mdl-demo` from anywhere.
-
-## More than one demo
-
-Every demo has a number - the port of its console; the site is on the next
-number. Give each demo its own number to run several at once (also handy when
-8081 is taken):
-
-```powershell
-.\mdl-demo.cmd create 7777 --name="Moodle 5.2 workshop"
-.\mdl-demo.cmd create 7800 --image=my-mdl-demo-offline
-.\mdl-demo.cmd list
-.\mdl-demo.cmd delete 7800
-```
-
-- `--name` sets the site name and the console heading.
-- `--image` uses a specific image, e.g. a custom offline build (default:
-  `ghcr.io/mutms/mdl-demo:latest`).
-- `--open` opens the console once it is ready (works with create and start).
-
-## Managing demos by hand
-
-The helper is optional - the plain commands work too:
-
-| action | command                     |
-| ------ | --------------------------- |
-| list   | `wslc ps -a`                |
-| stop   | `wslc stop mdl-demo-8081`   |
-| start  | `wslc start mdl-demo-8081`  |
-| delete | `wslc rm mdl-demo-8081`     |
-
-To create a demo on a custom port without the helper, name the container after
-the number, set `MDL_DEMO_PORT`, and map the number and the next one onto the
-container's ports 8081 and 8082 (`MDL_DEMO_NAME` is optional):
+To run several demos, give each its own number - the console port; the site is
+on the next one. Name the container after it and set `MDL_DEMO_PORT`
+(`MDL_DEMO_NAME` is optional):
 
 ```powershell
 wslc run -d --name mdl-demo-7777 -e MDL_DEMO_PORT=7777 -e MDL_DEMO_NAME="Moodle 5.2 workshop" -p 127.0.0.1:7777:8081 -p 127.0.0.1:7778:8082 ghcr.io/mutms/mdl-demo
 ```
 
-## Getting the newest version
+New demos use the image you already have; get the newest with
+`wslc pull ghcr.io/mutms/mdl-demo`.
 
-mdl-demo changes often, and your container tool keeps the copy it already has.
-Pull the latest before creating a new demo:
-
-```powershell
-wslc pull ghcr.io/mutms/mdl-demo
-```
-
-Only new demos use it - to update an existing demo, delete it and create it
-again.
-
-## Reclaiming disk space
-
-Old image layers pile up after updates. Remove the unused ones (containers,
-sites and data are never touched):
-
-```powershell
-.\mdl-demo.cmd gc          # dangling layers left after a pull
-.\mdl-demo.cmd gc --all    # every unused image, incl. the demo image - when disk is tight
-```
+[`mdl-demo.cmd`](launcher/mdl-demo.cmd) is a script that types these commands
+for you (`mdl-demo.cmd help`). Demos made with the script, the app or by hand
+all show up in each other.
 
 ## Removing everything
 
-Delete your demos (`mdl-demo.cmd delete NNNN` for each in `mdl-demo.cmd list`),
-remove the demo image (`wslc image remove ghcr.io/mutms/mdl-demo`), delete
-`mdl-demo.cmd`, and - if you use it for nothing else - remove the WSL (`wsl --uninstall`).
-`mdl-demo.cmd uninstall` prints these steps too.
+Delete your demos, remove the image (`wslc image remove ghcr.io/mutms/mdl-demo`)
+and - if you use it for nothing else - remove the WSL (`wsl --uninstall`).

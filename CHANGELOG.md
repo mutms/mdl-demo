@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changes
 
 - Updated references to MS WSL 3.0
+- Windows docs point to the new [MDL Demo app](https://github.com/mutms/mdl-demo-app)
 
 ## [0.7.3] - 2026-09-29
 

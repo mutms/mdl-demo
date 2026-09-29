@@ -156,7 +156,7 @@ echo Setting up mdl-demo on Windows 11 - just the steps, nothing is changed.
 echo.
 echo   1. Install the WSL containers:
 echo          wsl --install --no-distribution
-echo      then open a NEW terminal window. Details:
+echo      in an administrator Terminal, then restart the computer. Details:
 echo          https://learn.microsoft.com/en-gb/windows/wsl/
 echo.
 echo   2. Keep mdl-demo.cmd in a folder on your PATH, or run it from the
