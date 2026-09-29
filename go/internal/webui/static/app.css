@@ -201,7 +201,8 @@ header form { margin: 0; }
   border-radius: 999px; padding: .02rem .42rem; font-weight: 600; }
 .pgrid { list-style: none; padding: 0; margin: 0; display: grid;
   grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: .1rem .7rem; }
-.pgrid li { list-style: none; } /* Pico sets ul li{list-style:square} on the li */
+/* Pico sets ul li{list-style:square} on the li itself, so none on the ul is not enough. */
+.pgrid li, .catlist li, .camprows li { list-style: none; }
 .pitem { display: block; width: 100%; text-align: left; background: none; border: 0;
   padding: .18rem .35rem; margin: 0; cursor: pointer; border-radius: 5px; line-height: 1.2; }
 .pitem:hover { background: var(--idlebg); }
