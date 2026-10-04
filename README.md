@@ -46,7 +46,7 @@ For named commands like `create`, `start`, `stop` and `delete`, use the
 
 You need [WSL](https://learn.microsoft.com/en-gb/windows/wsl/) with containers
 (`wsl --install --no-distribution` in an administrator Terminal, then restart).
-The easiest way in is the **[MDL Demo app](https://github.com/mutms/mdl-demo-app)**,
+The easiest way in is the **[MDL Demo app](https://github.com/mutms/mdl-demo-win)**,
 which creates and manages demos for you. Or, in PowerShell:
 
 ```powershell

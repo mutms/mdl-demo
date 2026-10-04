@@ -17,10 +17,10 @@ Run throwaway Moodle/MuTMS demo sites on Windows with the
 
 ## The MDL Demo app (recommended)
 
-[MDL Demo](https://github.com/mutms/mdl-demo-app) is a small Windows app that
+[MDL Demo](https://github.com/mutms/mdl-demo-win) is a small Windows app that
 creates, starts, stops and deletes demos for you, with no commands to type.
 Download it from its
-[latest release](https://github.com/mutms/mdl-demo-app/releases/latest). It is
+[latest release](https://github.com/mutms/mdl-demo-win/releases/latest). It is
 not code-signed yet, so the first time you run it, Windows shows "Windows
 protected your PC": click **More info**, then **Run anyway**.
 
