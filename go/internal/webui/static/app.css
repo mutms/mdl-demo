@@ -322,15 +322,12 @@ footer .tm { margin: .5rem 0 0; font-size: .72rem; opacity: .85; }
 .row.end { justify-content: flex-end; gap: .15rem; }
 .row.names { align-items: flex-start; gap: .9rem; margin: .6rem 0 0; }
 
-/* Security-advisory badge (installed-plugins + Camp dialogs) and its list dot.
-   Severity tints the badge; the dot flags a row at a glance. */
+/* Security-advisory badge (installed-plugins + Camp dialogs); severity tints
+   it. Only in the dialogs — the lists carry no mark, a demo is not patched. */
 .advbadge { margin: 0 0 .6rem; padding: .35rem .6rem; border-radius: var(--pico-border-radius);
   font-size: .82rem; background: var(--errbg); color: var(--err); }
 .advbadge.sev-medium { background: #f59e0b1f; color: #b45309; }
 .advbadge.sev-low { background: var(--idlebg); color: var(--idle); }
-.advdot { display: inline-flex; align-items: center; justify-content: center;
-  width: 1rem; height: 1rem; border-radius: 999px; background: var(--err); color: #fff;
-  font-size: .7rem; font-weight: 700; line-height: 1; }
 
 /* Camp registry browse: a filter toolbar, a list of clickable rows and a pager. */
 /* Search on its own full-width row; the type + status selects side by side below

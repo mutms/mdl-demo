@@ -27,7 +27,7 @@
             data-relpath="{{.Relpath}}" data-source="{{.SourceURL}}"
             data-camp="{{.CampURL}}"
             {{with .Advisory}}data-advisory="{{.ID}} — {{.Severity}}: {{t $.Lang "affected"}} {{.AffectedVersions}}{{if .FixedIn}}, {{t $.Lang "fixed in"}} {{.FixedIn}}{{end}}" data-advisory-sev="{{.Severity}}"{{end}}>
-        <span class="pname">{{.DisplayName}}{{if .Advisory}} <span class="advdot" aria-label="{{t $.Lang "security advisory"}}">!</span>{{end}}</span>
+        <span class="pname">{{.DisplayName}}</span>
         <span class="pcomp">{{.Component}}</span>
       </button></li>
       {{end}}

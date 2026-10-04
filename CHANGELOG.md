@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changes
 
 - Added recipes for latest Moodle and MuTMS releases
+- Removed the security advisory mark from the plugin lists
 - Windows docs point to updated [MDL Demo app](https://github.com/mutms/mdl-demo-win)
 
 ## [0.7.4] - 2026-09-30

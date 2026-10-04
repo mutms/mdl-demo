@@ -95,7 +95,6 @@
       <span class="cr-comp">{{.Component}}</span>
       {{if ge .Tier 2}}<span class="cr-tier tier2">{{t $.Lang "Verified"}}</span>{{else if ge .Tier 1}}<span class="cr-tier tier1">{{t $.Lang "Claimed"}}</span>{{end}}
       {{if index $.CampInstalled .Component}}<span class="cr-inst">{{t $.Lang "installed"}}</span>{{end}}
-      {{if $adv}}<span class="advdot" aria-label="{{t $.Lang "security advisory"}}">!</span>{{end}}
       {{if .Stars}}<span class="cr-stars" aria-label="{{t $.Lang "stars"}}">★ {{.Stars}}</span>{{end}}
     </span>
     <span class="cr-sum">{{.Summary}}</span>
