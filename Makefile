@@ -120,6 +120,7 @@ hotpatch:
 	cd $(GODIR) && CGO_ENABLED=0 GOOS=linux GOARCH=$(VM_ARCH) go build -trimpath -ldflags "$(LDFLAGS)" -o ../dist/$(BINARY)-linux-$(VM_ARCH) $(PKG)
 	sudo podman cp dist/$(BINARY)-linux-$(VM_ARCH) $(TEST_NAME):/usr/bin/mdl-demo.new
 	sudo podman exec $(TEST_NAME) mv -f /usr/bin/mdl-demo.new /usr/bin/mdl-demo
+	sudo podman cp CHANGELOG.md $(TEST_NAME):/usr/share/mdl-demo/CHANGELOG.md
 	sudo podman restart $(TEST_NAME)
 	@echo "hot-patched $(TEST_NAME) with $(VERSION)"
 

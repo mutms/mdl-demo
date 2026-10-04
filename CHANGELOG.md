@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Changelog on the Settings page
+
 ### Changes
 
 - Added recipes for latest Moodle and MuTMS releases

@@ -50,6 +50,21 @@
 </article>
 {{end}}
 
+{{/* What changed between releases: the repo's CHANGELOG.md, baked into the
+     image. The newest release is shown, the rest fold away. */}}
+{{if .Changelog}}
+<article class="changelog">
+  <h2>{{t .Lang "Changelog"}}</h2>
+  {{template "release" index .Changelog 0}}
+  {{if gt (len .Changelog) 1}}
+  <details class="older">
+    <summary>{{t .Lang "Older releases"}}</summary>
+    {{range $i, $r := .Changelog}}{{if $i}}{{template "release" $r}}{{end}}{{end}}
+  </details>
+  {{end}}
+</article>
+{{end}}
+
 {{template "svcproblems" .}}
 
 <article>
@@ -70,6 +85,18 @@
 
 {{template "footer" .}}
 </html>{{end}}
+
+{{/* One changelog release: its version and date, then a list per change group. */}}
+{{define "release"}}
+<h3>{{.Version}}{{if .Date}} <small>{{.Date}}</small>{{end}}</h3>
+{{range .Groups}}
+{{if .Title}}<h4>{{.Title}}</h4>{{end}}
+<ul>
+  {{range .Items}}<li>{{range .}}{{if .URL}}<a href="{{.URL}}">{{.Text}}</a>{{else if .Code}}<code>{{.Text}}</code>{{else}}{{.Text}}{{end}}{{end}}</li>
+  {{end}}
+</ul>
+{{end}}
+{{end}}
 
 {{/* The catalogue-update result, swapped in after a pull. One line per repo:
      the new short revision on success, the git error on failure. */}}

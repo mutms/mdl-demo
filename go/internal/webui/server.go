@@ -321,6 +321,8 @@ type view struct {
 	CampInstalled map[string]bool
 	// CampUpdate is the "Camp update" git-pull result (Settings page).
 	CampUpdate *catUpdate
+	// Changelog is the baked CHANGELOG.md, newest release first (Settings page).
+	Changelog []release
 }
 
 // catUpdate is one catalogue's git-pull result for the Settings page.
@@ -1696,6 +1698,7 @@ func (s *Server) handleSettingsPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	v.DebugReport = b.String()
+	v.Changelog = loadChangelog()
 	s.render(w, "settings", v)
 }
 

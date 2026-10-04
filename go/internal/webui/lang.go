@@ -106,8 +106,10 @@ var messages = map[string]map[string]string{
 		"restoring":  "obnovuje se",
 		"failed":     "selhalo",
 
-		"Diagnostics": "Diagnostika",
-		"← back":      "← zpět",
+		"Diagnostics":    "Diagnostika",
+		"Changelog":      "Seznam změn",
+		"Older releases": "Starší verze",
+		"← back":         "← zpět",
 
 		"Site recipe":           "Recept stránek",
 		"Keep current codebase": "Ponechat stávající kód",
@@ -280,8 +282,10 @@ var messages = map[string]map[string]string{
 		"restoring":  "wird wiederhergestellt",
 		"failed":     "fehlgeschlagen",
 
-		"Diagnostics": "Diagnose",
-		"← back":      "← zurück",
+		"Diagnostics":    "Diagnose",
+		"Changelog":      "Änderungsprotokoll",
+		"Older releases": "Ältere Versionen",
+		"← back":         "← zurück",
 
 		"Site recipe":           "Website-Rezept",
 		"Keep current codebase": "Aktuellen Code behalten",

@@ -252,6 +252,12 @@ details table tr:last-child td { border-bottom: 0; }
 .stream-t { font-weight: 600; color: var(--fg); }
 .stream-d { color: var(--dim); font-weight: 400; }
 details.older { margin-top: .35rem; }
+/* Settings changelog: compact release blocks. */
+.changelog h3 { font-size: .95rem; margin: .9rem 0 .2rem; }
+.changelog h3 small { color: var(--dim); font-weight: 400; margin-left: .35rem; }
+.changelog h4 { font-size: .8rem; color: var(--dim); margin: .5rem 0 .1rem; }
+.changelog ul { margin: 0 0 .3rem; font-size: .88rem; }
+.changelog li { margin: 0; }
 /* Version packages: pick one radio chip, then the single Install button. */
 .pkgs { display: flex; flex-wrap: wrap; gap: .4rem; margin: .4rem 0 0; }
 .pkg { position: relative; }
