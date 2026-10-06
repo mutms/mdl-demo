@@ -16,8 +16,14 @@ if ($token === '' || !is_dir($dir)) {
     $fail();
 }
 $file = $dir . '/' . hash('sha256', $token) . '.json';
-$data = @file_get_contents($file);
-@unlink($file); // single use: consume before logging in, one winner per token
+// Single use: claim the file with an atomic rename before reading it, so
+// two requests with one token cannot both get in.
+$claimed = $file . '.' . bin2hex(random_bytes(8)) . '.used';
+if (!@rename($file, $claimed)) {
+    $fail();
+}
+$data = @file_get_contents($claimed);
+@unlink($claimed);
 if ($data === false) {
     $fail();
 }
