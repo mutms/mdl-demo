@@ -130,12 +130,15 @@ RUN curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg -o /usr/share/keyr
     && rm -rf /var/lib/apt/lists/*
 
 # Moodle's php.ini requirements (fpm + cli), values from mpd's runtime.
+# session.upload_progress is off as the PHP project advises for
+# CVE-2026-115560; Moodle does not use it.
 RUN for sapi in fpm cli; do \
         printf '%s\n' \
             'max_input_vars = 10000' \
             'upload_max_filesize = 200M' \
             'post_max_size = 206M' \
             'zend.exception_ignore_args = On' \
+            'session.upload_progress.enabled = 0' \
             > /etc/php/8.3/$sapi/conf.d/99-moodle.ini; \
     done
 
