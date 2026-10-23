@@ -65,6 +65,29 @@ But if you are on Linux you already know that — and the container engines all 
 pretty much the same `run` command. mdl-demo itself was built entirely inside a throwaway
 Linux VM, never on the host — read [DEV.md](DEV.md) for how it was done.
 
+## Updating
+
+New releases bring security fixes, so update when one comes out. Your container
+tool keeps the image it already has, and a demo keeps running the image it was
+made from. To update, get the new image, then delete the demo and create it
+again. The demo site and its data are deleted with it.
+
+On macOS:
+
+```sh
+container image pull ghcr.io/mutms/mdl-demo
+container stop mdl-demo-8081 && container rm mdl-demo-8081
+```
+
+On Windows, in PowerShell:
+
+```powershell
+wslc pull ghcr.io/mutms/mdl-demo
+wslc stop mdl-demo-8081; wslc rm mdl-demo-8081
+```
+
+Then run the command from [Getting started](#getting-started) again.
+
 ## Sharing your demo
 
 By default only your own computer can reach the site and the console. To let

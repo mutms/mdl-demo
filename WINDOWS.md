@@ -45,7 +45,8 @@ wslc run -d --name mdl-demo-7777 -e MDL_DEMO_PORT=7777 -e MDL_DEMO_NAME="Moodle 
 ```
 
 New demos use the image you already have; get the newest with
-`wslc pull ghcr.io/mutms/mdl-demo`.
+`wslc pull ghcr.io/mutms/mdl-demo`. Only new demos use it — to update an
+existing demo, delete it and create it again.
 
 [`mdl-demo.cmd`](launcher/mdl-demo.cmd) is a script that types these commands
 for you (`mdl-demo.cmd help`). Demos made with the script, the app or by hand

@@ -5,7 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.8.1] - 2026-10-23
+
+### Changed
+
+- Switched to Go 1.27.3 and golang.org/x/text 0.43.0
+- Updated Debian packages, including the root certificate store: Debian removed the
+  "emSign ECC Root CA - G3" and "Comodo AAA Services root" certificates
+- PHP 8.3.36 security update on Intel/AMD (amd64); Apple silicon and ARM (arm64) images
+  stay on PHP 8.3.35 until the PHP package repository publishes arm64 builds
+- README explains how to update an existing demo
 
 ### Fixed
 
