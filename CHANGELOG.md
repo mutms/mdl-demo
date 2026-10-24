@@ -5,12 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.8.2] - 2026-10-24
 
 ### Security
 
-- Turned off PHP session upload progress (`session.upload_progress.enabled = 0`), as the PHP
-  project advises for CVE-2026-115560; Moodle does not use it
+- PHP 8.3.36 security update for arm64 images
+- Disabled PHP session upload progress (CVE-2026-115560)
 
 ## [0.8.1] - 2026-10-23
 
