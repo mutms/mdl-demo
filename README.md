@@ -111,6 +111,33 @@ would never install on a live server. The console has two ways in:
 
 Install it, click through it, then reset the site and it is gone.
 
+## CLI console and Claude Code
+
+The **CLI console** tile opens a terminal inside the demo, in its own window. You
+are the `www-data` user, the same one the web server runs as, with no root. The
+code in `demo/` is read-only; `extrarepos/` is yours to write in. The session keeps
+running after you close the window, and the welcome message lists what's there.
+
+It's the easy way to fill a demo with sample data using
+[Claude Code](https://code.claude.com/docs), or to reproduce and diagnose a bug. Run
+`claude-install`, which installs Claude Code with its official installer along with
+Chromium, Node, Python and diagnostic tools, then `claude`, and sign in with your own account. A Claude subscription also lets you run
+`claude remote-control` and drive it from claude.ai/code or your phone. Claude Code is
+Anthropic's product, under Anthropic's own terms, and mdl-demo doesn't include it.
+
+To add a private plugin, `git clone` it into `extrarepos/x`, then run
+`mdl-repo-add x`. To deploy later changes, commit them and run it again.
+
+Your Claude login stays in the demo's home directory, where any PHP code on the
+site can read it, including a plugin you are trying out. Run `claude auth logout`
+before you try a plugin you don't trust, and before you delete the demo. Claude
+Code also asks for at least 4 GB of memory, so check how much your container gets.
+
+Reset and restore end the terminal session but keep your files. Backups contain only
+the site, so they don't include `extrarepos/`, a plugin added from it, or your login.
+
+To build a demo without the terminal, set `MDL_DEMO_NO_CLI=1` when you create it.
+
 ## Community
 
 Questions, ideas, or just to show what you demoed: join

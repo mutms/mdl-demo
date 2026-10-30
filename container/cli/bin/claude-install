@@ -1,0 +1,33 @@
+#!/bin/bash
+# Install Claude Code with its official installer into ~/.local/bin, plus Chromium,
+# Node, Python and everyday diagnostic tools (rg, jq, strace, lsof...). Safe to run again.
+# Signing in is yours to do afterwards: run claude.
+set -uo pipefail
+source /usr/share/mdl-demo/cli/lib/mdl-console
+
+if command -v chromium >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1 && command -v rg >/dev/null 2>&1; then
+    echo "Chromium, Node, Python and the diagnostic tools are already installed."
+else
+    echo "Installing Chromium, Node, Python and the diagnostic tools through the console (this takes a few minutes)."
+    if ! { console_post /cli/install-tools && console_follow; }; then
+        echo "Warning: the extra tools were not installed, so mdl-screenshot will not work." >&2
+        echo "Continuing with Claude Code." >&2
+    fi
+fi
+
+if command -v claude >/dev/null 2>&1; then
+    echo "Claude Code is already installed at $(command -v claude)."
+else
+    if ! curl -fsSL https://claude.ai/install.sh | bash; then
+        echo "claude-install: the Claude Code installer failed." >&2
+        exit 1
+    fi
+    if [ ! -x "$HOME/.local/bin/claude" ]; then
+        echo "claude-install: the installer ran but ~/.local/bin/claude is missing." >&2
+        exit 1
+    fi
+    hash -r
+fi
+
+echo
+echo "Done. Run claude to sign in with your own account."

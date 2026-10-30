@@ -51,19 +51,42 @@ PID 1 of the container, management web UI, and CLI.
   3×3 grid of navigation cards (each a sub-page): upstream caps it at **8** so a
   fork can drop in its own card (first or last) as the 9th and still fit the
   glanceable grid — beyond that, nest inside a card (as Settings does) rather
-  than add tiles. The optional **poster** (an image-baked custom card, see
+  than add tiles. The stock grid is now at that cap: Quick Tunnel, plugins, mail,
+  backups, recommendations, Settings, **CLI console**, Camp. The optional **poster** (an image-baked custom card, see
   `poster.go`/`assets/poster/`) takes the first slot; the **Camp registry** card
   the last. Both are removable, so the grid stays glanceable in every build.
 - `internal/tunnel` — the optional Cloudflare Quick Tunnel (one `cloudflared`
   child; rewrites the site's wwwroot to the public URL while it runs).
+- `internal/term` — the CLI console (`webui/cli.go`, `/cli`, `MDL_DEMO_NO_CLI`): a
+  shell as `www-data` over one WebSocket, in one shared tmux session (`main`, cwd
+  `/srv/projects`) that outlives the window. Binary frames are pty bytes both
+  ways, text frames JSON control (the window size). The `/cli` page alone relaxes
+  the CSP for inline style, because xterm.js always creates `<style>` elements and
+  sets true-colour text through style attributes, and it holds no `/events` stream.
+  tmux leaves the mouse to the browser terminal (`mouse off`, and
+  `CLAUDE_CODE_DISABLE_MOUSE=1` in the shell), so selecting and Ctrl+C work as on a
+  web page; `cli.js` makes Ctrl+C copy when text is selected and Ctrl+V paste, and joins rows that fill the width, because Claude Code's login screen breaks its URL into rows itself. Reset and restore kill the
+  session. Claude Code is never baked in or signed in by the console: the user runs
+  the official installer and login in the terminal, because Anthropic's terms bar a
+  product from intermediating claude.ai credentials.
+- `container/cli/` — the terminal's side, baked at `/usr/share/mdl-demo/cli/`:
+  helpers (`bin/`), their PHP, the CDP client, the MOTD, and `projects/`, copied to
+  `/srv/projects/` (the `AGENTS.md` and sample-data skill agents find there, not
+  this file). The MOTD is for people, so the agent-only helpers (`mdl-php`,
+  `mdl-sql`, `mdl-login`, `mdl-screenshot`) are documented in that `AGENTS.md` instead. `/srv/projects/extrarepos/` is the one place there `www-data` can
+  write; `/srv/projects` itself stays root-owned, because whoever can write the
+  tree's parent can rename the tree away (invariant 3). `www-data` has no sudo and
+  the terminal runs with no-new-privs: helpers needing root (`claude-install`,
+  `mdl-repo-add`) post to the console on loopback through `lib/mdl-console`, as
+  invariant 10 already allows, so they get its single-flight jobs and kill switches.
 - `internal/sso` — single-use login tokens behind the console's "Log in…"
   buttons and QR codes; only `sha256(token)` ever reaches the dataroot.
 - `internal/camp` — loads and queries the baked Camp registry catalogue
   (camp-registry.org's `camp-index`, ~6,400 plugin YAMLs + advisories, cloned to
   `/srv/extra/camp` at build; ODbL, credited on the Camp page). Powers the
   `/camp` browse/install page and the installed-plugins dialog's "Latest on Camp"
-  link + advisory badge. Camp installs reuse the git-URL install path. Two
-  boot-time kill switches (no lock-in): `MDL_DEMO_NO_CAMP` removes Camp entirely
+  link + advisory badge. Camp installs reuse the git-URL install path. Boot-time
+  kill switches (no lock-in), beside `MDL_DEMO_NO_TUNNEL` and `MDL_DEMO_NO_CLI`: `MDL_DEMO_NO_CAMP` removes Camp entirely
   (card, page, links, Settings button — the data is not even loaded) and
   `MDL_DEMO_NO_PLUGIN_URL` disables adding plugins from a URL (the git-URL box
   *and* Camp installs); both enforced in the Go handlers, not just templates.
@@ -181,8 +204,9 @@ PID 1 of the container, management web UI, and CLI.
     `GET /` yields the cookie and the token both). Inside the container there
     is no defence — a compromised site (PHP as www-data on 8082) can drive the
     console, whose jobs run as root on the root-owned tree (git clone of any
-    URL, mudev); the console is root-level control of the container. And
-    publishing the console port on anything but loopback (mpd's `make run` on
+    URL, mudev); the console is root-level control of the container. The CLI
+    console adds no power to that: it is a www-data shell behind the same checks,
+    and its helpers use this same path rather than sudo. And publishing the console port on anything but loopback (mpd's `make run` on
     the VM bridge) hands that control to whoever can reach the address. There
     is no login by design; the answer to both is where the port is published.
 
@@ -203,7 +227,7 @@ the addresses the README gives users. Other `PORT`/`HOST_IP` values exist only
 so several containers can share one VM.
 
 `hotpatch` covers Go/template/CSS/JS (all embedded in the binary); it does NOT
-update `container/php/` — rebuild the image (`make image`) for PHP changes. The site, DB
+update `container/php/` or `container/cli/` — rebuild the image (`make image`) for those. The site, DB
 and dataroot survive the restart, and the console's epoch bumps so open browser
 tabs reload themselves. Requires the image to exist (`make image`); the binary
 is built for the VM's own architecture (amd64 or arm64).

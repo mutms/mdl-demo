@@ -1,0 +1,42 @@
+#!/bin/bash
+# Add a plugin from a checkout in /srv/projects/extrarepos/ to the demo site, or
+# update it. The console clones it into the read-only code tree, records it with
+# mudev and upgrades the site. Only committed work is deployed: commit, then run
+# this again.
+#
+# Usage: mdl-repo-add <name> [ref]
+#   name   directory under /srv/projects/extrarepos/
+#   ref    branch or tag, default the checkout's current branch
+set -euo pipefail
+source /usr/share/mdl-demo/cli/lib/mdl-console
+
+ROOT=/srv/projects/extrarepos
+
+case "${1:-}" in
+    -h|--help|"")
+        sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'
+        [ -n "${1:-}" ]
+        exit
+        ;;
+esac
+NAME="$1"
+if [[ ! "$NAME" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+    echo "'$NAME' is not a directory name under $ROOT." >&2
+    exit 1
+fi
+if ! git -C "$ROOT/$NAME" rev-parse --git-dir >/dev/null 2>&1; then
+    echo "$ROOT/$NAME is not a git checkout." >&2
+    exit 1
+fi
+
+REF="${2:-}"
+if [ -z "$REF" ] && ! REF=$(git -C "$ROOT/$NAME" symbolic-ref --quiet --short HEAD); then
+    echo "The checkout is not on a branch: name the branch or tag to deploy." >&2
+    exit 1
+fi
+if [ -n "$(git -C "$ROOT/$NAME" status --porcelain)" ]; then
+    echo "Warning: uncommitted changes in $ROOT/$NAME will not be deployed." >&2
+fi
+
+console_post /plugins/add "url=$ROOT/$NAME" "ref=$REF"
+console_follow

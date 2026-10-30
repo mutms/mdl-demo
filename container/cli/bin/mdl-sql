@@ -1,0 +1,58 @@
+#!/bin/bash
+# Run one SQL statement against the demo's database, through Moodle's own
+# database layer.
+#
+# Usage: mdl-sql [options] <sql>
+#        mdl-sql [options] -          (SQL from stdin)
+#   --json        print rows as JSON
+#   --tsv         print rows tab separated, values not shortened
+#   --limit=<n>   at most n rows, default 100; 0 for all
+#   --write       allow a statement that changes data
+#
+# Write table names the Moodle way, in braces, and the prefix is added:
+#   mdl-sql 'SELECT id, username FROM {user} ORDER BY id'
+#   mdl-sql --write 'UPDATE {user} SET suspended = 0 WHERE id = 3'
+#
+# Without --write only SELECT, WITH, SHOW, EXPLAIN and VALUES run. That is a
+# guard against slips, not a security boundary. One statement per call; changes
+# are final and Moodle's caches are not purged.
+set -euo pipefail
+
+TREE=/srv/projects/demo
+PHPDIR=/usr/share/mdl-demo/cli/php
+
+FORMAT="table"
+LIMIT="100"
+WRITE="0"
+SQL=""
+HAVE_SQL=0
+for arg in "$@"; do
+    case "$arg" in
+        --json) FORMAT="json" ;;
+        --tsv)  FORMAT="tsv" ;;
+        --limit=*) LIMIT="${arg#--limit=}" ;;
+        --write) WRITE="1" ;;
+        -h|--help)
+            sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'
+            exit 0
+            ;;
+        -) SQL=$(cat); HAVE_SQL=1 ;;
+        --*) echo "Unknown option '${arg}'." >&2; exit 1 ;;
+        *) SQL="$arg"; HAVE_SQL=1 ;;
+    esac
+done
+
+if [ "$HAVE_SQL" = "0" ]; then
+    echo "Usage: mdl-sql [--json|--tsv] [--limit=<n>] [--write] <sql> | -" >&2
+    exit 1
+fi
+if [[ ! "$LIMIT" =~ ^[0-9]+$ ]]; then
+    echo "--limit must be a number." >&2
+    exit 1
+fi
+if [ ! -f "$TREE/config.php" ]; then
+    echo "No demo site is installed: install one from the console first." >&2
+    exit 1
+fi
+
+exec php "$PHPDIR/run.php" "$TREE" "" file "$PHPDIR/sql.php" "$FORMAT" "$LIMIT" "$WRITE" "$SQL"

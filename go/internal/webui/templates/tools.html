@@ -101,6 +101,20 @@
       <p class="tool-d">{{t .Lang "Refresh the code catalogues, or grab a diagnostics report."}}</p>
     </a>
 
+    {{/* The CLI console: a shell as www-data in its own window, where Claude Code
+         and the helper scripts live. Absent on a custom image built with
+         MDL_DEMO_NO_CLI. */}}
+    {{if .CLIEnabled}}
+    <a class="tool" href="/cli" target="_blank" rel="noopener">
+      <div class="tool-h">
+        <svg class="tool-i" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3"/><path d="M13 15h4"/></svg>
+        <span class="tool-t">{{t .Lang "CLI console"}}</span>
+        <span class="tool-x arrow">&#8599;</span>
+      </div>
+      <p class="tool-d">{{t .Lang "A terminal inside this demo: install Claude Code, generate sample data, add private plugins."}}</p>
+    </a>
+    {{end}}
+
     {{/* Camp registry browse — the community plugin catalogue. Last slot; absent
          on a custom image built with MDL_DEMO_NO_CAMP (the data isn't even
          loaded then). See camp.go / camp-registry.org. */}}

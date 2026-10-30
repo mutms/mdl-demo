@@ -228,6 +228,13 @@ $CFG->getremoteaddrconf = 1;
 $CFG->dataroot = '` + Dataroot + `';
 $CFG->directorypermissions = 02777;
 
+// PHP errors stay with the site's data: the CLI console's www-data can read them,
+// where Apache's log is root-only, and they travel with backups. They are always
+// logged and never shown in a page; deprecations would only flood the log.
+ini_set('error_log', $CFG->dataroot . '/php-errors.log');
+$CFG->debug = E_ALL & ~E_DEPRECATED & ~E_USER_DEPRECATED;
+$CFG->debugdisplay = 0;
+
 // Router (Moodle 5.0+): Apache rewrites unknown URLs to /r.php, so clean
 // URLs work; telling Moodle silences the environment check.
 $CFG->routerconfigured = true;

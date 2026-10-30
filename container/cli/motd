@@ -1,0 +1,32 @@
+mdl-demo CLI console: you are www-data, in a tmux session that outlives this window.
+The Moodle code in demo/ is read-only; extrarepos/ is yours to write in.
+
+Claude Code
+  claude-install          install Claude Code, Chromium, Node, Python and diagnostic tools
+  claude                  sign in with your own account, then ask for sample data
+                          or to reproduce and diagnose a bug
+  claude remote-control   drive the session from claude.ai/code or your phone
+  Coding agents read AGENTS.md here to learn how to work on this site.
+
+Adding a private plugin
+  1. Make a key, and add ~/.ssh/id_ed25519.pub to the repository as a deploy key:
+       ssh-keygen -t ed25519
+  2. Clone it into extrarepos/:
+       git clone git@github.com:you/moodle-local_example.git extrarepos/example
+  3. Install it into the site:
+       mdl-repo-add example
+  To deploy later changes, commit them in extrarepos/example and run step 3 again.
+  Over HTTPS, clone with your username and an access token instead of steps 1 and 2.
+
+Fresh session
+  Press Ctrl+D until Reconnect appears at the bottom of this window, then click it.
+
+Copy and paste
+  Select with the mouse, Ctrl+C copies, Ctrl+V pastes. Links open on click and the
+  wheel scrolls; inside Claude Code, scroll with PgUp and PgDn.
+
+Your Claude login is stored in your home directory, where any PHP on this site can
+read it. Run `claude auth logout` before testing untrusted plugins or deleting this demo.
+Reset and restore end this session but keep your files. Backups contain only the site,
+not your home directory or extrarepos/.
+

@@ -1,0 +1,49 @@
+# Shared by the helpers that need root-level work done: www-data has no sudo, so
+# they ask the console on loopback, like any other client of its port. One GET
+# yields the cookie, and the cookie's value is the token (see webui/auth.go).
+# That also gives them the console's single-flight jobs and kill switches.
+
+CONSOLE=http://127.0.0.1:8081
+CONSOLE_DIR=$(mktemp -d)
+trap 'rm -rf "$CONSOLE_DIR"' EXIT
+
+# console_post <path> [name=value...]: posts a form and fails unless the console
+# took it, saying why.
+console_post() {
+    local path="$1" jar="$CONSOLE_DIR/jar" token code arg
+    shift
+    if ! curl -fsS -c "$jar" -o /dev/null "$CONSOLE/"; then
+        echo "The console is not answering on $CONSOLE." >&2
+        return 1
+    fi
+    token=$(awk '$6 == "mdl_demo_csrf" { print $7 }' "$jar")
+    local args=(--data-urlencode "csrf=$token")
+    for arg in "$@"; do
+        args+=(--data-urlencode "$arg")
+    done
+    code=$(curl -sS -b "$jar" -o "$CONSOLE_DIR/body" -w '%{http_code}' "${args[@]}" "$CONSOLE$path")
+    case "$code" in
+        2*|3*) return 0 ;;
+        404) echo "This demo has that feature turned off." >&2 ;;
+        409) echo "The console is busy with another operation: try again when it finishes." >&2 ;;
+        *) echo "The console answered $code: $(cat "$CONSOLE_DIR/body")" >&2 ;;
+    esac
+    return 1
+}
+
+# console_follow: prints the running job's log as it grows, and fails if the job
+# failed. Polling is fine out here; the no-timers rule is about the console's UI.
+console_follow() {
+    local next=0 headers="$CONSOLE_DIR/headers" running failed
+    while :; do
+        curl -fsS -D "$headers" "$CONSOLE/joblog?format=text&from=$next" || return 1
+        next=$(tr -d '\r' <"$headers" | awk 'tolower($1) == "x-job-next:" { print $2 }')
+        running=$(tr -d '\r' <"$headers" | awk 'tolower($1) == "x-job-running:" { print $2 }')
+        failed=$(tr -d '\r' <"$headers" | awk 'tolower($1) == "x-job-failed:" { print $2 }')
+        if [ "$running" != "true" ]; then
+            [ "$failed" != "true" ]
+            return
+        fi
+        sleep 1
+    done
+}

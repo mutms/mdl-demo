@@ -1,0 +1,31 @@
+{{/* The CLI console: a full-window terminal in its own window. Deliberately not
+     built on "head": no htmx and no /events stream, because nothing here
+     refreshes. cli.js connects with the token in data-csrf. The footer stays:
+     it is the GPL-3.0 §5(d) legal notice, displayed on every page of the UI. */}}
+{{define "cli"}}<!doctype html>
+<html lang="{{.Lang}}">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "CLI console"}} — {{.Title}}</title>
+<link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+<script src="/static/theme.js"></script>
+<link rel="stylesheet" href="/static/pico.min.css">
+<link rel="stylesheet" href="/static/app.css">
+<link rel="stylesheet" href="/static/xterm/xterm.css">
+<link rel="stylesheet" href="/static/cli.css">
+<script src="/static/xterm/xterm.js" defer></script>
+<script src="/static/xterm/addon-fit.js" defer></script>
+<script src="/static/xterm/addon-web-links.js" defer></script>
+<script src="/static/xterm/addon-unicode11.js" defer></script>
+<script src="/static/xterm/addon-clipboard.js" defer></script>
+<script src="/static/cli.js" defer></script>
+<body class="cli">
+<div id="term" data-csrf="{{.CSRF}}"></div>
+<div id="cli-closed" hidden>
+  <span id="cli-ended" hidden>{{t .Lang "Session closed."}}</span>
+  <span id="cli-lost" hidden>{{t .Lang "Connection lost."}}</span>
+  <button type="button" id="cli-reconnect">{{t .Lang "Reconnect"}}</button>
+</div>
+{{template "footer" .}}
+</body>
+</html>{{end}}

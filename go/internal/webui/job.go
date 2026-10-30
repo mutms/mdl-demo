@@ -121,6 +121,7 @@ var jobLabels = map[string]string{
 	"restore": "restoring",
 	"plugin":  "adding plugin",
 	"update":  "updating",
+	"tools":   "installing tools",
 }
 
 // logTailLimit bounds how many trailing lines a full render carries; the
@@ -158,12 +159,17 @@ func (j *job) logSince(from int) jobView {
 	if start > len(j.lines) {
 		start = len(j.lines)
 	}
-	return jobView{
+	v := jobView{
 		Kind:    j.kind,
 		Running: j.running,
 		Log:     append([]string(nil), j.lines[start:]...),
 		Next:    j.dropped + len(j.lines),
 	}
+	if j.err != nil {
+		v.Failed = true
+		v.Error = j.err.Error()
+	}
+	return v
 }
 
 func (j *job) startInstall(o site.Options) bool {

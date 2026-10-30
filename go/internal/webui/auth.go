@@ -94,6 +94,12 @@ func validToken(v string) bool {
 const csp = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; " +
 	"connect-src 'self'; frame-ancestors 'none'; base-uri 'none'"
 
+// cliCSP is csp for the CLI console page alone. xterm.js always creates <style>
+// elements and sets true-colour text through style attributes, with no nonce
+// option for either, so that page must allow inline style; scripts stay as
+// strict as everywhere else, and terminal output only ever reaches the DOM as text.
+const cliCSP = csp + "; style-src-elem 'self' 'unsafe-inline'; style-src-attr 'unsafe-inline'"
+
 // secureHeaders sets the browser hardening headers on every response. The
 // Mailpit proxy under /mail/ is skipped: that is Mailpit's own page, with
 // its own inline scripts, and it sets its own headers.
@@ -109,7 +115,10 @@ func secureHeaders(next http.Handler) http.Handler {
 			h.Set("Cross-Origin-Opener-Policy", "same-origin")
 		}
 		h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
-		if !strings.HasPrefix(r.URL.Path, "/mail/") {
+		switch {
+		case r.URL.Path == "/cli":
+			h.Set("Content-Security-Policy", cliCSP)
+		case !strings.HasPrefix(r.URL.Path, "/mail/"):
 			h.Set("Content-Security-Policy", csp)
 		}
 		next.ServeHTTP(w, r)

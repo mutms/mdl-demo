@@ -1,0 +1,32 @@
+#!/bin/bash
+# Print a single-use login URL for the demo site, valid for 10 minutes. Open it
+# in a browser to be logged in, with no password involved.
+#
+# Usage: mdl-login [username] [--path=/local/path]
+#   username   Moodle username, default "admin"
+#   --path     page to land on, default "/"
+set -euo pipefail
+
+TREE=/srv/projects/demo
+PHPDIR=/usr/share/mdl-demo/cli/php
+
+USERNAME="admin"
+LANDING="/"
+for arg in "$@"; do
+    case "$arg" in
+        --path=*) LANDING="${arg#--path=}" ;;
+        -h|--help)
+            sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'
+            exit 0
+            ;;
+        -*) echo "Unknown option '${arg}'." >&2; exit 1 ;;
+        *) USERNAME="$arg" ;;
+    esac
+done
+
+if [ ! -f "$TREE/config.php" ]; then
+    echo "No demo site is installed: install one from the console first." >&2
+    exit 1
+fi
+
+exec php "$PHPDIR/run.php" "$TREE" "" file "$PHPDIR/login.php" "$USERNAME" "$LANDING"

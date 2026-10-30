@@ -20,6 +20,7 @@ import (
 	"github.com/mutms/mdl-demo/go/internal/recipes"
 	"github.com/mutms/mdl-demo/go/internal/state"
 	"github.com/mutms/mdl-demo/go/internal/svc"
+	"github.com/mutms/mdl-demo/go/internal/term"
 	"github.com/mutms/mdl-demo/go/internal/tunnel"
 )
 
@@ -175,6 +176,7 @@ func Reset(logf execx.Logf) error {
 	}
 
 	warn("stopping the tunnel", tunnel.Stop(logf))
+	term.KillAll(logf)
 
 	logf("Disabling Moodle cron")
 	_ = svc.Current().DisableCron(logf)

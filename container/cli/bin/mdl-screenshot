@@ -1,0 +1,85 @@
+#!/bin/bash
+# Save a PNG of one page of the demo site, seen as a given user. Logs in with a
+# single-use link (see mdl-login) and renders with headless Chromium, so no
+# password is involved. Needs Chromium: run claude-install first.
+#
+# Usage: mdl-screenshot [options] [/local/path]
+#   /local/path       page to capture, default "/"
+#   --user=<name>     Moodle username, default "admin"
+#   --size=<W>x<H>    window size, default 1280x1024; the capture is the
+#                     window, so raise H to see more of a long page
+#   --wait=<ms>       time given to the page's JavaScript, default 5000
+#   --out=<file.png>  where to save, default a new file in ~/screenshots/
+#
+# Prints the path of the PNG. Shows a page as it loads: it cannot click.
+set -euo pipefail
+
+USERNAME="admin"
+SIZE="1280x1024"
+WAIT="5000"
+OUT=""
+LANDING="/"
+for arg in "$@"; do
+    case "$arg" in
+        --user=*) USERNAME="${arg#--user=}" ;;
+        --size=*) SIZE="${arg#--size=}" ;;
+        --wait=*) WAIT="${arg#--wait=}" ;;
+        --out=*)  OUT="${arg#--out=}" ;;
+        -h|--help)
+            sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
+            exit 0
+            ;;
+        -*) echo "Unknown option '${arg}'." >&2; exit 1 ;;
+        *)  LANDING="$arg" ;;
+    esac
+done
+
+if [[ ! "$SIZE" =~ ^[0-9]+x[0-9]+$ ]]; then
+    echo "--size must look like 1280x1024." >&2
+    exit 1
+fi
+if [[ ! "$WAIT" =~ ^[0-9]+$ ]]; then
+    echo "--wait must be a number of milliseconds." >&2
+    exit 1
+fi
+if ! command -v chromium >/dev/null 2>&1; then
+    echo "Chromium is not installed: run claude-install first." >&2
+    exit 1
+fi
+
+if [ -z "$OUT" ]; then
+    mkdir -p "$HOME/screenshots"
+    SLUG=$(printf '%s' "$LANDING" | sed 's/[?#].*//' | tr -c 'A-Za-z0-9' '-' | sed 's/--*/-/g; s/^-//; s/-$//' | cut -c1-60)
+    OUT="$HOME/screenshots/$(date +%Y%m%d-%H%M%S)-${USERNAME}-${SLUG:-home}.png"
+else
+    OUT=$(realpath -m "$OUT")
+    mkdir -p "$(dirname "$OUT")"
+fi
+
+URL=$(mdl-login "$USERNAME" "--path=${LANDING}")
+
+# The site's URL carries the port published outside the container; inside, only
+# 8082 listens. Point the browser at it without changing what it asks for.
+HOSTPORT=$(printf '%s' "$URL" | sed -E 's#^https?://([^/]+).*#\1#')
+RULES=()
+case "$URL" in
+    http://127.0.0.1:8082/*) ;;
+    http://127.0.0.1:*|http://localhost:*) RULES=("--host-rules=MAP ${HOSTPORT} 127.0.0.1:8082") ;;
+esac
+
+# A throwaway profile: no session outlives the capture.
+PROFILE=$(mktemp -d)
+trap 'rm -rf "$PROFILE"' EXIT
+LOG="${PROFILE}/chromium.log"
+if ! chromium --headless=new --no-sandbox --disable-gpu --no-first-run --hide-scrollbars \
+        "${RULES[@]}" \
+        --user-data-dir="$PROFILE" \
+        --window-size="${SIZE/x/,}" \
+        --virtual-time-budget="$WAIT" \
+        --screenshot="$OUT" "$URL" >"$LOG" 2>&1 || [ ! -s "$OUT" ]; then
+    echo "Chromium did not produce a screenshot:" >&2
+    tail -n 20 "$LOG" >&2
+    exit 1
+fi
+
+echo "$OUT"

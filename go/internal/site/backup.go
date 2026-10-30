@@ -23,6 +23,7 @@ import (
 	"github.com/mutms/mdl-demo/go/internal/recipes"
 	"github.com/mutms/mdl-demo/go/internal/state"
 	"github.com/mutms/mdl-demo/go/internal/svc"
+	"github.com/mutms/mdl-demo/go/internal/term"
 	"github.com/mutms/mdl-demo/go/internal/tunnel"
 )
 
@@ -277,6 +278,7 @@ func Restore(logf execx.Logf, o RestoreOptions) error {
 	// ticker must not fire into a half-restored site. A failure from here on
 	// leaves an honest "no site" state; reset or a retry recovers.
 	warn("stopping the tunnel", tunnel.Stop(logf))
+	term.KillAll(logf)
 	logf("Disabling Moodle cron")
 	_ = svc.Current().DisableCron(logf)
 	if err := clearSiteState(); err != nil {

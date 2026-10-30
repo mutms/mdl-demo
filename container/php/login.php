@@ -36,4 +36,6 @@ if (!$user || !empty($user->deleted) || !empty($user->suspended)) {
     $fail();
 }
 complete_user_login($user);
-redirect($CFG->wwwroot . '/');
+// mdl-login can name a local page to land on; the console's buttons do not.
+$path = (isset($info->path) && is_string($info->path) && str_starts_with($info->path, '/')) ? $info->path : '/';
+redirect($CFG->wwwroot . $path);

@@ -144,6 +144,9 @@ func (s *Server) routes() (http.Handler, error) {
 	mux.HandleFunc("GET /plugins", s.handlePluginsPage)
 	mux.HandleFunc("POST /plugins/refs", s.csrf(s.handlePluginRefs))
 	mux.HandleFunc("POST /plugins/add", s.csrf(s.handlePluginAdd))
+	mux.HandleFunc("GET /cli", s.handleCLIPage)
+	mux.HandleFunc("GET /cli/ws", s.handleCLISocket)
+	mux.HandleFunc("POST /cli/install-tools", s.csrf(s.handleCLIInstallTools))
 	mux.HandleFunc("GET /recommends", s.handleRecommendsPage)
 	mux.HandleFunc("GET /poster", s.handlePosterPage)
 	mux.HandleFunc("GET /camp", s.handleCampPage)
@@ -302,7 +305,9 @@ type view struct {
 	// is never loaded. UrlInstallEnabled is false when MDL_DEMO_NO_PLUGIN_URL is
 	// set — hides the git-URL add box and Camp's Add button (the handlers also
 	// refuse). Both are boot-time, server-side (like TunnelEnabled).
-	CampEnabled       bool
+	CampEnabled bool
+	// CLIEnabled is false when MDL_DEMO_NO_CLI is set — hides the CLI console card.
+	CLIEnabled        bool
 	UrlInstallEnabled bool
 	// Camp browse page.
 	CampPlugins []camp.Plugin
@@ -621,6 +626,7 @@ func (s *Server) buildView(r *http.Request) view {
 	v.CSRF = csrfToken(r)
 	v.TunnelEnabled = tunnelEnabled()
 	v.CampEnabled = campEnabled()
+	v.CLIEnabled = cliEnabled()
 	v.UrlInstallEnabled = urlInstallEnabled()
 	if st, err := state.Load(); err == nil && st.Installed() {
 		v.Installed = true
@@ -736,7 +742,28 @@ func (s *Server) renderFragment(w http.ResponseWriter, r *http.Request, section 
 // fetched again on the next log event.
 func (s *Server) handleJobLog(w http.ResponseWriter, r *http.Request) {
 	from, _ := strconv.Atoi(r.URL.Query().Get("from"))
-	s.render(w, "logtail", view{Job: s.job.logSince(from)})
+	job := s.job.logSince(from)
+	if r.URL.Query().Get("format") == "text" {
+		writeJobLogText(w, job)
+		return
+	}
+	s.render(w, "logtail", view{Job: job})
+}
+
+// writeJobLogText is the log for a shell script following a job (the helpers in
+// container/cli/): the lines as plain text, the cursor and the outcome in headers.
+func writeJobLogText(w http.ResponseWriter, job jobView) {
+	h := w.Header()
+	h.Set("Content-Type", "text/plain; charset=utf-8")
+	h.Set("X-Job-Next", strconv.Itoa(job.Next))
+	h.Set("X-Job-Running", strconv.FormatBool(job.Running))
+	h.Set("X-Job-Failed", strconv.FormatBool(job.Failed))
+	for _, line := range job.Log {
+		fmt.Fprintln(w, line)
+	}
+	if job.Failed && !job.Running {
+		fmt.Fprintln(w, job.Error)
+	}
 }
 
 func (s *Server) handleInstall(w http.ResponseWriter, r *http.Request) {

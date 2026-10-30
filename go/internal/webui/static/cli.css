@@ -1,0 +1,56 @@
+/* The CLI console page: the terminal takes the window, the legal notice keeps a
+   compact line beneath it. */
+body.cli {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  max-width: none;
+  overflow: hidden;
+  background: #171717;
+}
+
+body.cli #term {
+  flex: 1;
+  min-height: 0;
+  padding: 6px 0 0 8px;
+}
+
+body.cli #cli-closed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.4rem 1rem;
+  color: #ebd99c;
+}
+
+body.cli #cli-closed[hidden] {
+  display: none;
+}
+
+body.cli #cli-closed button {
+  width: auto;
+  margin: 0;
+  padding: 0.2rem 0.8rem;
+}
+
+body.cli footer {
+  margin: 0;
+  padding: 0.25rem 1rem;
+  font-size: 0.7rem;
+  text-align: center;
+  color: #8a8a8a;
+}
+
+body.cli footer a {
+  color: inherit;
+}
+
+body.cli footer .tm {
+  display: inline;
+  margin: 0;
+  font-size: inherit;
+  color: inherit;
+}
