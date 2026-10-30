@@ -17,7 +17,6 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
-	"path/filepath"
 	"strconv"
 	"sync"
 	"syscall"
@@ -25,6 +24,7 @@ import (
 	"github.com/coder/websocket"
 	"github.com/creack/pty"
 
+	"github.com/mutms/mdl-demo/go/internal/debian"
 	"github.com/mutms/mdl-demo/go/internal/execx"
 )
 
@@ -176,27 +176,9 @@ func KillAll(logf execx.Logf) {
 // package list with no arguments: this route is reachable by anything on the
 // console port. Tools that only work as root, like tcpdump, are left out.
 func InstallTools(logf execx.Logf) error {
-	apt := []string{"DEBIAN_FRONTEND=noninteractive", "apt-get"}
-	if err := execx.Run(logf, "", "env", append(apt, "update")...); err != nil {
-		return err
-	}
-	if err := execx.Run(logf, "", "env", append(apt, "install", "-y", "--no-install-recommends",
-		"chromium", "nodejs", "fonts-liberation",
+	return debian.Install(logf, "chromium", "nodejs", "fonts-liberation",
 		"python3", "ripgrep", "jq", "less", "vim", "nano", "tree", "file", "patch", "unzip", "zip", "rsync",
-		"strace", "lsof", "htop", "psmisc", "iproute2", "bind9-dnsutils", "netcat-openbsd")...); err != nil {
-		return err
-	}
-	// Drop the package indexes apt-get update fetched, as the Containerfile does.
-	lists, err := filepath.Glob("/var/lib/apt/lists/*")
-	if err != nil {
-		return err
-	}
-	for _, path := range lists {
-		if err := os.RemoveAll(path); err != nil {
-			return err
-		}
-	}
-	return nil
+		"strace", "lsof", "htop", "psmisc", "iproute2", "bind9-dnsutils", "netcat-openbsd")
 }
 
 // startChild mirrors execx: inside PID 1 the reaper-aware hook must start the

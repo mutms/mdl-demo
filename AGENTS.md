@@ -79,6 +79,10 @@ PID 1 of the container, management web UI, and CLI.
   the terminal runs with no-new-privs: helpers needing root (`claude-install`,
   `mdl-repo-add`) post to the console on loopback through `lib/mdl-console`, as
   invariant 10 already allows, so they get its single-flight jobs and kill switches.
+- `internal/debian` — apt at run time, for the CLI console's tools and the Settings
+  page's **Update Debian Trixie** job. `policy-rc.d` stops package scripts restarting
+  services, and a job inside PID 1 can't restart the container, so the job's log asks
+  the user to stop and start it.
 - `internal/sso` — single-use login tokens behind the console's "Log in…"
   buttons and QR codes; only `sha256(token)` ever reaches the dataroot.
 - `internal/camp` — loads and queries the baked Camp registry catalogue

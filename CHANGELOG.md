@@ -9,15 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- CLI console: a terminal in the browser as `www-data`, removable with `MDL_DEMO_NO_CLI`
-- `claude-install` for Claude Code, Chromium, Node, Python and diagnostic tools, plus guidance for coding agents
-- `mdl-repo-add` to add plugins from private repositories
+- CLI console: a terminal in the browser as www-data, removable with MDL_DEMO_NO_CLI
+- claude-install for Claude Code, Chromium, Node, Python and diagnostic tools, plus guidance for coding agents
+- mdl-repo-add to add plugins from private repositories
+- Update Debian Trixie button on the Settings page, for OS security fixes
 
 ### Changed
 
-- `www-data`'s home is now `/home/www-data`
+- www-data's home is now /home/www-data
 - Reset and restore end the CLI console session
-- PHP errors are always logged to `php-errors.log` in the dataroot, and so into backups, and never shown in pages
+- PHP errors are always logged to php-errors.log in the dataroot, and so into backups, and never shown in pages
 
 ## [0.8.2] - 2026-10-24
 

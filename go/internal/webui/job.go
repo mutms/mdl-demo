@@ -122,6 +122,7 @@ var jobLabels = map[string]string{
 	"plugin":  "adding plugin",
 	"update":  "updating",
 	"tools":   "installing tools",
+	"debian":  "updating Debian",
 }
 
 // logTailLimit bounds how many trailing lines a full render carries; the
@@ -199,6 +200,10 @@ func (j *job) startPullUpdates(backupFirst bool, version string) bool {
 	return j.start("update", "", "", func(logf execx.Logf) error {
 		return site.PullUpdates(logf, backupFirst, version)
 	})
+}
+
+func (j *job) startUpdateDebian() bool {
+	return j.start("debian", "", "", site.UpdateDebian)
 }
 
 func (j *job) startRestore(o site.RestoreOptions) bool {

@@ -152,6 +152,7 @@ func (s *Server) routes() (http.Handler, error) {
 	mux.HandleFunc("GET /camp", s.handleCampPage)
 	mux.HandleFunc("POST /settings/update-camp", s.csrf(s.handleCampUpdate))
 	mux.HandleFunc("POST /settings/pull-updates", s.csrf(s.handlePullUpdates))
+	mux.HandleFunc("POST /settings/update-debian", s.csrf(s.handleUpdateDebian))
 	mux.HandleFunc("GET /backups", s.handleBackupsPage)
 	mux.HandleFunc("GET /section/backuplist", s.handleBackupList)
 	mux.HandleFunc("POST /backups/create", s.csrf(s.handleBackupCreate))
@@ -1016,6 +1017,16 @@ func (s *Server) handleSettingsUpdate(w http.ResponseWriter, r *http.Request) {
 // handlePullUpdates starts the site-wide minor update (fast-forward every
 // branch-tracked checkout, then upgrade). Single-flight job; progress streams to
 // the dashboard's Site log, so it redirects there rather than back to Settings.
+// handleUpdateDebian starts the job that upgrades the OS packages; the job log
+// streams on the dashboard, and says when a restart is needed.
+func (s *Server) handleUpdateDebian(w http.ResponseWriter, r *http.Request) {
+	if !s.job.startUpdateDebian() {
+		http.Error(w, "another operation is already running", http.StatusConflict)
+		return
+	}
+	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
 func (s *Server) handlePullUpdates(w http.ResponseWriter, r *http.Request) {
 	backupFirst := r.FormValue("backupfirst") != ""
 	if !s.job.startPullUpdates(backupFirst, s.version) {

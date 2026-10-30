@@ -36,6 +36,17 @@
 </article>
 {{end}}
 
+{{/* OS packages: security fixes for a demo that keeps running, without recreating
+     it. A plain POST that redirects to the dashboard, where the job log streams. */}}
+<article>
+  <h2>{{t .Lang "Debian updates"}}</h2>
+  <p class="empty">{{t .Lang "Install the latest Debian security fixes and updates. Afterwards, stop this container and start it again so running services use them; the demo site is kept."}}</p>
+  <form method="post" action="/settings/update-debian">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <div><button{{if .Busy}} disabled{{end}}>{{t .Lang "Update Debian Trixie"}}</button></div>
+  </form>
+</article>
+
 {{/* Camp registry: a separate update button (a fork may ship Camp without the
      recipe catalogues, or vice versa). Absent when MDL_DEMO_NO_CAMP. */}}
 {{if .CampEnabled}}

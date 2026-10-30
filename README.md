@@ -88,6 +88,10 @@ wslc stop mdl-demo-8081; wslc rm mdl-demo-8081
 
 Then run the command from [Getting started](#getting-started) again.
 
+To install Debian's security fixes without losing the demo, click **Update Debian
+Trixie** on the console's Settings page, then stop the container and start it again.
+This doesn't update mdl-demo itself, which still needs a new image.
+
 ## Sharing your demo
 
 By default only your own computer can reach the site and the console. To let
