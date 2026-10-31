@@ -19,6 +19,8 @@ import (
 	"net/http"
 	"os"
 	"os/user"
+	"path"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -28,9 +30,21 @@ import (
 // extraFilesDir is a variable so tests can point it elsewhere.
 var extraFilesDir = "/srv/projects/extrafiles"
 
+// maxExtraFileRows caps the listing: Claude Code can unpack anything here, and the
+// Settings page must stay usable.
+const (
+	maxExtraFileRows  = 1000
+	maxExtraFileDepth = 8
+)
+
+// extraFile is one row of the tree on the Settings page; a directory has no Size
+// and no actions. Rows are flat and indented, in display order.
 type extraFile struct {
-	Name string
-	Size string
+	Name  string
+	Path  string // relative to the folder, the value download and delete take
+	Size  string
+	IsDir bool
+	Depth int
 }
 
 // checkExtraFileName accepts a plain file name. Dot files stay out of the console:
@@ -43,23 +57,57 @@ func checkExtraFileName(name string) error {
 	return nil
 }
 
-// listExtraFiles lists the regular files in the folder, for the Settings page.
-func listExtraFiles() []extraFile {
-	entries, err := os.ReadDir(extraFilesDir)
-	if err != nil {
-		return nil
-	}
-	files := []extraFile{}
-	for _, e := range entries {
-		if checkExtraFileName(e.Name()) != nil || !e.Type().IsRegular() {
-			continue
-		}
-		if info, err := e.Info(); err == nil {
-			files = append(files, extraFile{Name: e.Name(), Size: fmt.Sprintf("%.1f MB", float64(info.Size())/1e6)})
+// checkExtraFilePath accepts a relative path of valid names, for an existing file.
+func checkExtraFilePath(rel string) error {
+	for _, name := range strings.Split(rel, "/") {
+		if err := checkExtraFileName(name); err != nil {
+			return err
 		}
 	}
-	sort.Slice(files, func(i, j int) bool { return files[i].Name < files[j].Name })
-	return files
+	return nil
+}
+
+// listExtraFiles returns the tree on the Settings page, directories before files,
+// and whether it had to stop early. Links are not followed and only regular files
+// are listed; a listing is just names, because download and delete go through
+// os.Root. Hidden names are skipped, which also keeps out every .git directory.
+func listExtraFiles() (rows []extraFile, truncated bool) {
+	var walk func(dir, prefix string, depth int)
+	walk = func(dir, prefix string, depth int) {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			return
+		}
+		sort.SliceStable(entries, func(i, j int) bool { return entries[i].IsDir() && !entries[j].IsDir() })
+		for _, e := range entries {
+			if checkExtraFileName(e.Name()) != nil {
+				continue
+			}
+			if !e.IsDir() && !e.Type().IsRegular() {
+				continue
+			}
+			if len(rows) >= maxExtraFileRows {
+				truncated = true
+				return
+			}
+			row := extraFile{Name: e.Name(), Path: prefix + e.Name(), IsDir: e.IsDir(), Depth: depth}
+			if e.IsDir() {
+				rows = append(rows, row)
+				if depth < maxExtraFileDepth {
+					walk(filepath.Join(dir, e.Name()), row.Path+"/", depth+1)
+				} else {
+					truncated = true
+				}
+				continue
+			}
+			if info, err := e.Info(); err == nil {
+				row.Size = fmt.Sprintf("%.1f MB", float64(info.Size())/1e6)
+				rows = append(rows, row)
+			}
+		}
+	}
+	walk(extraFilesDir, "", 0)
+	return rows, truncated
 }
 
 // chownExtraFile hands an uploaded file to www-data, so the terminal can change or
@@ -178,7 +226,7 @@ func (s *Server) handleFileDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name := r.URL.Query().Get("name")
-	if err := checkExtraFileName(name); err != nil {
+	if err := checkExtraFilePath(name); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -200,7 +248,7 @@ func (s *Server) handleFileDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": name}))
+	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": path.Base(name)}))
 	// ServeContent keeps the Content-Type set above and adds Range support, so a large
 	// download over a flaky link can resume.
 	http.ServeContent(w, r, "", info.ModTime(), f)
@@ -212,7 +260,7 @@ func (s *Server) handleFileDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name := r.FormValue("name")
-	if err := checkExtraFileName(name); err != nil {
+	if err := checkExtraFilePath(name); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}

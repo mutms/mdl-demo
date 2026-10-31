@@ -388,3 +388,14 @@ dialog:not([open]) .dangersign svg { animation: none; }
 #campdialog > article, #uploaddialog > article { width: min(92vw, 34rem); max-width: 34rem; }
 /* On the (non-dialog) Installed-plugins page the ref picker widens to match. */
 .refpick { max-width: 34rem; }
+
+/* The Settings page's file tree: flat table rows, indented by depth, because the
+   policy allows no inline style. Depths stop at maxExtraFileDepth in extrafiles.go. */
+td.filedepth1 { padding-left: 1.9rem; }
+td.filedepth2 { padding-left: 3.0rem; }
+td.filedepth3 { padding-left: 4.1rem; }
+td.filedepth4 { padding-left: 5.2rem; }
+td.filedepth5 { padding-left: 6.2rem; }
+td.filedepth6 { padding-left: 7.4rem; }
+td.filedepth7 { padding-left: 8.5rem; }
+td.filedepth8 { padding-left: 9.6rem; }

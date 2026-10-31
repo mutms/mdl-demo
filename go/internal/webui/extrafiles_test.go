@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -70,7 +71,7 @@ func TestExtraFilesRoundTrip(t *testing.T) {
 	if w.Code != http.StatusOK || w.Body.String() != "zipped" {
 		t.Fatalf("download: %d %q", w.Code, w.Body)
 	}
-	if got := listExtraFiles(); len(got) != 1 || got[0].Name != "plugin.zip" {
+	if got, _ := listExtraFiles(); len(got) != 1 || got[0].Name != "plugin.zip" {
 		t.Fatalf("listing: %v", got)
 	}
 	if w := upload(h, "plugin.zip", "other", fileTestToken); w.Code != http.StatusConflict {
@@ -82,7 +83,7 @@ func TestExtraFilesRoundTrip(t *testing.T) {
 	if w := fileRequest(h, r); w.Code != http.StatusSeeOther {
 		t.Fatalf("delete: %d", w.Code)
 	}
-	if got := listExtraFiles(); len(got) != 0 {
+	if got, _ := listExtraFiles(); len(got) != 0 {
 		t.Errorf("still listed after delete: %v", got)
 	}
 }
@@ -132,7 +133,7 @@ func TestExtraFilesRefusesPlantedFiles(t *testing.T) {
 	if w := download(h, "fifo"); w.Code != http.StatusNotFound {
 		t.Errorf("fifo: %d", w.Code)
 	}
-	if got := listExtraFiles(); len(got) != 0 {
+	if got, _ := listExtraFiles(); len(got) != 0 {
 		t.Errorf("non-files must not be listed: %v", got)
 	}
 }
@@ -165,5 +166,83 @@ func TestExtraFilesGuards(t *testing.T) {
 	}
 	if w := download(h, "x.zip"); w.Code != http.StatusNotFound {
 		t.Errorf("download with the CLI off: %d", w.Code)
+	}
+}
+
+func TestExtraFilesTree(t *testing.T) {
+	h, dir, secret := extraFilesTest(t)
+	for _, f := range []string{"top.zip", "plugin/version.php", "plugin/lang/en/x.php", "plugin/.git/config", ".hidden"} {
+		full := filepath.Join(dir, f)
+		if err := os.MkdirAll(filepath.Dir(full), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte("data"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Links stay unlisted and unfollowed, wherever they point and however deep.
+	if err := os.Symlink(filepath.Dir(secret), filepath.Join(dir, "plugin", "escape")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(secret, filepath.Join(dir, "plugin", "stolen")); err != nil {
+		t.Fatal(err)
+	}
+	rows, truncated := listExtraFiles()
+	if truncated {
+		t.Error("a small tree must not be cut short")
+	}
+	var got []string
+	for _, r := range rows {
+		got = append(got, strings.Repeat(">", r.Depth)+r.Path)
+	}
+	want := []string{"plugin", ">plugin/lang", ">>plugin/lang/en", ">>>plugin/lang/en/x.php", ">plugin/version.php", "top.zip"}
+	if strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Errorf("tree = %v, want %v", got, want)
+	}
+	w := download(h, "plugin/lang/en/x.php")
+	if w.Code != http.StatusOK || w.Body.String() != "data" {
+		t.Fatalf("nested download: %d %q", w.Code, w.Body)
+	}
+	if got := w.Header().Get("Content-Disposition"); !strings.Contains(got, "filename=x.php") {
+		t.Errorf("Content-Disposition = %q", got)
+	}
+	for _, name := range []string{"plugin/stolen", "plugin/escape/secret", "plugin/../../secret", "plugin/.git/config", "plugin", "/etc/passwd", "plugin//version.php"} {
+		if w := download(h, name); w.Code == http.StatusOK || strings.Contains(w.Body.String(), "TOP-SECRET") {
+			t.Errorf("download %q: %d %q", name, w.Code, w.Body)
+		}
+	}
+	remove := func(name string) int {
+		form := url.Values{"csrf": {fileTestToken}, "name": {name}}
+		r := httptest.NewRequest("POST", "/settings/files/delete", strings.NewReader(form.Encode()))
+		r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		return fileRequest(h, r).Code
+	}
+	if c := remove("plugin/version.php"); c != http.StatusSeeOther {
+		t.Errorf("nested delete: %d", c)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "plugin", "version.php")); err == nil {
+		t.Error("the nested file is still there")
+	}
+	if c := remove("plugin/lang"); c == http.StatusSeeOther {
+		t.Error("a directory must not be deleted from the console")
+	}
+	if c := remove("plugin/stolen"); c == http.StatusSeeOther {
+		t.Error("a link must not be deleted from the console")
+	}
+	if data, _ := os.ReadFile(secret); string(data) != "TOP-SECRET" {
+		t.Errorf("the secret changed: %q", data)
+	}
+}
+
+func TestExtraFilesListingIsCapped(t *testing.T) {
+	_, dir, _ := extraFilesTest(t)
+	for i := range maxExtraFileRows + 5 {
+		if err := os.WriteFile(filepath.Join(dir, "f"+strconv.Itoa(i)), nil, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rows, truncated := listExtraFiles()
+	if len(rows) != maxExtraFileRows || !truncated {
+		t.Errorf("rows = %d, truncated = %v", len(rows), truncated)
 	}
 }

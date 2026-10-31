@@ -316,7 +316,8 @@ type view struct {
 	// refuse). Both are boot-time, server-side (like TunnelEnabled).
 	CampEnabled bool
 	// ExtraFiles lists the CLI console's exchange folder on the Settings page.
-	ExtraFiles []extraFile
+	ExtraFiles          []extraFile
+	ExtraFilesTruncated bool
 	// CodeEditable is true when the demo was created with MDL_DEMO_EDITABLE_CODE and
 	// has a site: the dashboard and Backups page warn that backups omit code changes.
 	CodeEditable bool
@@ -1746,7 +1747,7 @@ func (s *Server) handleSettingsPage(w http.ResponseWriter, r *http.Request) {
 	v.DebugReport = b.String()
 	v.Changelog = loadChangelog()
 	if v.CLIEnabled {
-		v.ExtraFiles = listExtraFiles()
+		v.ExtraFiles, v.ExtraFilesTruncated = listExtraFiles()
 	}
 	s.render(w, "settings", v)
 }

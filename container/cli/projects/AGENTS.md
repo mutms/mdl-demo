@@ -21,8 +21,8 @@ so edit freely. Nobody's real data is here.
 - `/srv/projects/extrafiles/`: files the user shares with you. They upload and download
   here on the console's Settings page, so look here for what they mention uploading, and
   leave finished work here for them. Package only what they need: a zip of a plugin's own
-  files, never `~/.ssh`, tokens or logins. Top-level files only: subfolders don't show
-  in the console.
+  files, never `~/.ssh`, tokens or logins. The console shows the whole tree, so they can
+  download single files from subfolders, but only one at a time: zip anything bigger.
 - `~` (`/home/www-data`): scratch files, screenshots.
 - `/srv/data/dataroot`: Moodle's dataroot. You share its owner with the web
   server, so scripts you run can write into it safely.
