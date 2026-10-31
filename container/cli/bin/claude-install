@@ -5,6 +5,27 @@
 set -uo pipefail
 source /usr/share/mdl-demo/cli/lib/mdl-console
 
+# The container's own limit where it has one, else the machine's. The threshold sits
+# below 4 GB because a 4 GB virtual machine reports a little less than that.
+MEMORY=$(awk '/^MemTotal/ { print int($2 / 1024) }' /proc/meminfo)
+if [ -r /sys/fs/cgroup/memory.max ] && [ "$(cat /sys/fs/cgroup/memory.max)" != max ]; then
+    LIMIT=$(( $(cat /sys/fs/cgroup/memory.max) / 1048576 ))
+    [ "$LIMIT" -lt "$MEMORY" ] && MEMORY=$LIMIT
+fi
+
+warn_memory() {
+    if [ "$MEMORY" -lt 3500 ]; then
+        echo
+        echo "Warning: this container has only ${MEMORY} MB of memory, and Claude Code asks for"
+        echo "4 GB. With less, Claude Code and Chromium can slow down, hang or get killed."
+        echo "The README's CLI console section explains how to give it more."
+        echo
+    fi
+}
+
+# Before the wait, so there's time to act on it, and again where it can't scroll away.
+warn_memory
+
 if command -v chromium >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1 && command -v rg >/dev/null 2>&1; then
     echo "Chromium, Node, Python and the diagnostic tools are already installed."
 else
@@ -29,19 +50,6 @@ else
     hash -r
 fi
 
-# The container's own limit where it has one, else the machine's. The threshold sits
-# below 4 GB because a 4 GB virtual machine reports a little less than that.
-MEMORY=$(awk '/^MemTotal/ { print int($2 / 1024) }' /proc/meminfo)
-if [ -r /sys/fs/cgroup/memory.max ] && [ "$(cat /sys/fs/cgroup/memory.max)" != max ]; then
-    LIMIT=$(( $(cat /sys/fs/cgroup/memory.max) / 1048576 ))
-    [ "$LIMIT" -lt "$MEMORY" ] && MEMORY=$LIMIT
-fi
-
 echo
 echo "Done. Run claude to sign in with your own account."
-if [ "$MEMORY" -lt 3500 ]; then
-    echo
-    echo "Warning: this container has only ${MEMORY} MB of memory, and Claude Code asks for"
-    echo "4 GB. With less, Claude Code and Chromium can slow down, hang or get killed."
-    echo "The README's CLI console section explains how to give it more."
-fi
+warn_memory
