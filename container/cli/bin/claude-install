@@ -18,7 +18,7 @@ warn_memory() {
         echo
         echo "Warning: this container has only ${MEMORY} MB of memory, and Claude Code asks for"
         echo "4 GB. With less, Claude Code and Chromium can slow down, hang or get killed."
-        echo "The README's CLI console section explains how to give it more."
+        echo "To give it more, see https://github.com/mutms/mdl-demo/blob/main/CLI.md#memory"
         echo
     fi
 }

@@ -69,7 +69,8 @@ PID 1 of the container, management web UI, and CLI.
   session. Claude Code is never baked in or signed in by the console: the user runs
   the official installer and login in the terminal, because Anthropic's terms bar a
   product from intermediating claude.ai credentials.
-- `container/cli/` — the terminal's side, baked at `/usr/share/mdl-demo/cli/`:
+- `container/cli/` — the terminal's side (user guide: `CLI.md`), baked at
+  `/usr/share/mdl-demo/cli/`:
   helpers (`bin/`), their PHP, the CDP client, the MOTD, and `projects/`, copied to
   `/srv/projects/` (the `AGENTS.md` and sample-data skill agents find there, not
   this file). The MOTD is for people, so the agent-only helpers (`mdl-php`,

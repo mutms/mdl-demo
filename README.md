@@ -117,59 +117,14 @@ Install it, click through it, then reset the site and it is gone.
 
 ## CLI console and Claude Code
 
-The **CLI console** tile opens a terminal inside the demo, in its own window. You
-are the `www-data` user, the same one the web server runs as, with no root. The
-code in `demo/` is read-only; `extrarepos/` is yours to write in. The session keeps
-running after you close the window, and the welcome message shows how to start.
+The **CLI console** tile opens a terminal inside the demo. Run `claude-install`, then
+`claude`, sign in with your own account, and ask
+[Claude Code](https://code.claude.com/docs) to create sample data, add a private plugin
+or track down a bug.
 
-It's the easy way to fill a demo with sample data using
-[Claude Code](https://code.claude.com/docs), or to reproduce and diagnose a bug. Run
-`claude-install`, which installs Claude Code with its official installer along with
-Chromium, Node, Python and diagnostic tools, then `claude`, and sign in with your own account. A Claude subscription also lets you run
-`claude remote-control` and drive it from claude.ai/code or your phone. Claude Code is
-Anthropic's product, under Anthropic's own terms, and mdl-demo doesn't include it.
-
-To add a private plugin, `git clone` it into `extrarepos/x`, then run
-`mdl-repo-add x`. To deploy later changes, commit them and run it again.
-
-Your Claude login stays in the demo's home directory, where any PHP code on the
-site can read it, including a plugin you are trying out. Run `claude auth logout`
-before you try a plugin you don't trust, and before you delete the demo.
-
-Claude Code asks for at least 4 GB of memory, and with less, it and Chromium can slow
-down, hang or get killed. `claude-install` warns you if the container has less.
-
-* **macOS:** the limit is set when a demo is created. To raise it, download a backup from
-  the console if you want to keep the site, delete the demo, and create it again with
-  `--memory 4g`:
-
-  ```sh
-  container run -d --memory 4g --name mdl-demo-8081 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 ghcr.io/mutms/mdl-demo && open http://127.0.0.1:8081
-  ```
-
-* **Windows:** memory is shared by all your WSL containers. Run `wslc settings` and set
-  `memorySize` under `session`, as Microsoft's
-  [WSL container settings](https://learn.microsoft.com/en-us/windows/wsl/wsl-container-settings)
-  page explains.
-
-Reset and restore end the terminal session but keep your files. Backups contain only
-the site, so they don't include `extrarepos/`, a plugin added from it, or your login.
-
-To let Claude Code edit Moodle and its plugins directly, for example to fix a bug in
-core, add `-e MDL_DEMO_EDITABLE_CODE=1` when you create the demo. Things may break, and
-resetting the site gives you a clean copy. Backups don't include your code changes, so
-a restore loses them unless they are pushed and in the recipe. Any PHP on the site can
-change the code too. It can't be switched on later without creating the demo again.
-
-```sh
-container run -d --memory 4g -e MDL_DEMO_EDITABLE_CODE=1 --name mdl-demo-8081 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 ghcr.io/mutms/mdl-demo && open http://127.0.0.1:8081
-```
-
-```powershell
-wslc run -d -e MDL_DEMO_EDITABLE_CODE=1 --name mdl-demo-8081 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 ghcr.io/mutms/mdl-demo
-```
-
-To build a demo without the terminal, set `MDL_DEMO_NO_CLI=1` when you create it.
+Claude Code asks for at least 4 GB of memory, and a demo on macOS gets 1 GB unless you
+ask for more. Your Claude login is stored where any PHP on the site can read it, so sign
+out before you try a plugin you don't trust. See the **[CLI console guide](CLI.md)**.
 
 ## Community
 
