@@ -5,8 +5,8 @@ easy way to fill a demo with sample data using
 [Claude Code](https://code.claude.com/docs), or to reproduce and diagnose a bug.
 
 You are the `www-data` user, the same one the web server runs as, with no root. You
-start in `/srv/projects`, where the Moodle code in `demo/` is read-only and `extrarepos/`
-is yours to write in. The session keeps running after you close the window.
+start in `/srv/projects`, where the Moodle code in `demo/` is read-only, and `extrarepos/`
+and `extrafiles/` are yours to write in. The session keeps running after you close the window.
 
 ## Claude Code
 
@@ -72,6 +72,15 @@ no root, so you or Claude Code can put its release binary in `~/.local/bin`. Its
 stays in the home directory, where any PHP on the site can read it, so use a token limited
 to the repositories you need.
 
+## Moving files in and out
+
+The console's Settings page has **Additional files for use from CLI console**, where you
+can upload and download files. In the terminal they are in `/srv/projects/extrafiles`, so you
+can ask Claude Code to use what you uploaded, or to leave a zip of your plugin there.
+
+Use it to keep your work: **deleting the demo deletes `extrarepos/` too**, unless you have
+pushed it or downloaded a copy.
+
 ## Editable source code
 
 To let Claude Code edit Moodle and its plugins directly, for example to fix a bug in core,
@@ -97,7 +106,7 @@ PHP on the site can change the code too.
 ## What is kept
 
 Reset and restore end the terminal session but keep your files. Backups contain only the
-site, so they don't include `extrarepos/`, a plugin added from it, or your login. Deleting
+site, so they don't include `extrarepos/`, `extrafiles/`, a plugin added from it, or your login. Deleting
 the demo deletes all of it.
 
 ## Using the terminal

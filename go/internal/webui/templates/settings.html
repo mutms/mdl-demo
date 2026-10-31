@@ -47,6 +47,40 @@
   </form>
 </article>
 
+{{/* The CLI console's exchange folder. A plain multipart POST, like the Backups
+     upload, and absent with the console itself (MDL_DEMO_NO_CLI). */}}
+{{if .CLIEnabled}}
+<article>
+  <h2>{{t .Lang "Additional files for use from CLI console"}}</h2>
+  <p class="empty">{{t .Lang "Upload files to use in the CLI console, and download what Claude Code leaves here. They are in /srv/projects/extrafiles in the terminal. They survive a site reset, but they aren't in backups and are deleted with the demo."}}</p>
+  {{if .ExtraFiles}}
+  <table>
+    <tr><th>{{t .Lang "File"}}</th><th>{{t .Lang "Size"}}</th><th></th></tr>
+    {{range .ExtraFiles}}
+    <tr>
+      <td class="name">{{.Name}}</td>
+      <td class="meta">{{.Size}}</td>
+      <td><div class="row end">
+        <a class="ibtn" href="/settings/files/download?name={{.Name}}" title="{{t $.Lang "Download"}}" aria-label="{{t $.Lang "Download"}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></a>
+        <form method="post" action="/settings/files/delete"
+              data-confirm="{{t $.Lang "Delete this file?"}}">
+          <input type="hidden" name="csrf" value="{{$.CSRF}}">
+          <input type="hidden" name="name" value="{{.Name}}">
+          <button class="ibtn" title="{{t $.Lang "Delete"}}" aria-label="{{t $.Lang "Delete"}}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg></button>
+        </form>
+      </div></td>
+    </tr>
+    {{end}}
+  </table>
+  {{end}}
+  <form method="post" action="/settings/files/upload" enctype="multipart/form-data" class="stack">
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <input type="file" name="file" required>
+    <div><button class="secondary">{{t .Lang "Upload"}}</button></div>
+  </form>
+</article>
+{{end}}
+
 {{/* Camp registry: a separate update button (a fork may ship Camp without the
      recipe catalogues, or vice versa). Absent when MDL_DEMO_NO_CAMP. */}}
 {{if .CampEnabled}}

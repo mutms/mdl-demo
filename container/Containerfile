@@ -193,13 +193,13 @@ RUN for c in mdl-recipes mdl-plugins; do \
 RUN git clone --depth 1 https://github.com/camp-registry/camp-index /srv/extra/camp
 
 # The CLI console (internal/term): a shell as www-data, opening in /srv/projects
-# on a baked AGENTS.md. Only extrarepos/ is writable there. /srv/projects itself
+# on a baked AGENTS.md. Only extrarepos/ and extrafiles/ are writable there. /srv/projects itself
 # stays root-owned: whoever can write the tree's parent can rename the tree away
 # and replace it (invariant 3). The real home directory is where Claude Code's
 # install and login live; reset, restore and backups never touch it.
 COPY container/cli/ /usr/share/mdl-demo/cli/
 RUN usermod -d /home/www-data -s /bin/bash www-data \
-    && install -d -o www-data -g www-data /home/www-data /srv/projects/extrarepos \
+    && install -d -o www-data -g www-data /home/www-data /srv/projects/extrarepos /srv/projects/extrafiles \
     && cp -r /usr/share/mdl-demo/cli/projects/. /srv/projects/ \
     && rm -rf /usr/share/mdl-demo/cli/projects \
     && chown -R www-data:www-data /srv/projects/.claude \

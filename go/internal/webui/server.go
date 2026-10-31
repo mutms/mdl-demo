@@ -153,6 +153,10 @@ func (s *Server) routes() (http.Handler, error) {
 	mux.HandleFunc("POST /settings/update-camp", s.csrf(s.handleCampUpdate))
 	mux.HandleFunc("POST /settings/pull-updates", s.csrf(s.handlePullUpdates))
 	mux.HandleFunc("POST /settings/update-debian", s.csrf(s.handleUpdateDebian))
+	// Upload is not behind s.csrf, like /backups/upload below.
+	mux.HandleFunc("POST /settings/files/upload", s.handleFileUpload)
+	mux.HandleFunc("POST /settings/files/delete", s.csrf(s.handleFileDelete))
+	mux.HandleFunc("GET /settings/files/download", s.handleFileDownload)
 	mux.HandleFunc("GET /backups", s.handleBackupsPage)
 	mux.HandleFunc("GET /section/backuplist", s.handleBackupList)
 	mux.HandleFunc("POST /backups/create", s.csrf(s.handleBackupCreate))
@@ -311,6 +315,8 @@ type view struct {
 	// set — hides the git-URL add box and Camp's Add button (the handlers also
 	// refuse). Both are boot-time, server-side (like TunnelEnabled).
 	CampEnabled bool
+	// ExtraFiles lists the CLI console's exchange folder on the Settings page.
+	ExtraFiles []extraFile
 	// CodeEditable is true when the demo was created with MDL_DEMO_EDITABLE_CODE and
 	// has a site: the dashboard and Backups page warn that backups omit code changes.
 	CodeEditable bool
@@ -1739,6 +1745,9 @@ func (s *Server) handleSettingsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	v.DebugReport = b.String()
 	v.Changelog = loadChangelog()
+	if v.CLIEnabled {
+		v.ExtraFiles = listExtraFiles()
+	}
 	s.render(w, "settings", v)
 }
 

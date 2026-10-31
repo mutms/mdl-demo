@@ -18,6 +18,11 @@ so edit freely. Nobody's real data is here.
     from inside.
 - `/srv/projects/extrarepos/`: the place here for your own work. Put plugin
   checkouts and generator code in a directory of their own, under git.
+- `/srv/projects/extrafiles/`: files the user shares with you. They upload and download
+  here on the console's Settings page, so look here for what they mention uploading, and
+  leave finished work here for them. Package only what they need: a zip of a plugin's own
+  files, never `~/.ssh`, tokens or logins. Top-level files only: subfolders don't show
+  in the console.
 - `~` (`/home/www-data`): scratch files, screenshots.
 - `/srv/data/dataroot`: Moodle's dataroot. You share its owner with the web
   server, so scripts you run can write into it safely.
@@ -32,7 +37,7 @@ The commands you need are under Tools below. Each has `--help`.
   console's own routes, which the helpers below use for you.
 - Reset and restore in the console end this tmux session. Your files stay, and
   so does anything in `extrarepos/`, but the site and its data do not.
-- Backups contain the site only, not `extrarepos/` or `~`. A plugin added from
+- Backups contain the site only, not `extrarepos/`, `extrafiles/` or `~`. A plugin added from
   `extrarepos/` will not restore on another container without that checkout.
 
 ## Tools
@@ -79,6 +84,12 @@ can't install anything else.
 2. `git clone git@github.com:you/moodle-local_example.git extrarepos/example`
 3. `mdl-repo-add example` installs it into the site. To deploy later changes, commit
    them in `extrarepos/example` and run it again.
+
+## Saving and resuming work
+
+Deleting the demo deletes `extrarepos/`, so before stopping, offer to push the work or
+leave a zip in `extrafiles/`. To resume from a zip the user uploaded, unzip it into
+`extrarepos/`, run `git init` and commit if it has no `.git`, then use `mdl-repo-add`.
 
 ## Reaching the site from in here
 

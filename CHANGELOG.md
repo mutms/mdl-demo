@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Additional files for use from CLI console on the Settings page, to upload and download files
 - wget in the image, for use in the CLI console
 - MDL_DEMO_EDITABLE_CODE=1 when creating a demo lets the CLI console edit Moodle and plugin code directly
 

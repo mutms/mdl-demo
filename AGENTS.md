@@ -74,8 +74,9 @@ PID 1 of the container, management web UI, and CLI.
   helpers (`bin/`), their PHP, the CDP client, the MOTD, and `projects/`, copied to
   `/srv/projects/` (the `AGENTS.md` and sample-data skill agents find there, not
   this file). The MOTD is for people, so the agent-only helpers (`mdl-php`,
-  `mdl-sql`, `mdl-login`, `mdl-screenshot`) are documented in that `AGENTS.md` instead. `/srv/projects/extrarepos/` is the one place there `www-data` can
-  write; `/srv/projects` itself stays root-owned, because whoever can write the
+  `mdl-sql`, `mdl-login`, `mdl-screenshot`) are documented in that `AGENTS.md` instead. `/srv/projects/extrarepos/` and `extrafiles/` (the Settings page's file exchange,
+  `webui/extrafiles.go`, which treats the folder as hostile because the console is root) are
+  the only places there `www-data` can write; `/srv/projects` itself stays root-owned, because whoever can write the
   tree's parent can rename the tree away (invariant 3). `www-data` has no sudo and
   the terminal runs with no-new-privs: helpers needing root (`claude-install`,
   `mdl-repo-add`) post to the console on loopback through `lib/mdl-console`, as
