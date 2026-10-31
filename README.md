@@ -120,7 +120,7 @@ Install it, click through it, then reset the site and it is gone.
 The **CLI console** tile opens a terminal inside the demo, in its own window. You
 are the `www-data` user, the same one the web server runs as, with no root. The
 code in `demo/` is read-only; `extrarepos/` is yours to write in. The session keeps
-running after you close the window, and the welcome message lists what's there.
+running after you close the window, and the welcome message shows how to start.
 
 It's the easy way to fill a demo with sample data using
 [Claude Code](https://code.claude.com/docs), or to reproduce and diagnose a bug. Run
@@ -134,8 +134,23 @@ To add a private plugin, `git clone` it into `extrarepos/x`, then run
 
 Your Claude login stays in the demo's home directory, where any PHP code on the
 site can read it, including a plugin you are trying out. Run `claude auth logout`
-before you try a plugin you don't trust, and before you delete the demo. Claude
-Code also asks for at least 4 GB of memory, so check how much your container gets.
+before you try a plugin you don't trust, and before you delete the demo.
+
+Claude Code asks for at least 4 GB of memory, and with less, it and Chromium can slow
+down, hang or get killed. `claude-install` warns you if the container has less.
+
+* **macOS:** the limit is set when a demo is created. To raise it, download a backup from
+  the console if you want to keep the site, delete the demo, and create it again with
+  `--memory 4g`:
+
+  ```sh
+  container run -d --memory 4g --name mdl-demo-8081 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 ghcr.io/mutms/mdl-demo && open http://127.0.0.1:8081
+  ```
+
+* **Windows:** memory is shared by all your WSL containers. Run `wslc settings` and set
+  `memorySize` under `session`, as Microsoft's
+  [WSL container settings](https://learn.microsoft.com/en-us/windows/wsl/wsl-container-settings)
+  page explains.
 
 Reset and restore end the terminal session but keep your files. Backups contain only
 the site, so they don't include `extrarepos/`, a plugin added from it, or your login.

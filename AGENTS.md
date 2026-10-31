@@ -153,6 +153,8 @@ PID 1 of the container, management web UI, and CLI.
    to www-data, even to "fix" a permission error.
 4. **wwwroot = the URL in the user's browser**, chosen at install time and
    never baked into the image. Moodle breaks when visited under another URL.
+   The one exception is `config.php` switching wwwroot for a request whose Host is
+   exactly `127.0.0.1:8082`: that is how tools inside the container reach the site.
 5. **Moodle layout rules** (5.1+ split): `config.php` and `admin/cli/*` live
    at the tree root; the Apache docroot is `public/` when
    `public/version.php` exists, else the root; resolve every CLI script by

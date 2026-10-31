@@ -35,7 +35,7 @@ The commands you need are under Tools below. Each has `--help`.
 |---|---|
 | Run PHP with Moodle loaded | `mdl-php '<code>'`, a `.php` file, or `-` for stdin; `--user=<username>` |
 | Query the database | `mdl-sql 'SELECT id, username FROM {user}'`; `--write` to change data |
-| Log a browser in | `mdl-login [user] [--path=/local/path]` |
+| Log a browser in | `mdl-login [user] [--path=/local/path]`; `--internal` for a browser in here |
 | See a page as a user | `mdl-screenshot [--user=<name>] /local/path` prints a PNG's path; read the image |
 | Scripted browser checks | `/usr/share/mdl-demo/cli/browser/cdp.mjs` (dependency-free CDP client; `shot.mjs` shows its use) |
 | Add or update a plugin | `git commit` in `extrarepos/x`, then `mdl-repo-add x [ref]` |
@@ -58,14 +58,29 @@ can't install anything else.
   can't attach to the site's php-fpm workers, so reproduce through `mdl-php`.
 - To test a fix, commit it in `extrarepos/` and deploy it with `mdl-repo-add`, since
   the `demo` tree is read-only.
+- If the problem may be in mdl-demo itself (the console, the helpers, this container),
+  read its source. It's public, and its own `AGENTS.md` explains the architecture:
+  `git clone https://github.com/mutms/mdl-demo extrarepos/mdl-demo`
+  To match this demo, check out its version, the second word of `mdl-demo version`,
+  if that's a release tag. You can't deploy changes to it from here, so report what you
+  find at https://github.com/mutms/mdl-demo/issues.
+
+## Adding a private plugin
+
+1. Without a key yet, run `ssh-keygen -t ed25519`, then show the user
+   `~/.ssh/id_ed25519.pub` and ask them to add it to the repository as a deploy key.
+   Over HTTPS, ask for their username and an access token instead.
+2. `git clone git@github.com:you/moodle-local_example.git extrarepos/example`
+3. `mdl-repo-add example` installs it into the site. To deploy later changes, commit
+   them in `extrarepos/example` and run it again.
 
 ## Reaching the site from in here
 
-The site's URL (`mdl-php 'echo $CFG->wwwroot'`) carries the port published
-outside the container, but inside it only port 8082 listens. `mdl-screenshot`
-handles this. For `curl`, use `--connect-to ::127.0.0.1:8082` when the URL's
-port is not 8082. For a browser you start yourself, pass Chromium
-`--no-sandbox` and `--host-rules="MAP 127.0.0.1:<port> 127.0.0.1:8082"`.
+Use `http://127.0.0.1:8082` for anything running in this container: `curl`, a browser,
+`mdl-login --internal`. The site's public URL (`mdl-php 'echo $CFG->wwwroot'`) carries
+the port published outside, and doesn't work from in here. Give people that public
+URL, and don't save the internal one in site content. For a browser you start yourself,
+pass Chromium `--no-sandbox --disable-dev-shm-usage`.
 
 Mail the site sends never leaves the container; the console's Redirected emails
 page shows it.

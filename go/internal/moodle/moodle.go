@@ -221,6 +221,14 @@ $CFG->dboptions = array(
 
 $CFG->wwwroot  = '` + wwwroot + `';
 ` + sslproxy(wwwroot) + `
+// The container's own tools reach the site on its fixed internal port, because the
+// published port and any proxy in front of it don't exist in here. Only that exact
+// Host switches: everyone else, and every CLI script, keeps the URL above.
+if (($_SERVER['HTTP_HOST'] ?? '') === '127.0.0.1:8082') {
+    $CFG->wwwroot = 'http://127.0.0.1:8082';
+    unset($CFG->sslproxy);
+}
+
 // Apache only ever sees loopback (port mapping, cloudflared); real client
 // addresses arrive in X-Forwarded-For. 1 = skip HTTP_CLIENT_IP only.
 $CFG->getremoteaddrconf = 1;

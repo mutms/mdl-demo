@@ -56,29 +56,42 @@ else
     mkdir -p "$(dirname "$OUT")"
 fi
 
-URL=$(mdl-login "$USERNAME" "--path=${LANDING}")
+URL=$(mdl-login "$USERNAME" "--path=${LANDING}" --internal)
 
-# The site's URL carries the port published outside the container; inside, only
-# 8082 listens. Point the browser at it without changing what it asks for.
-HOSTPORT=$(printf '%s' "$URL" | sed -E 's#^https?://([^/]+).*#\1#')
-RULES=()
-case "$URL" in
-    http://127.0.0.1:8082/*) ;;
-    http://127.0.0.1:*|http://localhost:*) RULES=("--host-rules=MAP ${HOSTPORT} 127.0.0.1:8082") ;;
-esac
-
-# A throwaway profile: no session outlives the capture.
+# A throwaway profile: no session outlives the capture. The time limit turns a page
+# that never settles into an error, and /dev/shm is too small for Chromium here.
 PROFILE=$(mktemp -d)
 trap 'rm -rf "$PROFILE"' EXIT
 LOG="${PROFILE}/chromium.log"
-if ! chromium --headless=new --no-sandbox --disable-gpu --no-first-run --hide-scrollbars \
-        "${RULES[@]}" \
-        --user-data-dir="$PROFILE" \
-        --window-size="${SIZE/x/,}" \
-        --virtual-time-budget="$WAIT" \
-        --screenshot="$OUT" "$URL" >"$LOG" 2>&1 || [ ! -s "$OUT" ]; then
-    echo "Chromium did not produce a screenshot:" >&2
-    tail -n 20 "$LOG" >&2
+RC=0
+timeout --kill-after=5 60 chromium --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage \
+    --no-first-run --hide-scrollbars \
+    --user-data-dir="$PROFILE" \
+    --window-size="${SIZE/x/,}" \
+    --virtual-time-budget="$WAIT" \
+    --screenshot="$OUT" "$URL" >"$LOG" 2>&1 || RC=$?
+if [ "$RC" != 0 ] || [ ! -s "$OUT" ]; then
+    case "$RC" in
+        124) echo "Chromium did not finish within 60 seconds." >&2 ;;
+        137) echo "Chromium was killed, probably because memory ran out." >&2 ;;
+        *)   echo "Chromium did not produce a screenshot (exit $RC)." >&2 ;;
+    esac
+    # Out of memory looks like anything else, often a hang, so always give the facts:
+    # the container's own limit where it has one, else the machine's.
+    AVAILABLE=$(awk '/^MemAvailable/ { print int($2 / 1024) }' /proc/meminfo)
+    KILLS=$(awk '/^oom_kill / { print $2 }' /proc/vmstat)
+    if [ -r /sys/fs/cgroup/memory.events ]; then
+        KILLS=$(awk '$1 == "oom_kill" { print $2 }' /sys/fs/cgroup/memory.events)
+        MAX=$(cat /sys/fs/cgroup/memory.max)
+        if [ "$MAX" != max ]; then
+            AVAILABLE=$(( (MAX - $(cat /sys/fs/cgroup/memory.current)) / 1048576 ))
+        fi
+    fi
+    echo "Unused memory: ${AVAILABLE} MB. Processes killed for lack of memory: ${KILLS}." >&2
+    if [ "${KILLS:-0}" != 0 ]; then
+        echo "This container is probably short of memory, so give it more." >&2
+    fi
+    grep -v 'dbus/' "$LOG" | tail -n 10 >&2
     exit 1
 fi
 

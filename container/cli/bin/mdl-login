@@ -2,9 +2,10 @@
 # Print a single-use login URL for the demo site, valid for 10 minutes. Open it
 # in a browser to be logged in, with no password involved.
 #
-# Usage: mdl-login [username] [--path=/local/path]
-#   username   Moodle username, default "admin"
-#   --path     page to land on, default "/"
+# Usage: mdl-login [username] [--path=/local/path] [--internal]
+#   username    Moodle username, default "admin"
+#   --path      page to land on, default "/"
+#   --internal  a URL for a browser inside this container, not for your own
 set -euo pipefail
 
 TREE=/srv/projects/demo
@@ -12,11 +13,13 @@ PHPDIR=/usr/share/mdl-demo/cli/php
 
 USERNAME="admin"
 LANDING="/"
+INTERNAL=0
 for arg in "$@"; do
     case "$arg" in
         --path=*) LANDING="${arg#--path=}" ;;
+        --internal) INTERNAL=1 ;;
         -h|--help)
-            sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'
+            sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'
             exit 0
             ;;
         -*) echo "Unknown option '${arg}'." >&2; exit 1 ;;
@@ -29,4 +32,8 @@ if [ ! -f "$TREE/config.php" ]; then
     exit 1
 fi
 
-exec php "$PHPDIR/run.php" "$TREE" "" file "$PHPDIR/login.php" "$USERNAME" "$LANDING"
+URL=$(php "$PHPDIR/run.php" "$TREE" "" file "$PHPDIR/login.php" "$USERNAME" "$LANDING")
+if [ "$INTERNAL" = 1 ]; then
+    URL="http://127.0.0.1:8082/mdl-demo/login.php?${URL#*/mdl-demo/login.php\?}"
+fi
+echo "$URL"

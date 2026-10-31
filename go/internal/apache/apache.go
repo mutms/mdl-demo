@@ -32,6 +32,10 @@ func WriteVhost(wwwroot, docroot string, router bool) error {
 <VirtualHost *:` + strconv.Itoa(Port) + `>
     ServerName ` + wwwroot + `
     UseCanonicalName On
+    # The container's own tools, see config.php: Apache must report the port they used.
+    <If "%{HTTP_HOST} == '127.0.0.1:` + strconv.Itoa(Port) + `'">
+        UseCanonicalName Off
+    </If>
     DocumentRoot ` + docroot + `
     <Directory ` + docroot + `>
         Require all granted
