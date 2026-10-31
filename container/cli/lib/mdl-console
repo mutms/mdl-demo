@@ -21,11 +21,22 @@ console_post() {
     for arg in "$@"; do
         args+=(--data-urlencode "$arg")
     done
-    code=$(curl -sS -b "$jar" -o "$CONSOLE_DIR/body" -w '%{http_code}' "${args[@]}" "$CONSOLE$path")
+    # The console runs one job at a time, and a site install takes minutes. Starting
+    # this during one is natural, so wait for it, but not forever.
+    local waited=0
+    while :; do
+        code=$(curl -sS -b "$jar" -o "$CONSOLE_DIR/body" -w '%{http_code}' "${args[@]}" "$CONSOLE$path")
+        [ "$code" = 409 ] && [ "$waited" -lt 1800 ] || break
+        if [ "$waited" = 0 ]; then
+            echo "The console is busy, for example installing the site. Waiting for it to finish (Ctrl+C to stop)."
+        fi
+        sleep 5
+        waited=$((waited + 5))
+    done
     case "$code" in
         2*|3*) return 0 ;;
         404) echo "This demo has that feature turned off." >&2 ;;
-        409) echo "The console is busy with another operation: try again when it finishes." >&2 ;;
+        409) echo "The console was still busy after 30 minutes: try again when it finishes." >&2 ;;
         *) echo "The console answered $code: $(cat "$CONSOLE_DIR/body")" >&2 ;;
     esac
     return 1
