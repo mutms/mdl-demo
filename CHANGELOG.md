@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The site also answers on http://127.0.0.1:8082 inside the container, for tools in the CLI console
 - Claude Code needs at least 4 GB of memory, so on macOS create the demo with --memory 4g; claude-install warns when the container has less
 
+### Added
+
+- wget in the image, for use in the CLI console
+
 ### Fixed
 
 - claude-install and mdl-repo-add wait while the console is busy, such as during a site install

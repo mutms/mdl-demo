@@ -76,7 +76,7 @@ RUN apt-get update \
     && apt-get dist-upgrade -y \
     && apt-get install -y --no-install-recommends \
         curl git ca-certificates gnupg2 lsb-release apt-transport-https \
-        tmux openssh-client \
+        tmux openssh-client wget \
     && rm -rf /var/lib/apt/lists/*
 
 # PHP 8.3 from the Sury repo (keyring style), Apache, PostgreSQL — one apt
