@@ -23,6 +23,7 @@ if curl -fs -o /dev/null --max-time 2 http://127.0.0.1:8081/; then
 fi
 
 VERSION="$(git describe --tags --always --dirty)"
+echo "Building $VERSION"
 
 # Same as dev/github-publish.sh: a run here once ended up with an old binary, so
 # nothing old may survive, neither the image nor its cached layers.
