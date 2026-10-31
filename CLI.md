@@ -67,6 +67,11 @@ Claude Code can do this for you. By hand:
 To deploy later changes, commit them in `extrarepos/example` and run step 3 again. Over
 HTTPS, clone with your username and an access token instead of steps 1 and 2.
 
+If you'd rather use the [GitHub CLI](https://cli.github.com), `gh` isn't included but needs
+no root, so you or Claude Code can put its release binary in `~/.local/bin`. Its login
+stays in the home directory, where any PHP on the site can read it, so use a token limited
+to the repositories you need.
+
 ## Editable source code
 
 To let Claude Code edit Moodle and its plugins directly, for example to fix a bug in core,
