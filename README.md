@@ -155,6 +155,20 @@ down, hang or get killed. `claude-install` warns you if the container has less.
 Reset and restore end the terminal session but keep your files. Backups contain only
 the site, so they don't include `extrarepos/`, a plugin added from it, or your login.
 
+To let Claude Code edit Moodle and its plugins directly, for example to fix a bug in
+core, add `-e MDL_DEMO_EDITABLE_CODE=1` when you create the demo. Things may break, and
+resetting the site gives you a clean copy. Backups don't include your code changes, so
+a restore loses them unless they are pushed and in the recipe. Any PHP on the site can
+change the code too. It can't be switched on later without creating the demo again.
+
+```sh
+container run -d --memory 4g -e MDL_DEMO_EDITABLE_CODE=1 --name mdl-demo-8081 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 ghcr.io/mutms/mdl-demo && open http://127.0.0.1:8081
+```
+
+```powershell
+wslc run -d -e MDL_DEMO_EDITABLE_CODE=1 --name mdl-demo-8081 -p 127.0.0.1:8081:8081 -p 127.0.0.1:8082:8082 ghcr.io/mutms/mdl-demo
+```
+
 To build a demo without the terminal, set `MDL_DEMO_NO_CLI=1` when you create it.
 
 ## Community

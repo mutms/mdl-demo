@@ -48,6 +48,7 @@ func DefaultFullname(vendor string) string {
 // Moodle installer, cron timer. Fails fast if a site is already present.
 func Install(logf execx.Logf, o Options) error {
 	defer state.HoldBusy()() // pause the cron ticker while the tree/DB change
+	defer applyCodeAccess(logf)
 	if o.Recipe == "" || o.AdminPass == "" {
 		return fmt.Errorf("recipe and admin password are required")
 	}

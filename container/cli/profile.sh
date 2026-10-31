@@ -9,5 +9,5 @@ export NODE_OPTIONS=--experimental-websocket
 # Once per session, not in every tmux window. Nothing here runs login(1), so
 # /etc/motd would never be shown.
 case "$-" in
-    *i*) [ "${TMUX_PANE:-%0}" = "%0" ] && cat /usr/share/mdl-demo/cli/motd ;;
+    *i*) [ "${TMUX_PANE:-%0}" = "%0" ] && cat "/usr/share/mdl-demo/cli/motd${MDL_DEMO_EDITABLE_CODE:+-editable}" ;;
 esac

@@ -205,7 +205,7 @@ RUN usermod -d /home/www-data -s /bin/bash www-data \
     && chown -R www-data:www-data /srv/projects/.claude \
     && mv /usr/share/mdl-demo/cli/tmux.conf /etc/tmux.conf \
     && mv /usr/share/mdl-demo/cli/profile.sh /etc/profile.d/mdl-demo-cli.sh \
-    && git config --system --add safe.directory '/srv/projects/extrarepos/*'
+    && git config --system --add safe.directory '*'
 
 # Pre-bundled site backups: any *.mdb dropped into the repo's assets/backups/
 # dir ships in the image, ready to restore from the console — how a fork bakes a

@@ -8,6 +8,7 @@
 {{if .Installed}}
 <article>
   <h2>{{t .Lang "Demo site"}}</h2>
+  {{if .CodeEditable}}<div class="warn"><p>{{t .Lang "The source code is editable. Backups don't include code changes: a backup records which code to fetch, so a restore loses your edits unless they are pushed and in the recipe."}}</p></div>{{end}}
   {{/* One site per container, so its details are a description list, not a
        one-row table. */}}
   <dl class="site">

@@ -1,0 +1,15 @@
+mdl-demo CLI console: you are www-data, in a session that outlives this window.
+The source code in demo/ is editable: change Moodle and its plugins however you like,
+but things may break. Reset the site to get a clean copy. Backups don't include your
+code changes.
+
+Run claude-install, then claude, and sign in with your own account. Ask it for what
+you need: sample data, adding a private plugin, fixing a bug in the code.
+To continue from claude.ai/code or your phone, run "claude remote-control" instead.
+
+Your Claude login is stored in your home directory, where any PHP on this site can
+read it. Run `claude auth logout` before trying untrusted plugins or deleting this demo.
+
+Select with the mouse, Ctrl+C copies, Ctrl+V pastes.
+For a fresh session, press Ctrl+D until Reconnect appears, then click it.
+

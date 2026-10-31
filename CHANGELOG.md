@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - wget in the image, for use in the CLI console
+- MDL_DEMO_EDITABLE_CODE=1 when creating a demo lets the CLI console edit Moodle and plugin code directly
 
 ### Changed
 
@@ -19,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - claude-install and mdl-repo-add wait while the console is busy, such as during a site install
+- Plugins added from a local path no longer leave www-data's git objects in the root-owned code tree
 - mdl-screenshot works with any site URL, and fails with a message instead of hanging
 
 ## [0.9.0] - 2026-10-30

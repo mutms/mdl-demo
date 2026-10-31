@@ -79,6 +79,9 @@ PID 1 of the container, management web UI, and CLI.
   the terminal runs with no-new-privs: helpers needing root (`claude-install`,
   `mdl-repo-add`) post to the console on loopback through `lib/mdl-console`, as
   invariant 10 already allows, so they get its single-flight jobs and kill switches.
+  The terminal's shell gets `MDL_DEMO_EDITABLE_CODE` passed in, which picks
+  `motd-editable` over `motd`; git's ownership check is off system-wide
+  (`safe.directory = *`), because the tree's owner varies by demo.
 - `internal/debian` — apt at run time, for the CLI console's tools and the Settings
   page's **Update Debian Trixie** job. `policy-rc.d` stops package scripts restarting
   services, and a job inside PID 1 can't restart the container, so the job's log asks
@@ -113,7 +116,9 @@ PID 1 of the container, management web UI, and CLI.
 - `internal/moodle`, `internal/apache`, `internal/pgdb`, `internal/recipes`,
   `internal/state`, `internal/execx` — Moodle tree handling, vhost
   generation, DB provisioning, recipe catalogue scan, `/etc/mdl-demo/state.json`
-  (demo identity adopted once from `MDL_DEMO_PORT`/`MDL_DEMO_NAME`, the site
+  (demo identity adopted once from `MDL_DEMO_PORT`/`MDL_DEMO_NAME`, as is
+  `MDL_DEMO_EDITABLE_CODE`, because an exec'd CLI may not be able to read PID 1's
+  environment; the site
   URL override from `mdl-demo url`, installed site), command runner with
   line-streamed logs.
 - `container/php/` — the console's Moodle-side PHP: web endpoints at the top
@@ -147,10 +152,12 @@ PID 1 of the container, management web UI, and CLI.
    console+1 — never add a second port knob. A site URL behind a
    proxy/tunnel comes from `mdl-demo url --site`, not from guessing at Host
    headers; the console has no such override on purpose (invariant 10).
-3. **The Moodle code tree stays root-owned; PHP runs as www-data with
+3. **The Moodle code tree stays root-owned by default; PHP runs as www-data with
    read-only access.** This deliberately disables Moodle's web-based plugin
-   installation (plugins come only via recipes/mudev). Never chown the tree
-   to www-data, even to "fix" a permission error.
+   installation (plugins come only via recipes/mudev). The one exception is a demo
+   created with `MDL_DEMO_EDITABLE_CODE=1`, for coding agents: recorded once in
+   `state.json` at first boot, then `site.applyCodeAccess` gives www-data the tree after
+   each job that writes to it. Nothing else happens at boot. Otherwise never chown the tree to www-data, even to "fix" a permission error.
 4. **wwwroot = the URL in the user's browser**, chosen at install time and
    never baked into the image. Moodle breaks when visited under another URL.
    The one exception is `config.php` switching wwwroot for a request whose Host is

@@ -198,6 +198,10 @@ func adoptEnv(out io.Writer) error {
 		changed = true
 		fmt.Fprintf(out, "demo identity: %s (console port %d, site port %d)\n", st.Title(), st.Port(), st.SitePort())
 	}
+	if st.AdoptEditableCode(state.ContainerEnv("MDL_DEMO_EDITABLE_CODE")) {
+		changed = true
+		fmt.Fprintln(out, "source code is editable (MDL_DEMO_EDITABLE_CODE)")
+	}
 	if changed {
 		return st.Save()
 	}
@@ -307,6 +311,9 @@ type view struct {
 	// set — hides the git-URL add box and Camp's Add button (the handlers also
 	// refuse). Both are boot-time, server-side (like TunnelEnabled).
 	CampEnabled bool
+	// CodeEditable is true when the demo was created with MDL_DEMO_EDITABLE_CODE and
+	// has a site: the dashboard and Backups page warn that backups omit code changes.
+	CodeEditable bool
 	// CLIEnabled is false when MDL_DEMO_NO_CLI is set — hides the CLI console card.
 	CLIEnabled        bool
 	UrlInstallEnabled bool
@@ -595,13 +602,7 @@ func (s *Server) baseView(r *http.Request) view {
 }
 
 // boolEnv reads a container env var as a boolean (1/true/yes/on, case-folded).
-func boolEnv(key string) bool {
-	switch strings.ToLower(strings.TrimSpace(state.ContainerEnv(key))) {
-	case "1", "true", "yes", "on":
-		return true
-	}
-	return false
-}
+func boolEnv(key string) bool { return state.ContainerBool(key) }
 
 // tunnelEnabled reports whether the Quick Tunnel is available (off when the
 // custom-image env MDL_DEMO_NO_TUNNEL is set).
@@ -631,6 +632,7 @@ func (s *Server) buildView(r *http.Request) view {
 	v.UrlInstallEnabled = urlInstallEnabled()
 	if st, err := state.Load(); err == nil && st.Installed() {
 		v.Installed = true
+		v.CodeEditable = st.EditableCode
 		v.Recipe = st.Recipe
 		v.MoodleRelease, _ = moodle.Version()
 		v.SiteName = st.Fullname

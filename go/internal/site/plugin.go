@@ -131,6 +131,7 @@ func proposeRef(branches, tags []string, siteBranch string) string {
 // backupFirst, a "prior-update-<time>.mdb" undo point is taken first.
 func PullUpdates(logf execx.Logf, backupFirst bool, version string) error {
 	defer state.HoldBusy()() // pause the cron ticker across pull + upgrade
+	defer applyCodeAccess(logf)
 	if !moodle.Detected() {
 		return fmt.Errorf("no demo site installed")
 	}
@@ -165,6 +166,7 @@ func PullUpdates(logf execx.Logf, backupFirst bool, version string) error {
 // misbehaving plugin (or a bad switch) is one restore away from undone.
 func AddPlugin(logf execx.Logf, url, ref string, backupFirst bool, version string) error {
 	defer state.HoldBusy()() // pause the cron ticker across clone + upgrade
+	defer applyCodeAccess(logf)
 	if !allowedGitURL(url) {
 		return fmt.Errorf("not a git URL")
 	}
@@ -176,7 +178,8 @@ func AddPlugin(logf execx.Logf, url, ref string, backupFirst bool, version strin
 	}
 
 	// Clone into a temp dir on the same filesystem as the tree, so the final
-	// move is a rename. Kept shallow at the chosen ref.
+	// move is a rename. Kept shallow at the chosen ref. --no-local because a local
+	// clone hardlinks objects from extrarepos/, leaving www-data's files in the tree.
 	tmp, err := os.MkdirTemp(filepath.Dir(moodle.Root), ".plugin-add-")
 	if err != nil {
 		return err
@@ -185,7 +188,7 @@ func AddPlugin(logf execx.Logf, url, ref string, backupFirst bool, version strin
 	checkout := filepath.Join(tmp, "src")
 
 	logf(fmt.Sprintf("Cloning %s at %s", url, ref))
-	if err := execx.Run(logf, "", "git", "clone", "--depth", "1", "--branch", ref, url, checkout); err != nil {
+	if err := execx.Run(logf, "", "git", "clone", "--no-local", "--depth", "1", "--branch", ref, url, checkout); err != nil {
 		return fmt.Errorf("git clone failed: %w", err)
 	}
 

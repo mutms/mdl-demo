@@ -90,6 +90,9 @@ type State struct {
 	// and IP addresses only (see webui/auth.go), so a setting that named it
 	// something public would be an invitation to misuse it.
 	SiteURL string `json:"site_url,omitempty"`
+	// EditableCode records MDL_DEMO_EDITABLE_CODE, see AdoptEditableCode. Part of the
+	// container's identity, so a reset keeps it.
+	EditableCode bool `json:"editable_code,omitempty"`
 
 	Recipe  string `json:"recipe,omitempty"`
 	Wwwroot string `json:"wwwroot,omitempty"`
@@ -201,8 +204,8 @@ func (s *State) Save() error {
 // ContainerEnv returns a variable from the container's environment — the
 // `-e` values the runtime hands to PID 1. Inside `mdl-demo init` that is our
 // own environment; an exec'd CLI process (or `mdl-demo serve` under some
-// other init) reads it off /proc/1/environ instead, which works because
-// mdl-demo runs as root.
+// other init) tries /proc/1/environ instead, which even root may be refused (it
+// is on podman), and then gets "". What the CLI needs goes in state.json instead.
 func ContainerEnv(key string) string {
 	if os.Getpid() == 1 {
 		return os.Getenv(key)
@@ -217,6 +220,39 @@ func ContainerEnv(key string) string {
 		}
 	}
 	return ""
+}
+
+// ContainerBool reads a container environment variable as a boolean.
+func ContainerBool(key string) bool {
+	return parseBool(ContainerEnv(key))
+}
+
+// parseBool accepts 1/true/yes/on, case-folded.
+func parseBool(v string) bool {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "1", "true", "yes", "on":
+		return true
+	}
+	return false
+}
+
+// AdoptEditableCode records MDL_DEMO_EDITABLE_CODE on the first boot, beside the
+// demo's identity: exec'd CLI processes can't count on reading PID 1's environment
+// (see ContainerEnv). It reports whether the state changed.
+func (s *State) AdoptEditableCode(value string) bool {
+	if s.EditableCode || !parseBool(value) {
+		return false
+	}
+	s.EditableCode = true
+	return true
+}
+
+// CodeEditable reports whether the demo was created with MDL_DEMO_EDITABLE_CODE,
+// which gives www-data the source code. Set when the container is created, it
+// holds for the container's whole life.
+func CodeEditable() bool {
+	st, err := Load()
+	return err == nil && st.EditableCode
 }
 
 // AdoptIdentity records the console port and name from MDL_DEMO_PORT /

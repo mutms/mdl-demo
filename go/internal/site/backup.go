@@ -224,6 +224,7 @@ type RestoreOptions struct {
 // every account the backup lists.
 func Restore(logf execx.Logf, o RestoreOptions) error {
 	defer state.HoldBusy()() // pause the cron ticker while the tree/DB change
+	defer applyCodeAccess(logf)
 	warn := func(what string, err error) {
 		if err != nil {
 			logf("warning: " + what + " failed: " + err.Error())

@@ -26,6 +26,7 @@ import (
 
 	"github.com/mutms/mdl-demo/go/internal/debian"
 	"github.com/mutms/mdl-demo/go/internal/execx"
+	"github.com/mutms/mdl-demo/go/internal/state"
 )
 
 const (
@@ -74,6 +75,11 @@ func tmuxCommand() (*exec.Cmd, error) {
 		"PATH=/usr/local/bin:/usr/bin:/bin",
 		"TERM=xterm-256color",
 		"LANG=C.UTF-8",
+	}
+	// www-data can't read PID 1's environment, and the tree's permissions say
+	// read-only until a site is installed, so the shell has to be told.
+	if state.CodeEditable() {
+		cmd.Env = append(cmd.Env, "MDL_DEMO_EDITABLE_CODE=1")
 	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Credential: &syscall.Credential{Uid: uint32(uid), Gid: uint32(gid), Groups: []uint32{uint32(gid)}},

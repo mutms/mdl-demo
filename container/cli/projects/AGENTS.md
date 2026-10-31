@@ -6,11 +6,17 @@ so edit freely. Nobody's real data is here.
 
 ## Layout
 
-- `/srv/projects/demo`: the Moodle code. Read-only for you, root-owned on
-  purpose: never try to change its permissions. Moodle 5.1+ keeps the web root
-  in `public/`; `config.php` and `admin/cli/` are at the tree root on those
-  versions, so try the root first and then `public/` for any script.
-- `/srv/projects/extrarepos/`: the only place here you can write. Put plugin
+- `/srv/projects/demo`: the Moodle code. Moodle 5.1+ keeps the web root in `public/`;
+  `config.php` and `admin/cli/` are at the tree root on those versions, so try the
+  root first and then `public/` for any script.
+  - **`$MDL_DEMO_EDITABLE_CODE` is set:** this demo was created with editable code.
+    Edit Moodle and its plugins freely, in place. Things may break, and resetting the
+    site gives a clean copy. Purge caches after editing. Your edits aren't in backups.
+  - **It isn't set:** the code is read-only and root-owned on purpose, so never try to
+    change its permissions. If an edit in place is needed, tell the user it means
+    creating the demo again with `-e MDL_DEMO_EDITABLE_CODE=1`; it can't be changed
+    from inside.
+- `/srv/projects/extrarepos/`: the place here for your own work. Put plugin
   checkouts and generator code in a directory of their own, under git.
 - `~` (`/home/www-data`): scratch files, screenshots.
 - `/srv/data/dataroot`: Moodle's dataroot. You share its owner with the web
@@ -56,8 +62,8 @@ can't install anything else.
   `$CFG->debug = DEBUG_DEVELOPER;` at its top. They go to the same log.
 - `strace` works on a command you start, such as `strace -f php script.php`, but
   can't attach to the site's php-fpm workers, so reproduce through `mdl-php`.
-- To test a fix, commit it in `extrarepos/` and deploy it with `mdl-repo-add`, since
-  the `demo` tree is read-only.
+- To test a fix in a plugin, commit it in `extrarepos/` and deploy it with
+  `mdl-repo-add`, or edit it in place if the code is editable (see Layout).
 - If the problem may be in mdl-demo itself (the console, the helpers, this container),
   read its source. It's public, and its own `AGENTS.md` explains the architecture:
   `git clone https://github.com/mutms/mdl-demo extrarepos/mdl-demo`
