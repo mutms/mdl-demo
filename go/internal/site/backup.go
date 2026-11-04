@@ -310,12 +310,12 @@ func Restore(logf execx.Logf, o RestoreOptions) error {
 	if o.KeepCode {
 		logf("Keeping the current Moodle code tree (" + treeRecipe + ")")
 	} else if o.Recipe != "" {
-		logf("Assembling Moodle code tree from recipe " + treeRecipe + " (shallow clone of several git repositories)")
-		if err := execx.Run(logf, moodle.Root, "mudev", "clone", "--shallow", treeRecipe); err != nil {
+		logf("Assembling Moodle code tree from recipe " + treeRecipe + " (Moodle core from the local mirror, plugins from git)")
+		if err := execx.Run(logf, moodle.Root, "mudev", "clone", treeRecipe); err != nil {
 			return err
 		}
 	} else {
-		logf("Assembling Moodle code tree from the backup's recipe (shallow clone of several git repositories)")
+		logf("Assembling Moodle code tree from the backup's recipe (Moodle core from the local mirror, plugins from git)")
 		recipeFile := filepath.Join(staging, backup.RecipeName)
 		if err := backup.ExtractFile(path, backup.RecipeName, recipeFile); err != nil {
 			return err
@@ -330,7 +330,7 @@ func Restore(logf execx.Logf, o RestoreOptions) error {
 				return err
 			}
 		}
-		if err := execx.Run(logf, moodle.Root, "mudev", "clone", "--shallow", recipeFile); err != nil {
+		if err := execx.Run(logf, moodle.Root, "mudev", "clone", recipeFile); err != nil {
 			return err
 		}
 	}

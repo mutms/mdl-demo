@@ -97,8 +97,8 @@ func Install(logf execx.Logf, o Options) error {
 		return fmt.Errorf("database %q already holds %d tables (use `mdl-demo reset` first)", pgdb.Name, count)
 	}
 
-	logf("Assembling Moodle code tree from recipe " + recipe.ID + " (shallow clone of several git repositories)")
-	if err := execx.Run(logf, moodle.Root, "mudev", "clone", "--shallow", recipe.ID); err != nil {
+	logf("Assembling Moodle code tree from recipe " + recipe.ID + " (Moodle core from the local mirror, plugins from git)")
+	if err := execx.Run(logf, moodle.Root, "mudev", "clone", recipe.ID); err != nil {
 		return err
 	}
 	if !moodle.Detected() {

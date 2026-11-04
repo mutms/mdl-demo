@@ -192,6 +192,18 @@ RUN for c in mdl-recipes mdl-plugins; do \
 # that wants no Camp drops this line (or sets MDL_DEMO_NO_CAMP at runtime).
 RUN git clone --depth 1 https://github.com/camp-registry/camp-index /srv/extra/camp
 
+# Local Moodle mirror at mudev's path: every demo site links its Moodle core
+# checkout to it (git alternates), so creating or resetting a site fetches only
+# what the image does not have, instead of cloning Moodle again. About 1 GB, full
+# history; read-only at runtime, so mudev uses it as it is. Configured the way
+# mudev configures mirrors it creates: branches as branches, never pruned. Cloned
+# from a baked local mirror when a fork provides one under assets/repos/.
+RUN src=https://github.com/moodle/moodle.git; \
+    if [ -d /srv/extra/repos/github.com/moodle/moodle ]; then src=/srv/extra/repos/github.com/moodle/moodle; fi; \
+    git clone --bare "$src" /srv/extra/moodle.git \
+    && git -C /srv/extra/moodle.git config remote.origin.fetch '+refs/heads/*:refs/heads/*' \
+    && git -C /srv/extra/moodle.git config gc.pruneExpire never
+
 # The CLI console (internal/term): a shell as www-data, opening in /srv/projects
 # on a baked AGENTS.md. Only extrarepos/ and extrafiles/ are writable there. /srv/projects itself
 # stays root-owned: whoever can write the tree's parent can rename the tree away
