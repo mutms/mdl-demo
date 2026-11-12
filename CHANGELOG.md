@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - The image contains a local Moodle mirror, for much smaller downloads and faster site setups
+- Switched to Go 1.27.4
 
 ## [0.9.1] - 2026-10-31
 
